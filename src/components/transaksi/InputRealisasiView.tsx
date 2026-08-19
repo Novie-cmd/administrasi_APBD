@@ -320,7 +320,7 @@ export const InputRealisasiView: React.FC = () => {
         parsedResults.forEach((r, idx) => {
           const key = makeRealisasiCompositeKey(r.noSP2D, r.kodeBelanja, r.kodeSub, r.nilai, r.uraian, r.tahun || selectedTahun);
           const isDup = key ? (existingKeys.has(key) || seenBatchKeys.has(key)) : false;
-          if (key && !isDup) {
+          if (key) {
             seenBatchKeys.add(key);
           }
 
@@ -328,9 +328,6 @@ export const InputRealisasiView: React.FC = () => {
           if (r.nilai <= 0) {
             err = 'Nilai realisasi harus lebih dari 0.';
             errs.push(`Baris ${r.rowNum}: Nilai realisasi <= 0.`);
-          } else if (isDup) {
-            err = 'Data Realisasi ini duplikat dengan database/file ini.';
-            errs.push(`Baris ${r.rowNum}: Item "${r.noSP2D}" (${r.kodeBelanja}) duplikat.`);
           }
 
           parsedRows.push({
@@ -347,8 +344,8 @@ export const InputRealisasiView: React.FC = () => {
             uraian: r.uraian,
             rekanan: r.rekanan,
             tanggal: r.tanggal,
-            isValid: !err,
-            status: isDup ? 'Duplikat (Dilewati)' : 'Data Baru',
+            isValid: r.nilai > 0,
+            status: isDup ? 'Duplikat (Tetap Tampil & Disimpan)' : 'Data Baru',
             validationError: err
           });
         });
@@ -385,11 +382,12 @@ export const InputRealisasiView: React.FC = () => {
         tanggal: r.tanggal
       })),
       importedFileName || 'Import_Realisasi_SP2D.xlsx',
-      false
+      false,
+      true // allowDuplicates: keep duplicate values in database
     );
 
     setImportSuccessMsg(
-      `Berhasil mengimpor ${res.successCount} transaksi SP2D baru (${res.duplicateCount} duplikat dilewati).`
+      `Berhasil mengimpor ${res.successCount} transaksi SP2D (termasuk nilai transaksi berulang/duplikat).`
     );
     setPreviewData([]);
   };

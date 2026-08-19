@@ -125,7 +125,8 @@ interface AppContextType {
       tanggal: string;
     }[],
     fileName: string,
-    overwriteExisting?: boolean
+    overwriteExisting?: boolean,
+    allowDuplicates?: boolean
   ) => { successCount: number; duplicateCount: number; errors: string[] };
 
   // Master Data CRUD
@@ -844,7 +845,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       tanggal: string;
     }[],
     fileName: string,
-    overwriteExistingYear: boolean = false
+    overwriteExistingYear: boolean = false,
+    allowDuplicates: boolean = true
   ) => {
     let successCount = 0;
     let duplicateCount = 0;
@@ -896,11 +898,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const sp2dStr = (row.sp2d || '').trim();
 
         const key = makeRealisasiCompositeKey(sp2dStr, finalBelanja, finalSub, row.nilai, row.uraian, rowTahun);
+        const isDuplicate = key ? existingKeys.has(key) : false;
 
-        if (key && existingKeys.has(key)) {
+        if (isDuplicate) {
           duplicateCount++;
-          errors.push(`Baris ${index + 1}: Data Realisasi SP2D "${sp2dStr}" (${finalBelanja}) sudah ada (Duplikat).`);
-          return;
+          if (!allowDuplicates) {
+            errors.push(`Baris ${index + 1}: Data Realisasi SP2D "${sp2dStr}" (${finalBelanja}) sudah ada (Duplikat).`);
+            return;
+          }
         }
 
         const parsedDate = parseExcelDate(row.tanggal, rowTahun);

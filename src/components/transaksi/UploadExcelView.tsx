@@ -191,13 +191,12 @@ export const UploadExcelView: React.FC = () => {
             rowThn
           );
           const isDup = key ? (existingKeySet.has(key) || seenBatchKeys.has(key)) : false;
-          if (key && !isDup) {
+          if (key) {
             seenBatchKeys.add(key);
           }
 
           let err = '';
           if (r.nilai <= 0) err = 'Nilai realisasi harus > 0.';
-          else if (isDup && !overwriteMode) err = 'Data Realisasi ini duplikat dengan database/file sebelumnya.';
 
           return {
             globalRowNum: runningGlobalRowNum,
@@ -218,9 +217,9 @@ export const UploadExcelView: React.FC = () => {
             uraian: r.uraian,
             rekanan: r.rekanan,
             tanggal: r.tanggal,
-            isValid: !err,
+            isValid: r.nilai > 0,
             isDuplicate: isDup,
-            validationError: err
+            validationError: err || (isDup ? 'Baris Duplikat (Nilai tetap ditampilkan & dapat diimpor)' : '')
           };
         });
 
@@ -299,7 +298,8 @@ export const UploadExcelView: React.FC = () => {
     const res = batchImportExcel(
       validRows,
       summaryFileName,
-      overwriteMode
+      overwriteMode,
+      true // allowDuplicates: keep duplicate values in database
     );
 
     setImportResult(res);
@@ -882,26 +882,32 @@ export const UploadExcelView: React.FC = () => {
                       Row #{r.dbTargetRowNum}
                     </td>
                     <td className="px-3 py-2">
-                      {r.isValid ? (
+                      {r.isDuplicate ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-950 px-2 py-0.5 text-[10px] font-bold text-amber-400 border border-amber-800">
+                          <CheckCircle2 className="h-3 w-3" /> Duplikat (Tetap Tampil)
+                        </span>
+                      ) : r.isValid ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-950 px-2 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-800">
                           <CheckCircle2 className="h-3 w-3" /> Valid
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 rounded-full bg-rose-950 px-2 py-0.5 text-[10px] font-bold text-rose-300 border border-rose-800">
-                          <XCircle className="h-3 w-3" /> Peringatan
+                          <XCircle className="h-3 w-3" /> Nilai Kosong
                         </span>
                       )}
                     </td>
                     <td className="px-3 py-2 font-mono font-bold text-emerald-300">{r.sp2d}</td>
                     <td className="px-3 py-2 font-mono">{r.belanja}</td>
-                    <td className="px-3 py-2 text-right font-mono font-bold">
+                    <td className="px-3 py-2 text-right font-mono font-bold text-emerald-400">
                       Rp {r.nilai.toLocaleString('id-ID')}
                     </td>
                     <td className="px-3 py-2 max-w-xs truncate">
                       {r.uraian} ({r.rekanan})
                     </td>
                     <td className="px-3 py-2 text-[11px]">
-                      {r.validationError ? (
+                      {r.isDuplicate ? (
+                        <span className="text-amber-400 font-semibold">Duplikat Terdeteksi (Nilai Tetap Masuk)</span>
+                      ) : r.validationError ? (
                         <span className="text-rose-400 font-semibold">{r.validationError}</span>
                       ) : (
                         <span className="text-emerald-400">Siap Disambung</span>

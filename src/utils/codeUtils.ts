@@ -172,7 +172,7 @@ const INDO_MONTH_MAP: Record<string, number> = {
   mei: 5, may: 5,
   juni: 6, jun: 6, june: 6,
   juli: 7, jul: 7, july: 7,
-  agustus: 8, agt: 8, aug: 8, august: 8,
+  agustus: 8, agt: 8, ags: 8, aug: 8, august: 8,
   september: 9, sep: 9, sept: 9,
   oktober: 10, okt: 10, oct: 10, october: 10,
   november: 11, nov: 11,
@@ -206,15 +206,16 @@ export const parseExcelDate = (val: any, fallbackYear: number): { isoDate: strin
     }
   }
 
-  const str = String(val).trim().toLowerCase();
+  const rawStr = String(val).trim();
+  const str = rawStr.toLowerCase();
   if (!str) {
     return { isoDate: `${fallbackYear}-01-01`, month: 1, year: fallbackYear };
   }
 
-  // 3. Match Indonesian/English month names (e.g., "10 Februari 2026", "Februari 2026", "10-Feb-2026")
+  // 3. Match Indonesian/English month names (e.g., "10 November 2025", "Desember 2025", "10-Nov-2025", "15 Des 2025")
   let foundMonth = 0;
   for (const [mName, mNum] of Object.entries(INDO_MONTH_MAP)) {
-    const reg = new RegExp(`(?:^|\\b|_|\\/|\\-|\\.|\\s)${mName}(?:$|\\b|_|\\/|\\-|\\.|\\s)`, 'i');
+    const reg = new RegExp(`(?:^|[^a-z0-9])${mName}(?:$|[^a-z0-9])`, 'i');
     if (reg.test(str)) {
       foundMonth = mNum;
       break;
@@ -663,8 +664,39 @@ export const parseRealisasiFromExcelData = (
       if (colTanggal >= 0 && row[colTanggal] !== undefined && row[colTanggal] !== null && String(row[colTanggal]).trim()) {
         tglRaw = row[colTanggal];
       } else {
-        // In standard SIPD layout: AQ (col 42) is Tanggal SP2D, AN (col 39) is Tanggal SPM
-        tglRaw = row[42] || row[39] || row[40] || row[41] || row[43] || row[44] || row[38] || row[37] || row[1] || row[2];
+        // In standard SIPD layout: AQ (col 42) is Tanggal SP2D, AN (col 39) is Tanggal SPM, AO (col 40), etc. (EXCLUDE Column AS / index 44)
+        const candCols = [42, 39, 40, 41, 43, 38, 37, 27, 28, 1, 2, 3];
+        for (const c of candCols) {
+          if (row[c] !== undefined && row[c] !== null && String(row[c]).trim()) {
+            const p = parseExcelDate(row[c], selectedTahun);
+            if (p.isoDate !== `${selectedTahun}-01-01` || String(row[c]).toLowerCase().includes('jan')) {
+              tglRaw = row[c];
+              break;
+            }
+          }
+        }
+
+        // If still not found, scan candidate cells in the row for any date or month pattern (EXCLUDE Column AS / index 44, colNilai, etc.)
+        if (!tglRaw) {
+          for (let c = 0; c < row.length; c++) {
+            if (c === colNilai || c === 26 || c === 19 || c === 44) continue; // Explicitly skip Column AS (index 44)
+            const cellVal = row[c];
+            if (cellVal !== undefined && cellVal !== null) {
+              const strC = String(cellVal).trim();
+              if (strC && (strC.includes('-') || strC.includes('/') || strC.includes('.') || /[a-zA-Z]/.test(strC))) {
+                const testDate = parseExcelDate(cellVal, selectedTahun);
+                if (testDate.isoDate !== `${selectedTahun}-01-01` || strC.toLowerCase().includes('jan')) {
+                  tglRaw = cellVal;
+                  break;
+                }
+              }
+            }
+          }
+        }
+
+        if (!tglRaw) {
+          tglRaw = row[42] || row[39] || row[40] || row[41] || row[43] || row[38] || row[37] || row[1] || row[2];
+        }
       }
 
       const parsedDate = parseExcelDate(tglRaw, selectedTahun);
