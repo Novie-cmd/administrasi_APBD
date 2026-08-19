@@ -278,87 +278,106 @@ export const InputRealisasiView: React.FC = () => {
     safeDownloadExcel(wb, `Template_Import_Realisasi_Q6_AQ6_NTB_${selectedTahun}.xlsx`);
   };
 
-  // Upload Excel Handler for Realisasi
-  const handleFileUploadExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Upload Excel Handler for Realisasi (supports multi-file & all sheets)
+  const handleFileUploadExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    setImportedFileName(file.name);
+    const fileListArray: File[] = Array.from(files);
+    setImportedFileName(
+      fileListArray.length === 1
+        ? fileListArray[0].name
+        : `${fileListArray.length} File (${fileListArray.map(f => f.name).join(', ')})`
+    );
     setImportSuccessMsg(null);
     setImportErrors([]);
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const buffer = event.target?.result;
+    try {
+      const existingKeys = new Set(
+        realisasiList
+          .filter(r => Number(r.tahun) === Number(selectedTahun))
+          .map(r =>
+            makeRealisasiCompositeKey(r.noSP2D, r.kodeBelanja, r.kodeSub, r.nilai, r.uraian, r.tahun)
+          )
+      );
+      const seenBatchKeys = new Set<string>();
+      const parsedRows: PreviewRealisasiRow[] = [];
+      const errs: string[] = [];
+      let runningRowNum = 0;
+
+      for (let fIdx = 0; fIdx < fileListArray.length; fIdx++) {
+        const file = fileListArray[fIdx];
+        const buffer = await file.arrayBuffer();
         const workbook = XLSX.read(buffer, { type: 'array' });
-        const firstSheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[firstSheetName];
 
-        const rows2D: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-        const rowsJson: any[] = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+        for (const sheetName of workbook.SheetNames) {
+          const sheet = workbook.Sheets[sheetName];
+          if (!sheet) continue;
 
-        const parsedResults = parseRealisasiFromExcelData(rows2D, rowsJson, selectedTahun);
+          const rows2D: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+          const rowsJson: any[] = XLSX.utils.sheet_to_json(sheet, { defval: '' });
 
-        if (!parsedResults || parsedResults.length === 0) {
-          setImportErrors(['File Excel kosong atau format tidak valid.']);
-          setPreviewData([]);
-          return;
-        }
+          const parsedResults = parseRealisasiFromExcelData(rows2D, rowsJson, selectedTahun);
+          if (!parsedResults || parsedResults.length === 0) continue;
 
-        const existingKeys = new Set(
-          realisasiList
-            .filter(r => Number(r.tahun) === Number(selectedTahun))
-            .map(r =>
-              makeRealisasiCompositeKey(r.noSP2D, r.kodeBelanja, r.kodeSub, r.nilai, r.uraian, r.tahun)
-            )
-        );
-        const seenBatchKeys = new Set<string>();
-        const parsedRows: PreviewRealisasiRow[] = [];
-        const errs: string[] = [];
+          parsedResults.forEach((r) => {
+            runningRowNum++;
+            const key = makeRealisasiCompositeKey(
+              r.noSP2D,
+              r.kodeBelanja,
+              r.kodeSub,
+              r.nilai,
+              r.uraian,
+              r.tahun || selectedTahun
+            );
+            const isDup = key ? (existingKeys.has(key) || seenBatchKeys.has(key)) : false;
+            if (key) {
+              seenBatchKeys.add(key);
+            }
 
-        parsedResults.forEach((r, idx) => {
-          const key = makeRealisasiCompositeKey(r.noSP2D, r.kodeBelanja, r.kodeSub, r.nilai, r.uraian, r.tahun || selectedTahun);
-          const isDup = key ? (existingKeys.has(key) || seenBatchKeys.has(key)) : false;
-          if (key) {
-            seenBatchKeys.add(key);
-          }
+            let err = '';
+            if (r.nilai <= 0) {
+              err = 'Nilai realisasi harus lebih dari 0.';
+              errs.push(`File ${file.name} - Baris ${r.rowNum}: Nilai realisasi <= 0.`);
+            }
 
-          let err = '';
-          if (r.nilai <= 0) {
-            err = 'Nilai realisasi harus lebih dari 0.';
-            errs.push(`Baris ${r.rowNum}: Nilai realisasi <= 0.`);
-          }
-
-          parsedRows.push({
-            rowNum: r.rowNum,
-            tahun: r.tahun || selectedTahun,
-            kodeProgram: r.kodeProgram,
-            kodeKegiatan: r.kodeKegiatan,
-            kodeSub: r.kodeSub,
-            kodeBelanja: r.kodeBelanja,
-            namaBelanja: r.namaBelanja,
-            noSP2D: r.noSP2D,
-            noSPM: r.noSPM,
-            nilai: r.nilai,
-            uraian: r.uraian,
-            rekanan: r.rekanan,
-            tanggal: r.tanggal,
-            isValid: r.nilai > 0,
-            status: isDup ? 'Duplikat (Tetap Tampil & Disimpan)' : 'Data Baru',
-            validationError: err
+            parsedRows.push({
+              rowNum: runningRowNum,
+              tahun: r.tahun || selectedTahun,
+              kodeProgram: r.kodeProgram,
+              kodeKegiatan: r.kodeKegiatan,
+              kodeSub: r.kodeSub,
+              kodeBelanja: r.kodeBelanja,
+              namaBelanja: r.namaBelanja,
+              noSP2D: r.noSP2D,
+              noSPM: r.noSPM,
+              nilai: r.nilai,
+              uraian: r.uraian,
+              rekanan: r.rekanan,
+              tanggal: r.tanggal,
+              isValid: r.nilai > 0,
+              status: isDup ? 'Duplikat (Tetap Tampil & Disimpan)' : 'Data Baru',
+              validationError: err
+            });
           });
-        });
-
-        setPreviewData(parsedRows);
-        setImportErrors(errs);
-      } catch (err: any) {
-        console.error('Failed to parse Excel:', err);
-        setImportErrors([`Gagal membaca file Excel: ${err?.message || 'Format tidak didukung'}`]);
-        setPreviewData([]);
+        }
       }
-    };
-    reader.readAsArrayBuffer(file);
+
+      if (parsedRows.length === 0) {
+        setImportErrors(['Semua file Excel yang dipilih kosong atau format kolom tidak dikenali.']);
+        setPreviewData([]);
+        return;
+      }
+
+      setPreviewData(parsedRows);
+      setImportErrors(errs);
+    } catch (err: any) {
+      console.error('Failed to parse Excel files:', err);
+      setImportErrors([`Gagal membaca file Excel: ${err?.message || 'Format tidak didukung'}`]);
+      setPreviewData([]);
+    } finally {
+      e.target.value = '';
+    }
   };
 
   // Process Realisasi Batch Import
@@ -1020,9 +1039,10 @@ export const InputRealisasiView: React.FC = () => {
                 <p className="text-[11px] text-slate-400 mt-0.5">Pilih file .xlsx atau .xls dari komputer Anda</p>
                 <label className="mt-3 cursor-pointer rounded-xl bg-teal-600 hover:bg-teal-500 px-4 py-2 text-xs font-bold text-white shadow-md transition inline-flex items-center gap-2">
                   <FileSpreadsheet className="h-4 w-4" />
-                  <span>Pilih File Excel</span>
+                  <span>Pilih File Excel (Bisa Multi-File)</span>
                   <input
                     type="file"
+                    multiple
                     accept=".xlsx, .xls, .csv"
                     onChange={handleFileUploadExcel}
                     className="hidden"

@@ -129,7 +129,9 @@ export const UploadExcelView: React.FC = () => {
         )
   );
 
-  // Process files sequentially
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  // Process files sequentially with isolated error handling
   const processFiles = async (
     files: FileList | File[],
     append: boolean = false
@@ -168,71 +170,82 @@ export const UploadExcelView: React.FC = () => {
         const file = fileListArray[fIdx];
         const actualFileNumber = startingFileIndex + fIdx;
 
-        const buffer = await file.arrayBuffer();
-        const workbook = XLSX.read(buffer, { type: 'array' });
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
+        try {
+          const buffer = await file.arrayBuffer();
+          const workbook = XLSX.read(buffer, { type: 'array' });
 
-        const sheet2D: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-        const sheetJson: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
-
-        const rawResults = parseRealisasiFromExcelData(sheet2D, sheetJson, selectedTahun);
-        const startRowForFile = runningGlobalRowNum + 1;
-
-        const fileParsedRows: PreviewRow[] = rawResults.map(r => {
-          runningGlobalRowNum++;
-          const rowThn = r.tahun || selectedTahun;
-          const key = makeRealisasiCompositeKey(
-            r.noSP2D,
-            r.kodeBelanja,
-            r.kodeSub,
-            r.nilai,
-            r.uraian,
-            rowThn
-          );
-          const isDup = key ? (existingKeySet.has(key) || seenBatchKeys.has(key)) : false;
-          if (key) {
-            seenBatchKeys.add(key);
+          // Scan all sheets in the workbook to capture all data
+          const rawResults: any[] = [];
+          for (const sheetName of workbook.SheetNames) {
+            const worksheet = workbook.Sheets[sheetName];
+            if (!worksheet) continue;
+            const sheet2D: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+            const sheetJson: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+            const parsed = parseRealisasiFromExcelData(sheet2D, sheetJson, selectedTahun);
+            if (parsed && parsed.length > 0) {
+              rawResults.push(...parsed);
+            }
           }
 
-          let err = '';
-          if (r.nilai <= 0) err = 'Nilai realisasi harus > 0.';
+          const startRowForFile = runningGlobalRowNum + 1;
 
-          return {
-            globalRowNum: runningGlobalRowNum,
-            fileIndex: actualFileNumber,
-            sourceFileName: file.name,
-            localRowNum: r.rowNum,
-            dbTargetRowNum: baseDbCount + runningGlobalRowNum,
-            tahun: rowThn,
-            program: r.kodeProgram,
-            kegiatan: r.kodeKegiatan,
-            sub: r.kodeSub,
-            namaSub: r.namaSub,
-            belanja: r.kodeBelanja,
-            namaBelanja: r.namaBelanja,
-            sp2d: r.noSP2D,
-            spm: r.noSPM,
-            nilai: r.nilai,
-            uraian: r.uraian,
-            rekanan: r.rekanan,
-            tanggal: r.tanggal,
-            isValid: r.nilai > 0,
-            isDuplicate: isDup,
-            validationError: err || (isDup ? 'Baris Duplikat (Nilai tetap ditampilkan & dapat diimpor)' : '')
-          };
-        });
+          const fileParsedRows: PreviewRow[] = rawResults.map(r => {
+            runningGlobalRowNum++;
+            const rowThn = r.tahun || selectedTahun;
+            const key = makeRealisasiCompositeKey(
+              r.noSP2D,
+              r.kodeBelanja,
+              r.kodeSub,
+              r.nilai,
+              r.uraian,
+              rowThn
+            );
+            const isDup = key ? (existingKeySet.has(key) || seenBatchKeys.has(key)) : false;
+            if (key) {
+              seenBatchKeys.add(key);
+            }
 
-        existingRows = [...existingRows, ...fileParsedRows];
+            let err = '';
+            if (r.nilai <= 0) err = 'Nilai realisasi harus > 0.';
 
-        currentFileQueue.push({
-          index: actualFileNumber,
-          fileName: file.name,
-          totalRows: fileParsedRows.length,
-          validRows: fileParsedRows.filter(r => r.isValid).length,
-          startGlobalRow: startRowForFile,
-          endGlobalRow: runningGlobalRowNum
-        });
+            return {
+              globalRowNum: runningGlobalRowNum,
+              fileIndex: actualFileNumber,
+              sourceFileName: file.name,
+              localRowNum: r.rowNum,
+              dbTargetRowNum: baseDbCount + runningGlobalRowNum,
+              tahun: rowThn,
+              program: r.kodeProgram,
+              kegiatan: r.kodeKegiatan,
+              sub: r.kodeSub,
+              namaSub: r.namaSub,
+              belanja: r.kodeBelanja,
+              namaBelanja: r.namaBelanja,
+              sp2d: r.noSP2D,
+              spm: r.noSPM,
+              nilai: r.nilai,
+              uraian: r.uraian,
+              rekanan: r.rekanan,
+              tanggal: r.tanggal,
+              isValid: r.nilai > 0,
+              isDuplicate: isDup,
+              validationError: err || (isDup ? 'Baris Duplikat (Nilai tetap ditampilkan & dapat diimpor)' : '')
+            };
+          });
+
+          existingRows = [...existingRows, ...fileParsedRows];
+
+          currentFileQueue.push({
+            index: actualFileNumber,
+            fileName: file.name,
+            totalRows: fileParsedRows.length,
+            validRows: fileParsedRows.filter(r => r.isValid).length,
+            startGlobalRow: startRowForFile,
+            endGlobalRow: runningGlobalRowNum
+          });
+        } catch (fileErr) {
+          console.error(`Error parsing file ${file.name}:`, fileErr);
+        }
       }
 
       setPreviewData(existingRows);
@@ -247,9 +260,18 @@ export const UploadExcelView: React.FC = () => {
     }
   };
 
+  const handleDropFiles = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFiles(e.dataTransfer.files, previewData.length > 0);
+    }
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      processFiles(e.target.files, false);
+      // If queue already has files, append new files to the list
+      processFiles(e.target.files, previewData.length > 0);
     }
   };
 
@@ -257,6 +279,13 @@ export const UploadExcelView: React.FC = () => {
     if (e.target.files && e.target.files.length > 0) {
       processFiles(e.target.files, true);
     }
+  };
+
+  const handleRemoveFileFromQueue = (fileIdx: number) => {
+    const updatedQueue = fileQueue.filter(f => f.index !== fileIdx);
+    const updatedRows = previewData.filter(r => r.fileIndex !== fileIdx);
+    setPreviewData(updatedRows);
+    setFileQueue(updatedQueue);
   };
 
   const handleClearPreview = () => {
@@ -658,14 +687,23 @@ export const UploadExcelView: React.FC = () => {
       </div>
 
       {/* DROPZONE AREA */}
-      <div className="rounded-2xl border-2 border-dashed border-emerald-600/40 bg-slate-900/80 p-6 text-center shadow-xl space-y-4">
-        <FileSpreadsheet className="mx-auto h-12 w-12 text-emerald-400" />
+      <div
+        onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+        onDragLeave={() => setIsDragOver(false)}
+        onDrop={handleDropFiles}
+        className={`rounded-2xl border-2 border-dashed p-6 text-center shadow-xl space-y-4 transition ${
+          isDragOver
+            ? 'border-emerald-400 bg-emerald-950/40 ring-4 ring-emerald-500/20'
+            : 'border-emerald-600/40 bg-slate-900/80 hover:border-emerald-500/60'
+        }`}
+      >
+        <FileSpreadsheet className={`mx-auto h-12 w-12 transition ${isDragOver ? 'text-emerald-300 scale-110' : 'text-emerald-400'}`} />
         <div>
           <h2 className="text-sm font-bold text-white">
             Pilih File Excel Transaksi Realisasi Keuangan (.xlsx, .xls, .csv)
           </h2>
           <p className="mt-1 text-xs text-slate-400">
-            Dapat memilih satu atau beberapa file sekaligus. Sistem mendukung format SIPD/SIMDA (Urutan Kolom Q6-AQ6) maupun format tabel standar.
+            Pilih 1 file atau blok/seret beberapa file sekaligus (misal: <code>november1.xlsx</code> dan <code>november2.xlsx</code>).
           </p>
         </div>
 
