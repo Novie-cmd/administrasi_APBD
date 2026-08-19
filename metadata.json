@@ -1,0 +1,6 @@
+{
+  "name": "Sistem Informasi Keuangan BAKESBANGPOLDAGRI NTB",
+  "description": "BAKESBANGPOLDAGRI NTB Financial Management System (BFMS) - Pengelolaan Anggaran, Realisasi, Pelaporan, Import Excel, dan Analisis Keuangan Multi-Tahun.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
