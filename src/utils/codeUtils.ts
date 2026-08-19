@@ -166,17 +166,17 @@ export const isValidKodeSub = (val: any): boolean => {
 
 const INDO_MONTH_MAP: Record<string, number> = {
   januari: 1, jan: 1, january: 1,
-  februari: 2, feb: 2, february: 2,
+  februari: 2, feb: 2, february: 2, febr: 2,
   maret: 3, mar: 3, march: 3,
   april: 4, apr: 4,
   mei: 5, may: 5,
   juni: 6, jun: 6, june: 6,
   juli: 7, jul: 7, july: 7,
-  agustus: 8, agt: 8, ags: 8, aug: 8, august: 8,
+  agustus: 8, agt: 8, ags: 8, agu: 8, aug: 8, august: 8,
   september: 9, sep: 9, sept: 9,
   oktober: 10, okt: 10, oct: 10, october: 10,
-  november: 11, nov: 11,
-  desember: 12, des: 12, dec: 12, december: 12
+  november: 11, nop: 11, nov: 11, nvb: 11, nw: 11,
+  desember: 12, des: 12, dec: 12, december: 12, dsb: 12
 };
 
 export const parseExcelDate = (val: any, fallbackYear: number): { isoDate: string; month: number; year: number } => {
@@ -212,11 +212,12 @@ export const parseExcelDate = (val: any, fallbackYear: number): { isoDate: strin
     return { isoDate: `${fallbackYear}-01-01`, month: 1, year: fallbackYear };
   }
 
-  // 3. Match Indonesian/English month names (e.g., "10 November 2025", "Desember 2025", "10-Nov-2025", "15 Des 2025")
+  // 3. Match Indonesian/English month names (e.g., "10 November 2025", "Desember 2025", "10-Nov-2025", "15 Des 2025", "Nopember")
   let foundMonth = 0;
   for (const [mName, mNum] of Object.entries(INDO_MONTH_MAP)) {
+    // Check boundary or delimiter match
     const reg = new RegExp(`(?:^|[^a-z0-9])${mName}(?:$|[^a-z0-9])`, 'i');
-    if (reg.test(str)) {
+    if (reg.test(str) || str.includes(mName)) {
       foundMonth = mNum;
       break;
     }
@@ -280,7 +281,17 @@ export const parseExcelDate = (val: any, fallbackYear: number): { isoDate: strin
     }
   }
 
-  // 4c. Standard JS Date fallback
+  // 4c. Check if only month number or digits exist (e.g., "11", "12", "11/2025", "12/2025")
+  const monthYearMatch = str.match(/^(\d{1,2})[\/\-\.](\d{4})$/);
+  if (monthYearMatch) {
+    const m = parseInt(monthYearMatch[1], 10);
+    const y = parseInt(monthYearMatch[2], 10) || fallbackYear;
+    if (m >= 1 && m <= 12) {
+      return { isoDate: `${y}-${String(m).padStart(2, '0')}-15`, month: m, year: y };
+    }
+  }
+
+  // 4d. Standard JS Date fallback
   const d = new Date(str);
   if (!isNaN(d.getTime())) {
     const y = d.getFullYear() || fallbackYear;

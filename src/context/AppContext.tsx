@@ -259,6 +259,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Ref to prevent circular updates between Firestore listener and local state
   const isApplyingRemoteChange = useRef(false);
   const isInitialCloudLoad = useRef(true);
+  const lastLocalActionTime = useRef<number>(0);
 
   // 1. Subscribe to Firestore Real-Time Updates
   useEffect(() => {
@@ -298,10 +299,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setRekananList(remoteData.rekananList);
         }
         if (remoteData.anggaranList && Array.isArray(remoteData.anggaranList)) {
-          setAnggaranList(remoteData.anggaranList);
+          setAnggaranList(prevLocal => {
+            if (remoteData.anggaranList!.length === 0 && prevLocal.length > 0) {
+              return prevLocal;
+            }
+            const remoteIds = new Set(remoteData.anggaranList!.map(a => a.id));
+            const remoteKeys = new Set(
+              remoteData.anggaranList!.map(a => `${a.kodeBelanja}_${a.kodeSub}_${a.tahun}`)
+            );
+            const pendingLocal = prevLocal.filter(
+              l => !remoteIds.has(l.id) && !remoteKeys.has(`${l.kodeBelanja}_${l.kodeSub}_${l.tahun}`)
+            );
+            return [...remoteData.anggaranList!, ...pendingLocal];
+          });
         }
         if (remoteData.realisasiList && Array.isArray(remoteData.realisasiList)) {
-          setRealisasiList(remoteData.realisasiList);
+          setRealisasiList(prevLocal => {
+            // If remote is empty but local has items, don't wipe local state
+            if (remoteData.realisasiList!.length === 0 && prevLocal.length > 0) {
+              return prevLocal;
+            }
+            const remoteIds = new Set(remoteData.realisasiList!.map(r => r.id));
+            const remoteKeys = new Set(
+              remoteData.realisasiList!.map(r =>
+                makeRealisasiCompositeKey(r.noSP2D, r.kodeBelanja, r.kodeSub, r.nilai, r.uraian, r.tahun)
+              )
+            );
+            const pendingLocal = prevLocal.filter(l => {
+              const k = makeRealisasiCompositeKey(l.noSP2D, l.kodeBelanja, l.kodeSub, l.nilai, l.uraian, l.tahun);
+              return !remoteIds.has(l.id) && (!k || !remoteKeys.has(k));
+            });
+            return [...remoteData.realisasiList!, ...pendingLocal];
+          });
         }
         if (remoteData.importLogs && Array.isArray(remoteData.importLogs)) {
           setImportLogs(remoteData.importLogs);
