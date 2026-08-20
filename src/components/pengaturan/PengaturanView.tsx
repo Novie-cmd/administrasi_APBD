@@ -47,6 +47,15 @@ export const PengaturanView: React.FC = () => {
     importBackupJSON,
     realisasiList,
     anggaranList,
+    tahunList,
+    opd,
+    opdList,
+    programs,
+    kegiatanList,
+    subKegiatanList,
+    belanjaList,
+    sumberDanaList,
+    rekananList,
     selectedTahun,
     currentUser
   } = useApp();
@@ -108,7 +117,26 @@ export const PengaturanView: React.FC = () => {
   };
 
   const exportBackupJSON = () => {
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(localStorage));
+    const backupObj = {
+      appName: 'Sistem Keuangan BAKESBANGPOLDAGRI NTB',
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      exportedBy: currentUser.nama,
+      users,
+      tahunList,
+      opd,
+      opdList,
+      programs,
+      kegiatanList,
+      subKegiatanList,
+      belanjaList,
+      sumberDanaList,
+      rekananList,
+      anggaranList,
+      realisasiList,
+      activityLogs
+    };
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backupObj, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', dataStr);
     downloadAnchor.setAttribute('download', `BFMS_NTB_Backup_${new Date().toISOString().split('T')[0]}.json`);
@@ -135,10 +163,10 @@ export const PengaturanView: React.FC = () => {
       {/* Tabs */}
       <div className="flex overflow-x-auto gap-2 border-b border-slate-800 pb-2 scrollbar-none">
         {[
-          { id: 'cloud', label: 'Cloud Real-Time Sync (Laptop ⇄ HP)', icon: Cloud },
+          { id: 'cloud', label: 'Cloud Sync (Laptop ⇄ HP)', icon: Cloud },
+          { id: 'backup', label: 'Cadangan & Pemulihan JSON (Backup/Restore)', icon: HardDrive },
           { id: 'users', label: 'Manajemen Pengguna (User)', icon: Users },
           { id: 'spreadsheet', label: 'Integrasi Google Spreadsheet', icon: Database },
-          { id: 'backup', label: 'Backup & Restore Database', icon: HardDrive },
           { id: 'logs', label: 'Audit Trail (Log Aktivitas)', icon: Activity }
         ].map(tab => {
           const Icon = tab.icon;
@@ -601,14 +629,14 @@ export const PengaturanView: React.FC = () => {
               <div className="rounded-2xl border border-sky-900/40 bg-sky-950/20 p-5 space-y-3">
                 <div className="flex items-center gap-2 text-sky-300 font-bold text-xs">
                   <Upload className="h-4 w-4" />
-                  <span>2. Impor / Pulihkan dari File JSON</span>
+                  <span>2. Impor & Pulihkan dari File JSON</span>
                 </div>
                 <p className="text-[11px] text-slate-300 leading-relaxed">
-                  Punya file cadangan JSON yang pernah Anda unduh sebelumnya? Unggah file tersebut untuk memulihkan seluruh data transaksi dan anggaran secara instan.
+                  Punya file cadangan format JSON yang pernah Anda unduh sebelumnya? Klik tombol di bawah untuk memilih file dan memulihkan seluruh data secara instan.
                 </p>
-                <label className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-sky-500 shadow-md cursor-pointer transition">
+                <label className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 hover:bg-sky-500 px-4 py-2.5 text-xs font-bold text-white shadow-md cursor-pointer transition">
                   <Upload className="h-4 w-4" />
-                  <span>Pilih & Upload File Backup (.json)</span>
+                  <span>Pulihkan dari File JSON (.json)</span>
                   <input
                     type="file"
                     accept=".json"
