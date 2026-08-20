@@ -590,25 +590,65 @@ export const PengaturanView: React.FC = () => {
 
           {/* Recovery & Backup Controls */}
           <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-6 shadow-xl">
-            <div>
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <HardDrive className="h-4 w-4 text-emerald-400" />
-                <span>Pemulihan Data Cepat & Cadangan (Disaster Recovery)</span>
-              </h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Gunakan tombol di bawah untuk memulihkan data jika data impor sebelumnya tidak muncul, mengunduh file cadangan offline, atau memulihkan dari file JSON.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <HardDrive className="h-5 w-5 text-emerald-400" />
+                  <span>Pemulihan Data (Restore) & Cadangan (Backup)</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Gunakan fitur ini untuk memulihkan seluruh data transaksi/anggaran, mengunggah file cadangan JSON, atau menyimpan cadangan baru.
+                </p>
+              </div>
+
+              {/* Action Buttons Header */}
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="flex items-center gap-2 rounded-xl bg-sky-600 hover:bg-sky-500 px-4 py-2 text-xs font-bold text-white shadow cursor-pointer transition">
+                  <Upload className="h-4 w-4" />
+                  <span>Pulihkan dari File JSON</span>
+                  <input
+                    type="file"
+                    accept=".json"
+                    className="hidden"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = ev => {
+                        const content = ev.target?.result as string;
+                        if (content) {
+                          const res = importBackupJSON(content);
+                          setBackupMessage({
+                            type: res.success ? 'success' : 'error',
+                            text: res.message
+                          });
+                        }
+                      };
+                      reader.readAsText(file);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+
+                <button
+                  onClick={exportBackupJSON}
+                  className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2 text-xs font-bold text-white shadow transition"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Unduh Cadangan JSON</span>
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {/* Option 1: Restore Local Snapshot */}
-              <div className="rounded-2xl border border-emerald-900/40 bg-emerald-950/20 p-5 space-y-3">
-                <div className="flex items-center gap-2 text-emerald-300 font-bold text-xs">
-                  <RefreshCw className="h-4 w-4" />
+              <div className="rounded-2xl border border-emerald-900/60 bg-emerald-950/30 p-5 space-y-3 shadow-inner">
+                <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm">
+                  <RefreshCw className="h-4 w-4 text-emerald-400" />
                   <span>1. Pulihkan dari Snapshot Cadangan Lokal</span>
                 </div>
-                <p className="text-[11px] text-slate-300 leading-relaxed">
-                  Sistem secara otomatis menyimpan snapshot permanen setiap kali Anda melakukan impor atau penambahan data. Klik tombol ini untuk memulihkan data 2025 & 2026 yang tersimpan.
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Sistem menyimpan snapshot otomatis setiap kali terjadi impor atau perubahan data. Klik tombol ini untuk memulihkan data jika data di layar sempat nol/hilang.
                 </p>
                 <button
                   onClick={() => {
@@ -618,7 +658,7 @@ export const PengaturanView: React.FC = () => {
                       text: res.message
                     });
                   }}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 shadow-md transition"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg transition"
                 >
                   <RefreshCw className="h-4 w-4" />
                   <span>Pulihkan Data dari Snapshot Otomatis</span>
@@ -626,17 +666,17 @@ export const PengaturanView: React.FC = () => {
               </div>
 
               {/* Option 2: Upload Backup JSON */}
-              <div className="rounded-2xl border border-sky-900/40 bg-sky-950/20 p-5 space-y-3">
-                <div className="flex items-center gap-2 text-sky-300 font-bold text-xs">
-                  <Upload className="h-4 w-4" />
-                  <span>2. Impor & Pulihkan dari File JSON</span>
+              <div className="rounded-2xl border border-sky-900/60 bg-sky-950/30 p-5 space-y-3 shadow-inner">
+                <div className="flex items-center gap-2 text-sky-300 font-bold text-sm">
+                  <Upload className="h-4 w-4 text-sky-400" />
+                  <span>2. Impor & Pulihkan dari File JSON (.json)</span>
                 </div>
-                <p className="text-[11px] text-slate-300 leading-relaxed">
-                  Punya file cadangan format JSON yang pernah Anda unduh sebelumnya? Klik tombol di bawah untuk memilih file dan memulihkan seluruh data secara instan.
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Punya file cadangan format JSON yang pernah Anda unduh? Klik tombol di bawah untuk memilih file dan memulihkan seluruh data transaksi dan master secara instan.
                 </p>
-                <label className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 hover:bg-sky-500 px-4 py-2.5 text-xs font-bold text-white shadow-md cursor-pointer transition">
+                <label className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 hover:bg-sky-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg cursor-pointer transition">
                   <Upload className="h-4 w-4" />
-                  <span>Pulihkan dari File JSON (.json)</span>
+                  <span>Pilih & Upload File Backup (.json)</span>
                   <input
                     type="file"
                     accept=".json"
@@ -666,14 +706,6 @@ export const PengaturanView: React.FC = () => {
             {/* Additional Actions */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-5">
               <div className="flex flex-wrap items-center gap-3">
-                <button
-                  onClick={exportBackupJSON}
-                  className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-xs font-bold text-slate-200 hover:bg-slate-700 hover:text-white transition shadow"
-                >
-                  <Download className="h-4 w-4 text-emerald-400" />
-                  <span>Unduh Cadangan Lengkap (.json)</span>
-                </button>
-
                 <button
                   onClick={async () => {
                     try {
