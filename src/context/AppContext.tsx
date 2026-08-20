@@ -177,20 +177,60 @@ interface AppContextType {
   deleteActivityLog: (id: string) => void;
   clearAllActivityLogs: () => void;
   resetAllData: () => void;
+  restoreFromBackup: () => { success: boolean; realisasiCount: number; anggaranCount: number; message: string };
+  importBackupJSON: (jsonData: string) => { success: boolean; message: string };
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'BFMS_NTB_STORE_V1';
+export const STORAGE_KEY = 'BFMS_NTB_STORE_V1';
+export const BACKUP_STORAGE_KEY = 'BFMS_NTB_PERMANENT_BACKUP_V1';
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Load initial or local stored data
+  // Load initial or local stored data with multi-layer backup recovery
   const loadStoredData = () => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        return JSON.parse(stored);
-      }
+      const primaryStr = localStorage.getItem(STORAGE_KEY);
+      const backupStr = localStorage.getItem(BACKUP_STORAGE_KEY);
+      
+      let primary = primaryStr ? JSON.parse(primaryStr) : null;
+      let backup = backupStr ? JSON.parse(backupStr) : null;
+
+      if (!primary && !backup) return null;
+      if (!primary && backup) return backup;
+      if (primary && !backup) return primary;
+
+      // If both exist, merge intelligently to ensure no data is lost
+      const realisasiPrimary = Array.isArray(primary?.realisasiList) ? primary.realisasiList : [];
+      const realisasiBackup = Array.isArray(backup?.realisasiList) ? backup.realisasiList : [];
+
+      const anggaranPrimary = Array.isArray(primary?.anggaranList) ? primary.anggaranList : [];
+      const anggaranBackup = Array.isArray(backup?.anggaranList) ? backup.anggaranList : [];
+
+      // Combine realisasi items without duplicates
+      const realisasiMap = new Map<string, Realisasi>();
+      [...realisasiBackup, ...realisasiPrimary].forEach((r: Realisasi) => {
+        if (r && r.id) {
+          realisasiMap.set(r.id, r);
+        }
+      });
+
+      const anggaranMap = new Map<string, Anggaran>();
+      [...anggaranBackup, ...anggaranPrimary].forEach((a: Anggaran) => {
+        if (a && a.id) {
+          anggaranMap.set(a.id, a);
+        }
+      });
+
+      return {
+        ...primary,
+        realisasiList: realisasiMap.size > 0 ? Array.from(realisasiMap.values()) : primary?.realisasiList,
+        anggaranList: anggaranMap.size > 0 ? Array.from(anggaranMap.values()) : primary?.anggaranList,
+        programs: primary?.programs?.length > (backup?.programs?.length || 0) ? primary.programs : (backup?.programs || primary?.programs),
+        kegiatanList: primary?.kegiatanList?.length > (backup?.kegiatanList?.length || 0) ? primary.kegiatanList : (backup?.kegiatanList || primary?.kegiatanList),
+        subKegiatanList: primary?.subKegiatanList?.length > (backup?.subKegiatanList?.length || 0) ? primary.subKegiatanList : (backup?.subKegiatanList || primary?.subKegiatanList),
+        belanjaList: primary?.belanjaList?.length > (backup?.belanjaList?.length || 0) ? primary.belanjaList : (backup?.belanjaList || primary?.belanjaList),
+      };
     } catch (err) {
       console.error('Failed to load local storage:', err);
     }
@@ -361,33 +401,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => unsubscribe();
   }, []);
 
-  // 2. Initial cloud state check or bootstrap initial data to Firestore
+  // 2. Initial cloud state check (non-destructive)
   useEffect(() => {
     const bootstrapFirestore = async () => {
       try {
         const existingData = await fetchSharedDataOnce();
-        if (!existingData) {
-          // Cloud is empty, push initial dataset
-          await saveSharedDataToFirestore(
-            {
-              users,
-              selectedTahun,
-              tahunList,
-              opdList,
-              programs,
-              kegiatanList,
-              subKegiatanList,
-              belanjaList,
-              sumberDanaList,
-              rekananList,
-              anggaranList,
-              realisasiList,
-              importLogs,
-              activityLogs,
-              sheetConfig
-            },
-            'Initial Seed'
-          );
+        if (existingData) {
+          if (existingData.realisasiList && existingData.realisasiList.length > 0) {
+            setRealisasiList(existingData.realisasiList);
+          }
+          if (existingData.anggaranList && existingData.anggaranList.length > 0) {
+            setAnggaranList(existingData.anggaranList);
+          }
         }
       } catch (err) {
         console.warn('Initial cloud seed skipped/cached:', err);
@@ -438,9 +463,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       sheetConfig
     };
 
-    // Save to local cache
+    // Save to local cache with redundant permanent snapshot
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToStore));
+      if (realisasiList.length > 0 || anggaranList.length > 0) {
+        localStorage.setItem(BACKUP_STORAGE_KEY, JSON.stringify(dataToStore));
+      }
     } catch (e) {
       console.error('Error writing to localStorage:', e);
     }
@@ -1420,6 +1448,86 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const restoreFromBackup = () => {
+    try {
+      const backupStr = localStorage.getItem(BACKUP_STORAGE_KEY) || localStorage.getItem(STORAGE_KEY);
+      if (!backupStr) {
+        return { success: false, realisasiCount: 0, anggaranCount: 0, message: 'Tidak ditemukan data cadangan lokal.' };
+      }
+      const data = JSON.parse(backupStr);
+      let countRealisasi = 0;
+      let countAnggaran = 0;
+
+      if (data.users && Array.isArray(data.users)) setUsers(data.users);
+      if (data.tahunList && Array.isArray(data.tahunList)) setTahunList(data.tahunList);
+      if (data.opdList && Array.isArray(data.opdList)) setOpdList(data.opdList);
+      if (data.programs && Array.isArray(data.programs)) setPrograms(data.programs);
+      if (data.kegiatanList && Array.isArray(data.kegiatanList)) setKegiatanList(data.kegiatanList);
+      if (data.subKegiatanList && Array.isArray(data.subKegiatanList)) setSubKegiatanList(data.subKegiatanList);
+      if (data.belanjaList && Array.isArray(data.belanjaList)) setBelanjaList(data.belanjaList);
+      if (data.sumberDanaList && Array.isArray(data.sumberDanaList)) setSumberDanaList(data.sumberDanaList);
+      if (data.rekananList && Array.isArray(data.rekananList)) setRekananList(data.rekananList);
+      
+      if (data.anggaranList && Array.isArray(data.anggaranList)) {
+        setAnggaranList(data.anggaranList);
+        countAnggaran = data.anggaranList.length;
+      }
+      if (data.realisasiList && Array.isArray(data.realisasiList)) {
+        setRealisasiList(data.realisasiList);
+        countRealisasi = data.realisasiList.length;
+      }
+
+      logActivity(`Memulihkan data dari Cadangan Lokal (Snapshot Recovery): ${countRealisasi} Realisasi, ${countAnggaran} Anggaran`);
+      return {
+        success: true,
+        realisasiCount: countRealisasi,
+        anggaranCount: countAnggaran,
+        message: `Berhasil memulihkan ${countRealisasi} data realisasi dan ${countAnggaran} data anggaran.`
+      };
+    } catch (e: any) {
+      console.error('Failed to restore from backup:', e);
+      return { success: false, realisasiCount: 0, anggaranCount: 0, message: `Gagal memulihkan: ${e.message}` };
+    }
+  };
+
+  const importBackupJSON = (jsonData: string) => {
+    try {
+      const data = JSON.parse(jsonData);
+      // Support raw store object or { BFMS_NTB_STORE_V1: "..." } format
+      const targetData = data.realisasiList ? data : (data[STORAGE_KEY] ? JSON.parse(data[STORAGE_KEY]) : data);
+      
+      if (targetData.users && Array.isArray(targetData.users)) setUsers(targetData.users);
+      if (targetData.tahunList && Array.isArray(targetData.tahunList)) setTahunList(targetData.tahunList);
+      if (targetData.opdList && Array.isArray(targetData.opdList)) setOpdList(targetData.opdList);
+      if (targetData.programs && Array.isArray(targetData.programs)) setPrograms(targetData.programs);
+      if (targetData.kegiatanList && Array.isArray(targetData.kegiatanList)) setKegiatanList(targetData.kegiatanList);
+      if (targetData.subKegiatanList && Array.isArray(targetData.subKegiatanList)) setSubKegiatanList(targetData.subKegiatanList);
+      if (targetData.belanjaList && Array.isArray(targetData.belanjaList)) setBelanjaList(targetData.belanjaList);
+      if (targetData.sumberDanaList && Array.isArray(targetData.sumberDanaList)) setSumberDanaList(targetData.sumberDanaList);
+      if (targetData.rekananList && Array.isArray(targetData.rekananList)) setRekananList(targetData.rekananList);
+      
+      let countRealisasi = 0;
+      let countAnggaran = 0;
+      if (targetData.anggaranList && Array.isArray(targetData.anggaranList)) {
+        setAnggaranList(targetData.anggaranList);
+        countAnggaran = targetData.anggaranList.length;
+      }
+      if (targetData.realisasiList && Array.isArray(targetData.realisasiList)) {
+        setRealisasiList(targetData.realisasiList);
+        countRealisasi = targetData.realisasiList.length;
+      }
+
+      logActivity(`Impor file cadangan JSON: ${countRealisasi} Realisasi, ${countAnggaran} Anggaran dipulihkan`);
+      return {
+        success: true,
+        message: `Berhasil mengimpor cadangan JSON: ${countRealisasi} Realisasi & ${countAnggaran} Anggaran.`
+      };
+    } catch (e: any) {
+      console.error('Failed to parse backup JSON:', e);
+      return { success: false, message: `Format file JSON tidak valid: ${e.message}` };
+    }
+  };
+
   const resetAllData = () => {
     localStorage.removeItem(STORAGE_KEY);
     setCurrentUser(INITIAL_USERS[0]);
@@ -1525,7 +1633,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         logActivity,
         deleteActivityLog,
         clearAllActivityLogs,
-        resetAllData
+        resetAllData,
+        restoreFromBackup,
+        importBackupJSON
       }}
     >
       {children}

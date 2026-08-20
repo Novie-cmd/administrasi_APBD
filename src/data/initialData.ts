@@ -203,6 +203,7 @@ export const INITIAL_SUBKEGIATAN: SubKegiatan[] = [
 ];
 
 export const INITIAL_BELANJA: Belanja[] = [
+  // --- TAHUN ANGGARAN 2025 (4 Digit Rincian Objek) ---
   {
     kodeBelanja: '5.1.01.01.01.0001',
     namaBelanja: 'Belanja Gaji Pokok PNS/PNSD',
@@ -212,6 +213,12 @@ export const INITIAL_BELANJA: Belanja[] = [
   {
     kodeBelanja: '5.1.02.01.01.0024',
     namaBelanja: 'Belanja Alat/Bahan untuk Kegiatan Kantor - Alat Tulis Kantor (ATK)',
+    jenisBelanja: 'Belanja Barang dan Jasa',
+    tahun: 2025
+  },
+  {
+    kodeBelanja: '5.1.02.01.01.0040',
+    namaBelanja: 'Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat',
     jenisBelanja: 'Belanja Barang dan Jasa',
     tahun: 2025
   },
@@ -240,10 +247,72 @@ export const INITIAL_BELANJA: Belanja[] = [
     tahun: 2025
   },
   {
+    kodeBelanja: '5.1.05.01.01.0001',
+    namaBelanja: 'Belanja Hibah Uang kepada Pemerintah Pusat / Daerah / Badan / Lembaga',
+    jenisBelanja: 'Belanja Hibah',
+    tahun: 2025
+  },
+  {
     kodeBelanja: '5.1.05.01.01.0002',
     namaBelanja: 'Belanja Hibah Uang kepada Badan/Lembaga/Ormas Terdaftar NTB',
     jenisBelanja: 'Belanja Hibah',
     tahun: 2025
+  },
+
+  // --- TAHUN ANGGARAN 2026 (5 Digit Rincian Objek - Format SIPD 2026) ---
+  {
+    kodeBelanja: '5.1.01.01.01.00001',
+    namaBelanja: 'Belanja Gaji Pokok PNS/PNSD',
+    jenisBelanja: 'Belanja Pegawai',
+    tahun: 2026
+  },
+  {
+    kodeBelanja: '5.1.02.01.01.00024',
+    namaBelanja: 'Belanja Alat/Bahan untuk Kegiatan Kantor - Alat Tulis Kantor (ATK)',
+    jenisBelanja: 'Belanja Barang dan Jasa',
+    tahun: 2026
+  },
+  {
+    kodeBelanja: '5.1.02.01.01.00040',
+    namaBelanja: 'Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat',
+    jenisBelanja: 'Belanja Barang dan Jasa',
+    tahun: 2026
+  },
+  {
+    kodeBelanja: '5.1.02.01.01.00052',
+    namaBelanja: 'Belanja Makanan dan Minuman Rapat / Operasional Lapangan',
+    jenisBelanja: 'Belanja Barang dan Jasa',
+    tahun: 2026
+  },
+  {
+    kodeBelanja: '5.1.02.04.01.00001',
+    namaBelanja: 'Belanja Perjalanan Dinas Dalam Daerah Kab/Kota NTB',
+    jenisBelanja: 'Belanja Barang dan Jasa',
+    tahun: 2026
+  },
+  {
+    kodeBelanja: '5.1.02.04.01.00003',
+    namaBelanja: 'Belanja Perjalanan Dinas Luar Daerah (Jakarta/Surakarta)',
+    jenisBelanja: 'Belanja Barang dan Jasa',
+    tahun: 2026
+  },
+  {
+    kodeBelanja: '5.2.02.08.01.00005',
+    namaBelanja: 'Belanja Modal Personal Computer / Laptop Operasional',
+    jenisBelanja: 'Belanja Modal',
+    tahun: 2026
+  },
+  {
+    kodeBelanja: '5.1.05.01.01.00001',
+    namaBelanja: 'Belanja Hibah Uang kepada Pemerintah Pusat / Daerah / Badan / Lembaga',
+    jenisBelanja: 'Belanja Hibah',
+    tahun: 2026
+  },
+  {
+    kodeBelanja: '5.1.05.01.01.00002',
+    namaBelanja: 'Belanja Hibah Uang kepada Badan/Lembaga/Ormas Terdaftar NTB',
+    jenisBelanja: 'Belanja Hibah',
+    tahun: 2026
   }
 ];
 

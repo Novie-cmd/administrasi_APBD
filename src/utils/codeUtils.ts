@@ -2,7 +2,7 @@ export const extractCode = (val: any): string => {
   if (val === undefined || val === null) return '';
   const str = String(val).trim();
   if (!str) return '';
-  // Regex to extract budget codes like 5.1.02.01.01.0024 or 5.01.01.2.01.01 or 5.01.01
+  // Regex to extract budget codes like 5.1.02.01.01.0024 (4 digits) or 5.1.05.01.01.00001 (5 digits) or 5.01.01.2.01.01
   const match = str.match(/\b\d+(\.\d+)+\b/);
   if (match) {
     return match[0];
@@ -14,9 +14,54 @@ export const normalizeCode = (val: any): string => {
   return extractCode(val).trim().toLowerCase();
 };
 
+/**
+ * Normalizes dot-separated numerical codes by trimming leading zeroes on each segment.
+ * This ensures 4-digit codes from TA 2025 (e.g. 5.1.05.01.01.0001, 5.1.02.01.01.0040)
+ * match identically with 5-digit codes from TA 2026 (e.g. 5.1.05.01.01.00001, 5.1.02.01.01.00040).
+ */
+export const normalizeSegmentCode = (val: any): string => {
+  const code = extractCode(val).trim().toLowerCase();
+  if (!code) return '';
+  if (/^\d+(\.\d+)+$/.test(code)) {
+    return code
+      .split('.')
+      .map(part => parseInt(part, 10).toString())
+      .join('.');
+  }
+  return code;
+};
+
+/**
+ * Checks equality between two budget codes, supporting both exact string match
+ * and cross-year digit format variations (4-digit 2025 vs 5-digit 2026).
+ */
 export const isCodeEqual = (a: any, b: any): boolean => {
   if (!a || !b) return false;
-  return normalizeCode(a) === normalizeCode(b);
+  const rawA = normalizeCode(a);
+  const rawB = normalizeCode(b);
+  if (rawA === rawB) return true;
+  return normalizeSegmentCode(rawA) === normalizeSegmentCode(rawB);
+};
+
+/**
+ * Formats a budget expenditure code according to fiscal year specifications:
+ * - TA 2026 and above: 5 digits for the final sub-object segment (e.g. 5.1.05.01.01.00001, 5.1.02.01.01.00040)
+ * - TA 2025 and earlier: 4 digits for the final sub-object segment (e.g. 5.1.05.01.01.0001, 5.1.02.01.01.0040)
+ */
+export const formatKodeBelanjaByYear = (val: any, tahun?: number): string => {
+  const code = extractCode(val);
+  if (!code) return String(val || '');
+  const parts = code.split('.');
+  if (parts.length >= 6) {
+    const targetDigits = (tahun && Number(tahun) >= 2026) ? 5 : 4;
+    const lastIdx = parts.length - 1;
+    const num = parseInt(parts[lastIdx], 10);
+    if (!isNaN(num)) {
+      parts[lastIdx] = String(num).padStart(targetDigits, '0');
+    }
+    return parts.join('.');
+  }
+  return code;
 };
 
 export const findRowValueByKeys = (

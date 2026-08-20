@@ -43,10 +43,16 @@ export const PengaturanView: React.FC = () => {
     deleteActivityLog,
     clearAllActivityLogs,
     resetAllData,
+    restoreFromBackup,
+    importBackupJSON,
+    realisasiList,
+    anggaranList,
+    selectedTahun,
     currentUser
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'users' | 'cloud' | 'spreadsheet' | 'backup' | 'logs'>('cloud');
+  const [backupMessage, setBackupMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Search filter
   const [searchTerm, setSearchTerm] = useState('');
@@ -489,29 +495,197 @@ export const PengaturanView: React.FC = () => {
 
       {/* TAB 3: BACKUP */}
       {activeTab === 'backup' && (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-4 shadow-xl">
-          <h3 className="text-sm font-bold text-white">Cadangan (Backup) & Pemulihan Data Database</h3>
-          <p className="text-xs text-slate-400">
-            Ekspor seluruh data transaksi anggaran, realisasi, dan master data ke format JSON aman.
-          </p>
-
-          <div className="flex items-center gap-4 pt-2">
-            <button
-              onClick={exportBackupJSON}
-              className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 shadow-md"
+        <div className="space-y-6">
+          {/* Status Alert Banner */}
+          {backupMessage && (
+            <div
+              className={`flex items-center justify-between rounded-2xl border p-4 text-xs font-semibold ${
+                backupMessage.type === 'success'
+                  ? 'border-emerald-700/60 bg-emerald-950/60 text-emerald-300'
+                  : 'border-rose-700/60 bg-rose-950/60 text-rose-300'
+              }`}
             >
-              <Download className="h-4 w-4" />
-              <span>Unduh Cadangan JSON</span>
-            </button>
-
-            {!isReadonly && (
+              <div className="flex items-center gap-2">
+                {backupMessage.type === 'success' ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                ) : (
+                  <AlertTriangle className="h-4 w-4 text-rose-400" />
+                )}
+                <span>{backupMessage.text}</span>
+              </div>
               <button
-                onClick={resetAllData}
-                className="flex items-center gap-2 rounded-xl border border-rose-800 bg-rose-950/60 px-5 py-2.5 text-xs font-bold text-rose-300 hover:bg-rose-900 transition"
+                onClick={() => setBackupMessage(null)}
+                className="text-slate-400 hover:text-white"
               >
-                <span>Reset Seluruh Data</span>
+                ✕
               </button>
-            )}
+            </div>
+          )}
+
+          {/* Active Data Statistics */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow">
+              <div className="text-xs text-slate-400">Total Realisasi Aktif</div>
+              <div className="text-xl font-bold text-emerald-400 mt-1">
+                {realisasiList.length} <span className="text-xs font-normal text-slate-400">transaksi</span>
+              </div>
+              <div className="text-[11px] text-slate-400 mt-1 flex gap-2">
+                <span>2025: <strong className="text-white">{realisasiList.filter(r => Number(r.tahun) === 2025).length}</strong></span>
+                <span>•</span>
+                <span>2026: <strong className="text-white">{realisasiList.filter(r => Number(r.tahun) === 2026).length}</strong></span>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow">
+              <div className="text-xs text-slate-400">Total Pagu Anggaran</div>
+              <div className="text-xl font-bold text-sky-400 mt-1">
+                {anggaranList.length} <span className="text-xs font-normal text-slate-400">rekening belanja</span>
+              </div>
+              <div className="text-[11px] text-slate-400 mt-1 flex gap-2">
+                <span>2025: <strong className="text-white">{anggaranList.filter(a => Number(a.tahun) === 2025).length}</strong></span>
+                <span>•</span>
+                <span>2026: <strong className="text-white">{anggaranList.filter(a => Number(a.tahun) === 2026).length}</strong></span>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow">
+              <div className="text-xs text-slate-400">Status Database Cloud</div>
+              <div className="text-xl font-bold text-indigo-400 mt-1 flex items-center gap-2">
+                <span className={`h-2.5 w-2.5 rounded-full ${cloudSync.status === 'connected' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                {cloudSync.status === 'connected' ? 'Tersinkron' : 'Menghubungkan'}
+              </div>
+              <div className="text-[11px] text-slate-400 mt-1 truncate">
+                Update: {cloudSync.lastSyncedAt ? new Date(cloudSync.lastSyncedAt).toLocaleTimeString('id-ID') : '-'}
+              </div>
+            </div>
+          </div>
+
+          {/* Recovery & Backup Controls */}
+          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-6 shadow-xl">
+            <div>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <HardDrive className="h-4 w-4 text-emerald-400" />
+                <span>Pemulihan Data Cepat & Cadangan (Disaster Recovery)</span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Gunakan tombol di bawah untuk memulihkan data jika data impor sebelumnya tidak muncul, mengunduh file cadangan offline, atau memulihkan dari file JSON.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Option 1: Restore Local Snapshot */}
+              <div className="rounded-2xl border border-emerald-900/40 bg-emerald-950/20 p-5 space-y-3">
+                <div className="flex items-center gap-2 text-emerald-300 font-bold text-xs">
+                  <RefreshCw className="h-4 w-4" />
+                  <span>1. Pulihkan dari Snapshot Cadangan Lokal</span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Sistem secara otomatis menyimpan snapshot permanen setiap kali Anda melakukan impor atau penambahan data. Klik tombol ini untuk memulihkan data 2025 & 2026 yang tersimpan.
+                </p>
+                <button
+                  onClick={() => {
+                    const res = restoreFromBackup();
+                    setBackupMessage({
+                      type: res.success ? 'success' : 'error',
+                      text: res.message
+                    });
+                  }}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 shadow-md transition"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  <span>Pulihkan Data dari Snapshot Otomatis</span>
+                </button>
+              </div>
+
+              {/* Option 2: Upload Backup JSON */}
+              <div className="rounded-2xl border border-sky-900/40 bg-sky-950/20 p-5 space-y-3">
+                <div className="flex items-center gap-2 text-sky-300 font-bold text-xs">
+                  <Upload className="h-4 w-4" />
+                  <span>2. Impor / Pulihkan dari File JSON</span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Punya file cadangan JSON yang pernah Anda unduh sebelumnya? Unggah file tersebut untuk memulihkan seluruh data transaksi dan anggaran secara instan.
+                </p>
+                <label className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-sky-500 shadow-md cursor-pointer transition">
+                  <Upload className="h-4 w-4" />
+                  <span>Pilih & Upload File Backup (.json)</span>
+                  <input
+                    type="file"
+                    accept=".json"
+                    className="hidden"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = ev => {
+                        const content = ev.target?.result as string;
+                        if (content) {
+                          const res = importBackupJSON(content);
+                          setBackupMessage({
+                            type: res.success ? 'success' : 'error',
+                            text: res.message
+                          });
+                        }
+                      };
+                      reader.readAsText(file);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* Additional Actions */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-5">
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={exportBackupJSON}
+                  className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-xs font-bold text-slate-200 hover:bg-slate-700 hover:text-white transition shadow"
+                >
+                  <Download className="h-4 w-4 text-emerald-400" />
+                  <span>Unduh Cadangan Lengkap (.json)</span>
+                </button>
+
+                <button
+                  onClick={async () => {
+                    try {
+                      await forceSyncCloud();
+                      setBackupMessage({
+                        type: 'success',
+                        text: 'Berhasil mendorong seluruh data lokal saat ini ke Firestore Cloud.'
+                      });
+                    } catch (e: any) {
+                      setBackupMessage({
+                        type: 'error',
+                        text: `Gagal sinkronisasi cloud: ${e.message}`
+                      });
+                    }
+                  }}
+                  className="flex items-center gap-2 rounded-xl border border-indigo-700/50 bg-indigo-950/60 px-4 py-2.5 text-xs font-bold text-indigo-300 hover:bg-indigo-900 transition shadow"
+                >
+                  <Cloud className="h-4 w-4 text-indigo-400" />
+                  <span>Paksa Simpan ke Cloud Database</span>
+                </button>
+              </div>
+
+              {!isReadonly && (
+                <button
+                  onClick={() => {
+                    if (window.confirm('PERINGATAN: Apakah Anda yakin ingin mereset seluruh data kembali ke setelan pabrik awal? Tindakan ini tidak dapat dibatalkan jika Anda belum mengunduh file cadangan.')) {
+                      resetAllData();
+                      setBackupMessage({
+                        type: 'success',
+                        text: 'Seluruh data telah direset ke setelan awal.'
+                      });
+                    }
+                  }}
+                  className="flex items-center gap-2 rounded-xl border border-rose-800/80 bg-rose-950/40 px-4 py-2.5 text-xs font-bold text-rose-400 hover:bg-rose-900/60 hover:text-rose-200 transition"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span>Reset Seluruh Data</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
