@@ -32,6 +32,7 @@ export const Navbar: React.FC<{
     selectedTahun,
     setSelectedTahun,
     tahunList,
+    realisasiList,
     notifications,
     sheetConfig,
     syncStatus,
@@ -122,11 +123,14 @@ export const Navbar: React.FC<{
             className="cursor-pointer rounded-lg bg-emerald-950 px-2.5 py-1 text-xs font-bold text-emerald-100 border border-emerald-600/50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
             id="select-tahun-anggaran"
           >
-            {tahunList.map(t => (
-              <option key={t.id} value={t.tahun}>
-                {t.tahun} {t.statusAktif ? '(Aktif)' : ''}
-              </option>
-            ))}
+            {tahunList.map(t => {
+              const count = realisasiList.filter(r => Number(r.tahun) === Number(t.tahun)).length;
+              return (
+                <option key={t.id} value={t.tahun}>
+                  TA {t.tahun} {count > 0 ? `(${count} Data)` : ''} {t.statusAktif ? '★' : ''}
+                </option>
+              );
+            })}
           </select>
         </div>
 

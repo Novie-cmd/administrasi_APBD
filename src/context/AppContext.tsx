@@ -185,8 +185,25 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const STORAGE_KEY = 'BFMS_NTB_STORE_V1';
 export const BACKUP_STORAGE_KEY = 'BFMS_NTB_PERMANENT_BACKUP_V1';
+const LEGACY_STORAGE_KEYS = ['BFMS_STORE_V1', 'BFMS_NTB_SNAPSHOT_V2', 'BFMS_APP_DATA'];
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Helper to persist snapshot to both primary and backup storage synchronously
+  const persistToLocalStorage = (data: any) => {
+    try {
+      const serialized = JSON.stringify(data);
+      localStorage.setItem(STORAGE_KEY, serialized);
+      if (
+        (data.realisasiList && data.realisasiList.length > 0) ||
+        (data.anggaranList && data.anggaranList.length > 0)
+      ) {
+        localStorage.setItem(BACKUP_STORAGE_KEY, serialized);
+      }
+    } catch (e) {
+      console.error('Failed to write to localStorage:', e);
+    }
+  };
+
   // Load initial or local stored data with multi-layer backup recovery
   const loadStoredData = () => {
     try {
@@ -196,36 +213,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       let primary = primaryStr ? JSON.parse(primaryStr) : null;
       let backup = backupStr ? JSON.parse(backupStr) : null;
 
+      // Check legacy storage keys as fallback if primary is empty
+      if (!primary && !backup) {
+        for (const legKey of LEGACY_STORAGE_KEYS) {
+          const legStr = localStorage.getItem(legKey);
+          if (legStr) {
+            try {
+              const legData = JSON.parse(legStr);
+              if (legData && (legData.realisasiList?.length > 0 || legData.anggaranList?.length > 0)) {
+                primary = legData;
+                break;
+              }
+            } catch {}
+          }
+        }
+      }
+
       if (!primary && !backup) return null;
       if (!primary && backup) return backup;
       if (primary && !backup) return primary;
 
-      // If both exist, merge intelligently to ensure no data is lost
-      const realisasiPrimary = Array.isArray(primary?.realisasiList) ? primary.realisasiList : [];
-      const realisasiBackup = Array.isArray(backup?.realisasiList) ? backup.realisasiList : [];
+      // If both exist, merge intelligently to ensure no transaction or budget item is ever lost
+      const realisasiPrimary: Realisasi[] = Array.isArray(primary?.realisasiList) ? primary.realisasiList : [];
+      const realisasiBackup: Realisasi[] = Array.isArray(backup?.realisasiList) ? backup.realisasiList : [];
 
-      const anggaranPrimary = Array.isArray(primary?.anggaranList) ? primary.anggaranList : [];
-      const anggaranBackup = Array.isArray(backup?.anggaranList) ? backup.anggaranList : [];
+      const anggaranPrimary: Anggaran[] = Array.isArray(primary?.anggaranList) ? primary.anggaranList : [];
+      const anggaranBackup: Anggaran[] = Array.isArray(backup?.anggaranList) ? backup.anggaranList : [];
 
-      // Combine realisasi items without duplicates
+      // Combine realisasi items without duplicates using composite keys & IDs
       const realisasiMap = new Map<string, Realisasi>();
       [...realisasiBackup, ...realisasiPrimary].forEach((r: Realisasi) => {
         if (r && r.id) {
-          realisasiMap.set(r.id, r);
+          const compKey = makeRealisasiCompositeKey(r.noSP2D, r.kodeBelanja, r.kodeSub, r.nilai, r.uraian, r.tahun);
+          const mapKey = compKey || r.id;
+          realisasiMap.set(mapKey, r);
         }
       });
 
       const anggaranMap = new Map<string, Anggaran>();
       [...anggaranBackup, ...anggaranPrimary].forEach((a: Anggaran) => {
         if (a && a.id) {
-          anggaranMap.set(a.id, a);
+          const compKey = `${a.kodeBelanja}_${a.kodeSub}_${a.tahun}`;
+          anggaranMap.set(compKey, a);
         }
       });
 
+      const mergedRealisasi = realisasiMap.size > 0 ? Array.from(realisasiMap.values()) : primary?.realisasiList;
+      const mergedAnggaran = anggaranMap.size > 0 ? Array.from(anggaranMap.values()) : primary?.anggaranList;
+
       return {
         ...primary,
-        realisasiList: realisasiMap.size > 0 ? Array.from(realisasiMap.values()) : primary?.realisasiList,
-        anggaranList: anggaranMap.size > 0 ? Array.from(anggaranMap.values()) : primary?.anggaranList,
+        realisasiList: mergedRealisasi,
+        anggaranList: mergedAnggaran,
         programs: primary?.programs?.length > (backup?.programs?.length || 0) ? primary.programs : (backup?.programs || primary?.programs),
         kegiatanList: primary?.kegiatanList?.length > (backup?.kegiatanList?.length || 0) ? primary.kegiatanList : (backup?.kegiatanList || primary?.kegiatanList),
         subKegiatanList: primary?.subKegiatanList?.length > (backup?.subKegiatanList?.length || 0) ? primary.subKegiatanList : (backup?.subKegiatanList || primary?.subKegiatanList),
@@ -298,44 +337,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Ref to prevent circular updates between Firestore listener and local state
   const isApplyingRemoteChange = useRef(false);
-  const isInitialCloudLoad = useRef(true);
-  const lastLocalActionTime = useRef<number>(0);
+  const isInitialCloudLoad = useRef(false);
 
-  // 1. Subscribe to Firestore Real-Time Updates
+  // 1. Subscribe to Firestore Real-Time Updates (Live single source of truth from Firebase)
   useEffect(() => {
     const unsubscribe = subscribeToSharedData(
       remoteData => {
         if (!remoteData) return;
         isApplyingRemoteChange.current = true;
 
-        if (remoteData.users && Array.isArray(remoteData.users)) {
+        if (remoteData.users && Array.isArray(remoteData.users) && remoteData.users.length > 0) {
           setUsers(remoteData.users);
         }
         if (remoteData.selectedTahun) {
           setSelectedTahun(remoteData.selectedTahun);
         }
-        if (remoteData.tahunList && Array.isArray(remoteData.tahunList)) {
+        if (remoteData.tahunList && Array.isArray(remoteData.tahunList) && remoteData.tahunList.length > 0) {
           setTahunList(remoteData.tahunList);
         }
-        if (remoteData.opdList && Array.isArray(remoteData.opdList)) {
+        if (remoteData.opdList && Array.isArray(remoteData.opdList) && remoteData.opdList.length > 0) {
           setOpdList(remoteData.opdList);
         }
-        if (remoteData.programs && Array.isArray(remoteData.programs)) {
+        if (remoteData.programs && Array.isArray(remoteData.programs) && remoteData.programs.length > 0) {
           setPrograms(remoteData.programs);
         }
-        if (remoteData.kegiatanList && Array.isArray(remoteData.kegiatanList)) {
+        if (remoteData.kegiatanList && Array.isArray(remoteData.kegiatanList) && remoteData.kegiatanList.length > 0) {
           setKegiatanList(remoteData.kegiatanList);
         }
-        if (remoteData.subKegiatanList && Array.isArray(remoteData.subKegiatanList)) {
+        if (remoteData.subKegiatanList && Array.isArray(remoteData.subKegiatanList) && remoteData.subKegiatanList.length > 0) {
           setSubKegiatanList(remoteData.subKegiatanList);
         }
-        if (remoteData.belanjaList && Array.isArray(remoteData.belanjaList)) {
+        if (remoteData.belanjaList && Array.isArray(remoteData.belanjaList) && remoteData.belanjaList.length > 0) {
           setBelanjaList(remoteData.belanjaList);
         }
-        if (remoteData.sumberDanaList && Array.isArray(remoteData.sumberDanaList)) {
+        if (remoteData.sumberDanaList && Array.isArray(remoteData.sumberDanaList) && remoteData.sumberDanaList.length > 0) {
           setSumberDanaList(remoteData.sumberDanaList);
         }
-        if (remoteData.rekananList && Array.isArray(remoteData.rekananList)) {
+        if (remoteData.rekananList && Array.isArray(remoteData.rekananList) && remoteData.rekananList.length > 0) {
           setRekananList(remoteData.rekananList);
         }
         if (remoteData.anggaranList && Array.isArray(remoteData.anggaranList)) {
@@ -355,7 +393,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         if (remoteData.realisasiList && Array.isArray(remoteData.realisasiList)) {
           setRealisasiList(prevLocal => {
-            // If remote is empty but local has items, don't wipe local state
+            // If remote is empty but local has items, never wipe local state
             if (remoteData.realisasiList!.length === 0 && prevLocal.length > 0) {
               return prevLocal;
             }
@@ -372,10 +410,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             return [...remoteData.realisasiList!, ...pendingLocal];
           });
         }
-        if (remoteData.importLogs && Array.isArray(remoteData.importLogs)) {
+        if (remoteData.importLogs && Array.isArray(remoteData.importLogs) && remoteData.importLogs.length > 0) {
           setImportLogs(remoteData.importLogs);
         }
-        if (remoteData.activityLogs && Array.isArray(remoteData.activityLogs)) {
+        if (remoteData.activityLogs && Array.isArray(remoteData.activityLogs) && remoteData.activityLogs.length > 0) {
           setActivityLogs(remoteData.activityLogs);
         }
         if (remoteData.sheetConfig) {
@@ -390,7 +428,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         setTimeout(() => {
           isApplyingRemoteChange.current = false;
-        }, 100);
+        }, 200);
       },
       err => {
         console.warn('Cloud sync offline or error:', err);
@@ -399,28 +437,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     return () => unsubscribe();
-  }, []);
-
-  // 2. Initial cloud state check (non-destructive)
-  useEffect(() => {
-    const bootstrapFirestore = async () => {
-      try {
-        const existingData = await fetchSharedDataOnce();
-        if (existingData) {
-          if (existingData.realisasiList && existingData.realisasiList.length > 0) {
-            setRealisasiList(existingData.realisasiList);
-          }
-          if (existingData.anggaranList && existingData.anggaranList.length > 0) {
-            setAnggaranList(existingData.anggaranList);
-          }
-        }
-      } catch (err) {
-        console.warn('Initial cloud seed skipped/cached:', err);
-      } finally {
-        isInitialCloudLoad.current = false;
-      }
-    };
-    bootstrapFirestore();
   }, []);
 
   // Filter State

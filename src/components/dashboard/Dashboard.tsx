@@ -197,16 +197,49 @@ export const Dashboard: React.FC = () => {
                 className="cursor-pointer bg-transparent text-sm font-black text-emerald-300 focus:outline-none"
                 id="dashboard-year-select"
               >
-                {tahunList.map(t => (
-                  <option key={t.id} value={t.tahun} className="bg-slate-900 text-white">
-                    {t.tahun} {t.statusAktif ? '(Aktif)' : ''}
-                  </option>
-                ))}
+                {tahunList.map(t => {
+                  const count = realisasiList.filter(r => Number(r.tahun) === Number(t.tahun)).length;
+                  return (
+                    <option key={t.id} value={t.tahun} className="bg-slate-900 text-white">
+                      TA {t.tahun} {count > 0 ? `(${count} Realisasi)` : ''} {t.statusAktif ? '★ Aktif' : ''}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           </div>
         </div>
       </div>
+
+      {/* SMART YEAR DATA NOTIFICATION BANNER */}
+      {currentRealisasiList.length === 0 && realisasiList.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-amber-600/60 bg-gradient-to-r from-amber-950/80 to-slate-900 p-4 shadow-xl">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-amber-500/20 text-amber-300">
+              <Info className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-amber-200">
+                Data Realisasi Terdeteksi di Tahun Anggaran Lain
+              </div>
+              <div className="text-xs text-slate-300 mt-0.5">
+                Terdapat {realisasiList.length} transaksi di database ({Array.from(new Set(realisasiList.map(r => r.tahun))).map(th => `TA ${th}: ${realisasiList.filter(r => Number(r.tahun) === Number(th)).length} data`).join(', ')}).
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {Array.from(new Set(realisasiList.map(r => r.tahun))).map(th => (
+              <button
+                key={th}
+                onClick={() => setSelectedTahun(Number(th))}
+                className="rounded-xl bg-amber-600 hover:bg-amber-500 px-3.5 py-1.5 text-xs font-bold text-white shadow transition"
+              >
+                Beralih ke TA {th}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 4 STATISTIC SUMMARY CARDS */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

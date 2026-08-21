@@ -54,6 +54,7 @@ interface PreviewRealisasiRow {
 export const InputRealisasiView: React.FC = () => {
   const {
     selectedTahun,
+    setSelectedTahun,
     programs,
     kegiatanList,
     subKegiatanList,
@@ -745,68 +746,105 @@ export const InputRealisasiView: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800 text-slate-300">
-              {currentRealisasi
-                .filter(r => {
-                  if (!searchTerm.trim()) return true;
-                  const q = searchTerm.toLowerCase();
-                  return (
-                    (r.noSP2D || '').toLowerCase().includes(q) ||
-                    (r.noSPM || '').toLowerCase().includes(q) ||
-                    (r.kodeBelanja || '').toLowerCase().includes(q) ||
-                    (r.kodeSub || '').toLowerCase().includes(q) ||
-                    (r.uraian || '').toLowerCase().includes(q) ||
-                    (r.rekanan || '').toLowerCase().includes(q) ||
-                    (r.tanggal || '').toLowerCase().includes(q)
-                  );
-                })
-                .map((r, idx) => (
-                  <tr key={r.id} className="hover:bg-slate-800/50">
-                    <td className="px-3 py-3 text-center font-mono font-bold text-slate-400">
-                      {idx + 1}
-                    </td>
-                    <td className="px-4 py-3 font-mono font-bold text-teal-300">{r.noSP2D || '-'}</td>
-                    <td className="px-4 py-3 text-slate-300 whitespace-nowrap">{r.tanggal || '-'}</td>
-                    <td className="px-4 py-3 font-mono text-emerald-400">{r.kodeBelanja || '-'}</td>
-                    <td className="px-4 py-3 font-medium text-white max-w-xs">{r.uraian || '-'}</td>
-                    <td className="px-4 py-3 text-right font-mono font-bold text-emerald-400">
-                      Rp {(Number(r.nilai) || 0).toLocaleString('id-ID')}
-                    </td>
-                    <td className="px-4 py-3 text-slate-300">{r.rekanan || '-'}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
-                          r.statusValidation === 'Disetujui PPK'
-                            ? 'bg-emerald-950 text-emerald-300 border border-emerald-700'
-                            : r.statusValidation === 'Ditolak'
-                            ? 'bg-rose-950 text-rose-300 border border-rose-700'
-                            : 'bg-amber-950 text-amber-300 border border-amber-700'
-                        }`}
-                      >
-                        {r.statusValidation || 'Disetujui PPK'}
-                      </span>
-                    </td>
-                    {!isReadOnly && (
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            onClick={() => handleOpenEdit(r)}
-                            className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-amber-400 transition"
-                            title="Edit Transaksi SP2D"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => setDeletingRealisasi(r)}
-                            className="rounded p-1 text-slate-400 hover:bg-rose-950 hover:text-rose-400 transition"
-                            title="Hapus Data"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+              {currentRealisasi.length === 0 ? (
+                <tr>
+                  <td colSpan={isReadOnly ? 8 : 9} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="h-12 w-12 rounded-2xl bg-slate-800 flex items-center justify-center text-slate-400">
+                        <FileSpreadsheet className="h-6 w-6" />
+                      </div>
+                      <div className="text-sm font-bold text-white">
+                        Belum ada transaksi realisasi pada TA {selectedTahun}
+                      </div>
+                      {realisasiList.length > 0 ? (
+                        <div className="space-y-2">
+                          <p className="text-xs text-amber-300">
+                            Ditemukan {realisasiList.length} total transaksi di sistem pada tahun anggaran lain:
+                          </p>
+                          <div className="flex items-center justify-center gap-2 flex-wrap">
+                            {Array.from(new Set(realisasiList.map(r => r.tahun))).map(th => (
+                              <button
+                                key={th}
+                                onClick={() => setSelectedTahun(Number(th))}
+                                className="rounded-lg bg-amber-600 hover:bg-amber-500 px-3 py-1 text-xs font-bold text-white shadow transition"
+                              >
+                                Beralih ke TA {th} ({realisasiList.filter(r => Number(r.tahun) === Number(th)).length} Data)
+                              </button>
+                            ))}
+                          </div>
                         </div>
+                      ) : (
+                        <p className="text-xs text-slate-400 max-w-sm">
+                          Silakan klik tombol <strong>Input Transaksi Realisasi</strong> atau <strong>Import File Excel</strong> untuk mulai memasukkan data SP2D.
+                        </p>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                currentRealisasi
+                  .filter(r => {
+                    if (!searchTerm.trim()) return true;
+                    const q = searchTerm.toLowerCase();
+                    return (
+                      (r.noSP2D || '').toLowerCase().includes(q) ||
+                      (r.noSPM || '').toLowerCase().includes(q) ||
+                      (r.kodeBelanja || '').toLowerCase().includes(q) ||
+                      (r.kodeSub || '').toLowerCase().includes(q) ||
+                      (r.uraian || '').toLowerCase().includes(q) ||
+                      (r.rekanan || '').toLowerCase().includes(q) ||
+                      (r.tanggal || '').toLowerCase().includes(q)
+                    );
+                  })
+                  .map((r, idx) => (
+                    <tr key={r.id} className="hover:bg-slate-800/50">
+                      <td className="px-3 py-3 text-center font-mono font-bold text-slate-400">
+                        {idx + 1}
                       </td>
-                    )}
-                  </tr>
-                ))}
+                      <td className="px-4 py-3 font-mono font-bold text-teal-300">{r.noSP2D || '-'}</td>
+                      <td className="px-4 py-3 text-slate-300 whitespace-nowrap">{r.tanggal || '-'}</td>
+                      <td className="px-4 py-3 font-mono text-emerald-400">{r.kodeBelanja || '-'}</td>
+                      <td className="px-4 py-3 font-medium text-white max-w-xs">{r.uraian || '-'}</td>
+                      <td className="px-4 py-3 text-right font-mono font-bold text-emerald-400">
+                        Rp {(Number(r.nilai) || 0).toLocaleString('id-ID')}
+                      </td>
+                      <td className="px-4 py-3 text-slate-300">{r.rekanan || '-'}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                            r.statusValidation === 'Disetujui PPK'
+                              ? 'bg-emerald-950 text-emerald-300 border border-emerald-700'
+                              : r.statusValidation === 'Ditolak'
+                              ? 'bg-rose-950 text-rose-300 border border-rose-700'
+                              : 'bg-amber-950 text-amber-300 border border-amber-700'
+                          }`}
+                        >
+                          {r.statusValidation || 'Disetujui PPK'}
+                        </span>
+                      </td>
+                      {!isReadOnly && (
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => handleOpenEdit(r)}
+                              className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-amber-400 transition"
+                              title="Edit Transaksi SP2D"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => setDeletingRealisasi(r)}
+                              className="rounded p-1 text-slate-400 hover:bg-rose-950 hover:text-rose-400 transition"
+                              title="Hapus Data"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))
+              )}
             </tbody>
           </table>
         </div>
