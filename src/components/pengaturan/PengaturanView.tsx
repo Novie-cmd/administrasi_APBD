@@ -219,12 +219,52 @@ export const PengaturanView: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="flex items-center gap-1.5 rounded-full bg-emerald-950 px-3 py-1 text-xs font-bold text-emerald-300 border border-emerald-700">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
-                  Status: {cloudSync.status === 'syncing' ? 'Menyinkronkan...' : cloudSync.status === 'error' ? 'Offline' : 'Aktif (Real-Time Live)'}
+                <span className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold border ${
+                  cloudSync.status === 'syncing'
+                    ? 'bg-cyan-950 text-cyan-300 border-cyan-700'
+                    : cloudSync.status === 'quota_exceeded'
+                    ? 'bg-amber-950 text-amber-300 border-amber-700'
+                    : cloudSync.status === 'error'
+                    ? 'bg-rose-950 text-rose-300 border-rose-700'
+                    : 'bg-emerald-950 text-emerald-300 border-emerald-700'
+                }`}>
+                  <span className={`h-2 w-2 rounded-full ${
+                    cloudSync.status === 'syncing'
+                      ? 'bg-cyan-400 animate-ping'
+                      : cloudSync.status === 'quota_exceeded'
+                      ? 'bg-amber-400'
+                      : cloudSync.status === 'error'
+                      ? 'bg-rose-400'
+                      : 'bg-emerald-400 animate-ping'
+                  }`} />
+                  Status: {
+                    cloudSync.status === 'syncing'
+                      ? 'Menyinkronkan...'
+                      : cloudSync.status === 'quota_exceeded'
+                      ? 'Kuota Cloud Tercapai (Penyimpanan Lokal & Sheet Aktif)'
+                      : cloudSync.status === 'error'
+                      ? 'Offline'
+                      : 'Aktif (Real-Time Live)'
+                  }
                 </span>
               </div>
             </div>
+
+            {/* Quota Notice Banner if quota exceeded */}
+            {cloudSync.status === 'quota_exceeded' && (
+              <div className="rounded-xl border border-amber-500/40 bg-amber-950/30 p-4 space-y-2 text-amber-200 text-xs">
+                <div className="flex items-center gap-2 font-bold text-amber-300 text-sm">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500/20 text-amber-300">ℹ</span>
+                  <span>Batas Kuota Gratis Firestore Harian Tercapai</span>
+                </div>
+                <p className="text-amber-200/90 leading-relaxed">
+                  Batas unit tulis gratis Firestore (*Free Spark tier limit*) telah tercapai untuk hari ini. <strong>Seluruh data Anda tetap aman 100%</strong> tersimpan di browser (Local Storage & Backup Permanen) dan Anda dapat menggunakan menu <strong>Integrasi Google Spreadsheet</strong> untuk sinkronisasi antar perangkat tanpa batas kuota.
+                </p>
+                <p className="text-[11px] text-amber-300/80">
+                  * Kuota Firebase akan ter-reset otomatis setiap hari (00:00 UTC). Anda juga dapat membuka konsol Firebase jika ingin meningkatkan paket.
+                </p>
+              </div>
+            )}
 
             {/* Illustration / Card sync */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

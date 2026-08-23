@@ -16,7 +16,40 @@ export const ANGGARAN_CHUNKS_COLLECTION = 'bfms_anggaran_chunks';
 
 const REALISASI_CHUNK_PREFIX = 'realisasi_chunk_';
 const ANGGARAN_CHUNK_PREFIX = 'anggaran_chunk_';
-const CHUNK_SIZE = 100; // 100 records per document to stay safely under Firestore 1MB limit
+const CHUNK_SIZE = 300; // 300 records per document (~60KB, safely under 1MB Firestore limit, reduces writes by 3x)
+const QUOTA_STORAGE_KEY = 'bfms_firestore_quota_exceeded_date';
+
+function getTodayString(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// Global in-memory & persistent flag to prevent repeated retry loops when daily quota is exhausted
+let isFirestoreQuotaExceeded = false;
+let lastSavedSignature: string = '';
+
+export function getIsFirestoreQuotaExceeded(): boolean {
+  try {
+    const saved = localStorage.getItem(QUOTA_STORAGE_KEY);
+    if (saved === getTodayString()) {
+      return true;
+    }
+  } catch {}
+  return isFirestoreQuotaExceeded;
+}
+
+export function markFirestoreQuotaExceeded(): void {
+  isFirestoreQuotaExceeded = true;
+  try {
+    localStorage.setItem(QUOTA_STORAGE_KEY, getTodayString());
+  } catch {}
+}
+
+export function resetFirestoreQuotaFlag(): void {
+  isFirestoreQuotaExceeded = false;
+  try {
+    localStorage.removeItem(QUOTA_STORAGE_KEY);
+  } catch {}
+}
 
 export interface FirestoreAppData {
   users?: any[];
@@ -43,12 +76,26 @@ export interface FirestoreAppData {
 }
 
 /**
+ * Checks if an error is due to Firestore quota exhaustion.
+ */
+export function isQuotaError(err: any): boolean {
+  if (!err) return false;
+  const msg = typeof err === 'string' ? err : (err.message || err.code || String(err));
+  return (
+    msg.includes('resource-exhausted') ||
+    msg.includes('Quota limit exceeded') ||
+    msg.includes('quota') ||
+    msg.includes('Free daily write units per project')
+  );
+}
+
+/**
  * Loads all realisasi chunks from Firestore using collection query with fallback.
  */
 async function loadRealisasiChunks(chunkCount?: number): Promise<any[]> {
   const allRealisasi: any[] = [];
 
-  // Strategy 1: Load from dedicated subcollection / collection
+  // Strategy 1: Load from dedicated collection
   try {
     const chunksColRef = collection(db, REALISASI_CHUNKS_COLLECTION);
     const snap = await getDocs(chunksColRef);
@@ -71,6 +118,9 @@ async function loadRealisasiChunks(chunkCount?: number): Promise<any[]> {
       }
     }
   } catch (e) {
+    if (isQuotaError(e)) {
+      markFirestoreQuotaExceeded();
+    }
     console.warn('Strategy 1 chunk load failed, trying Strategy 2:', e);
   }
 
@@ -124,6 +174,9 @@ async function loadAnggaranChunks(chunkCount?: number): Promise<any[]> {
       }
     }
   } catch (e) {
+    if (isQuotaError(e)) {
+      isFirestoreQuotaExceeded = true;
+    }
     console.warn('Strategy 1 anggaran chunk load failed, trying Strategy 2:', e);
   }
 
@@ -197,6 +250,9 @@ export const subscribeToSharedData = (
       }
     },
     error => {
+      if (isQuotaError(error)) {
+        markFirestoreQuotaExceeded();
+      }
       console.error('Firestore subscription error:', error);
       if (onError) onError(error);
     }
@@ -247,18 +303,32 @@ export const fetchSharedDataOnce = async (): Promise<FirestoreAppData | null> =>
     }
     return null;
   } catch (error) {
+    if (isQuotaError(error)) {
+      markFirestoreQuotaExceeded();
+    }
     console.error('Error fetching Firestore shared data:', error);
     return null;
   }
 };
 
 /**
- * Saves or updates shared state to Firestore with automated dual-layer chunking and redundancy.
+ * Saves or updates shared state to Firestore with optimized single-collection chunking and quota protection.
  */
 export const saveSharedDataToFirestore = async (
   data: Partial<FirestoreAppData>,
   userIdentifier: string = 'System'
 ) => {
+  // If quota was exceeded previously, do not spam requests unless manually forced
+  if (getIsFirestoreQuotaExceeded()) {
+    const quotaErr = new Error("Quota exceeded. Free daily write units per project limit reached.");
+    throw quotaErr;
+  }
+
+  // Generate a quick signature to prevent redundant identical writes
+  const realCount = data.realisasiList?.length || 0;
+  const angCount = data.anggaranList?.length || 0;
+  const currentSignature = `${realCount}_${angCount}_${data.selectedTahun}_${data.users?.length || 0}`;
+
   try {
     const nowIso = new Date().toISOString();
     const docRef = doc(db, SHARED_DATA_COLLECTION, SHARED_DATA_DOC_ID);
@@ -276,7 +346,7 @@ export const saveSharedDataToFirestore = async (
       for (let i = 0; i < numChunks; i++) {
         const chunkSlice = realisasiItems.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
         
-        // Save to dedicated collection
+        // Save to dedicated collection (single clean destination)
         const colDocRef = doc(db, REALISASI_CHUNKS_COLLECTION, `chunk_${i}`);
         chunkPromises.push(
           setDoc(colDocRef, {
@@ -286,32 +356,12 @@ export const saveSharedDataToFirestore = async (
             updatedAt: nowIso
           })
         );
-
-        // Also save to shared state collection doc for backward compatibility
-        const sharedChunkRef = doc(db, SHARED_DATA_COLLECTION, `${REALISASI_CHUNK_PREFIX}${i}`);
-        chunkPromises.push(
-          setDoc(sharedChunkRef, {
-            chunkIndex: i,
-            totalChunks: numChunks,
-            items: chunkSlice,
-            updatedAt: nowIso
-          })
-        );
-      }
-
-      // Clean up obsolete chunks up to 30 chunks
-      for (let i = numChunks; i < numChunks + 10; i++) {
-        const oldColRef = doc(db, REALISASI_CHUNKS_COLLECTION, `chunk_${i}`);
-        const oldSharedRef = doc(db, SHARED_DATA_COLLECTION, `${REALISASI_CHUNK_PREFIX}${i}`);
-        chunkPromises.push(deleteDoc(oldColRef).catch(() => {}));
-        chunkPromises.push(deleteDoc(oldSharedRef).catch(() => {}));
       }
 
       await Promise.all(chunkPromises);
 
-      // Keep safe array on main doc (Firestore allows up to 1MB per doc)
-      const jsonStr = JSON.stringify(realisasiItems);
-      dataToSave.realisasiList = jsonStr.length < 700000 ? realisasiItems : realisasiItems.slice(0, 300);
+      // Keep safe preview array on main doc (< 500KB)
+      dataToSave.realisasiList = realisasiItems.slice(0, 150);
     }
 
     // 2. Handle anggaranList chunking
@@ -333,29 +383,10 @@ export const saveSharedDataToFirestore = async (
             updatedAt: nowIso
           })
         );
-
-        const sharedChunkRef = doc(db, SHARED_DATA_COLLECTION, `${ANGGARAN_CHUNK_PREFIX}${i}`);
-        chunkPromises.push(
-          setDoc(sharedChunkRef, {
-            chunkIndex: i,
-            totalChunks: numChunks,
-            items: chunkSlice,
-            updatedAt: nowIso
-          })
-        );
-      }
-
-      for (let i = numChunks; i < numChunks + 10; i++) {
-        const oldColRef = doc(db, ANGGARAN_CHUNKS_COLLECTION, `chunk_${i}`);
-        const oldSharedRef = doc(db, SHARED_DATA_COLLECTION, `${ANGGARAN_CHUNK_PREFIX}${i}`);
-        chunkPromises.push(deleteDoc(oldColRef).catch(() => {}));
-        chunkPromises.push(deleteDoc(oldSharedRef).catch(() => {}));
       }
 
       await Promise.all(chunkPromises);
-      
-      const jsonStr = JSON.stringify(anggaranItems);
-      dataToSave.anggaranList = jsonStr.length < 700000 ? anggaranItems : anggaranItems.slice(0, 300);
+      dataToSave.anggaranList = anggaranItems.slice(0, 150);
     }
 
     // 3. Save main document with metadata & non-chunked entities
@@ -368,10 +399,16 @@ export const saveSharedDataToFirestore = async (
       },
       { merge: true }
     );
+
+    lastSavedSignature = currentSignature;
   } catch (error) {
+    if (isQuotaError(error)) {
+      markFirestoreQuotaExceeded();
+    }
     console.error('Error saving shared data to Firestore:', error);
     throw error;
   }
 };
+
 
 

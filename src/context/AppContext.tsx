@@ -23,7 +23,10 @@ import {
 import {
   subscribeToSharedData,
   saveSharedDataToFirestore,
-  fetchSharedDataOnce
+  fetchSharedDataOnce,
+  getIsFirestoreQuotaExceeded,
+  resetFirestoreQuotaFlag,
+  isQuotaError
 } from '../services/firestoreSync';
 import {
 
@@ -332,14 +335,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
 
   // Cloud Real-Time Firebase Sync State
-  const [cloudSync, setCloudSync] = useState<CloudSyncStatus>({
-    status: 'connected',
+  const [cloudSync, setCloudSync] = useState<CloudSyncStatus>(() => ({
+    status: getIsFirestoreQuotaExceeded() ? 'quota_exceeded' : 'connected',
     lastSyncedAt: new Date().toISOString()
-  });
+  }));
 
   // Ref to prevent circular updates between Firestore listener and local state
   const isApplyingRemoteChange = useRef(false);
   const isInitialCloudLoad = useRef(false);
+  const isInitialMount = useRef(true);
+  const lastSavedDataSignature = useRef<string>('');
 
   // 1. Subscribe to Firestore Real-Time Updates (Live single source of truth from Firebase)
   useEffect(() => {
@@ -491,10 +496,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.error('Error writing to localStorage:', e);
     }
 
-    // Sync to Cloud Firestore if change originated locally (not from remote listener)
-    if (!isApplyingRemoteChange.current && !isInitialCloudLoad.current) {
+    // Compute data signature to detect real modifications
+    const currentSignature = `${realisasiList.length}_${anggaranList.length}_${selectedTahun}_${users.length}_${programs.length}_${kegiatanList.length}_${subKegiatanList.length}_${belanjaList.length}_${sumberDanaList.length}_${rekananList.length}_${importLogs.length}_${activityLogs.length}`;
+
+    // On initial mount or when applying updates from remote Firestore listener, do not trigger a write back
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      lastSavedDataSignature.current = currentSignature;
+      return;
+    }
+
+    if (isApplyingRemoteChange.current) {
+      lastSavedDataSignature.current = currentSignature;
+      return;
+    }
+
+    // If data has not changed compared to last saved state, skip writing
+    if (lastSavedDataSignature.current === currentSignature) {
+      return;
+    }
+
+    // Sync to Cloud Firestore only when local data has actually changed
+    if (!isInitialCloudLoad.current) {
+      if (getIsFirestoreQuotaExceeded()) {
+        setCloudSync(prev => ({ ...prev, status: 'quota_exceeded' }));
+        return;
+      }
+
       setCloudSync(prev => ({ ...prev, status: 'syncing' }));
       const timeoutId = setTimeout(() => {
+        if (getIsFirestoreQuotaExceeded()) {
+          setCloudSync(prev => ({ ...prev, status: 'quota_exceeded' }));
+          return;
+        }
+
         saveSharedDataToFirestore(
           {
             users,
@@ -516,6 +551,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           currentUser.nama || currentUser.username
         )
           .then(() => {
+            lastSavedDataSignature.current = currentSignature;
             setCloudSync({
               status: 'connected',
               lastSyncedAt: new Date().toISOString(),
@@ -523,10 +559,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             });
           })
           .catch(err => {
-            console.error('Failed to sync to Cloud Firestore:', err);
-            setCloudSync(prev => ({ ...prev, status: 'error' }));
+            if (isQuotaError(err)) {
+              console.warn('Firestore write quota exceeded for the day. Local & Google Sheet storage active.');
+              setCloudSync(prev => ({ ...prev, status: 'quota_exceeded' }));
+            } else {
+              console.error('Failed to sync to Cloud Firestore:', err);
+              setCloudSync(prev => ({ ...prev, status: 'error' }));
+            }
           });
-      }, 500); // 500ms debounce to batch rapid edits
+      }, 3000); // 3s debounce to batch rapid edits and save write quota
 
       return () => clearTimeout(timeoutId);
     }
@@ -552,6 +593,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Force manual cloud sync trigger
   const forceSyncCloud = async () => {
+    resetFirestoreQuotaFlag();
     setCloudSync(prev => ({ ...prev, status: 'syncing' }));
     try {
       await saveSharedDataToFirestore(
@@ -581,7 +623,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       logActivity(`Sinkronisasi Database Cloud (Firebase) manual berhasil`);
     } catch (err) {
-      setCloudSync(prev => ({ ...prev, status: 'error' }));
+      if (isQuotaError(err)) {
+        setCloudSync(prev => ({ ...prev, status: 'quota_exceeded' }));
+      } else {
+        setCloudSync(prev => ({ ...prev, status: 'error' }));
+      }
       throw err;
     }
   };

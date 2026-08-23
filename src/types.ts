@@ -161,7 +161,7 @@ export interface GoogleSheetConfig {
 }
 
 export interface CloudSyncStatus {
-  status: 'connected' | 'syncing' | 'offline' | 'error';
+  status: 'connected' | 'syncing' | 'offline' | 'error' | 'quota_exceeded';
   lastSyncedAt?: string;
   lastUpdatedBy?: string;
 }

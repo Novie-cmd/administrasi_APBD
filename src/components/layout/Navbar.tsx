@@ -144,11 +144,21 @@ export const Navbar: React.FC<{
           className={`flex items-center gap-1.5 rounded-xl border px-2.5 sm:px-3 py-1.5 text-xs font-medium transition-all ${
             cloudSync.status === 'syncing'
               ? 'border-cyan-500/50 bg-cyan-950/60 text-cyan-300 animate-pulse'
+              : cloudSync.status === 'quota_exceeded'
+              ? 'border-amber-500/50 bg-amber-950/40 text-amber-300 hover:border-amber-400'
               : cloudSync.status === 'error'
               ? 'border-rose-500/50 bg-rose-950/40 text-rose-300 hover:border-rose-400'
               : 'border-emerald-500/40 bg-emerald-950/40 text-emerald-300 hover:border-emerald-400 hover:text-white'
           }`}
-          title={`Cloud Real-Time Database: ${cloudSync.status === 'syncing' ? 'Menyinkronkan...' : 'Terhubung Real-Time (Laptop ⇄ HP)'}. Klik untuk paksa sinkronisasi sekarang.`}
+          title={`Status Cloud: ${
+            cloudSync.status === 'syncing'
+              ? 'Menyinkronkan...'
+              : cloudSync.status === 'quota_exceeded'
+              ? 'Kuota Cloud Harian Tercapai (Penyimpanan Lokal & Google Sheet Aktif)'
+              : cloudSync.status === 'error'
+              ? 'Koneksi Cloud Terputus'
+              : 'Terhubung Real-Time (Laptop ⇄ HP)'
+          }. Klik untuk buka menu sinkronisasi.`}
           id="btn-cloud-sync"
         >
           <span className="relative flex h-2 w-2">
@@ -156,6 +166,8 @@ export const Navbar: React.FC<{
               className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
                 cloudSync.status === 'syncing'
                   ? 'bg-cyan-400 animate-ping'
+                  : cloudSync.status === 'quota_exceeded'
+                  ? 'bg-amber-400'
                   : cloudSync.status === 'error'
                   ? 'bg-rose-500 animate-ping'
                   : 'bg-emerald-400 animate-ping'
@@ -165,15 +177,27 @@ export const Navbar: React.FC<{
               className={`relative inline-flex h-2 w-2 rounded-full ${
                 cloudSync.status === 'syncing'
                   ? 'bg-cyan-400'
+                  : cloudSync.status === 'quota_exceeded'
+                  ? 'bg-amber-400'
                   : cloudSync.status === 'error'
                   ? 'bg-rose-500'
                   : 'bg-emerald-500'
               }`}
             />
           </span>
-          <Cloud className={`h-3.5 w-3.5 ${cloudSync.status === 'syncing' ? 'animate-bounce text-cyan-300' : 'text-emerald-400'}`} />
+          <Cloud className={`h-3.5 w-3.5 ${
+            cloudSync.status === 'syncing'
+              ? 'animate-bounce text-cyan-300'
+              : cloudSync.status === 'quota_exceeded'
+              ? 'text-amber-400'
+              : 'text-emerald-400'
+          }`} />
           <span className="hidden lg:inline font-semibold">
-            {cloudSync.status === 'syncing' ? 'Syncing...' : 'Cloud Live'}
+            {cloudSync.status === 'syncing'
+              ? 'Syncing...'
+              : cloudSync.status === 'quota_exceeded'
+              ? 'Cloud Quota (Local OK)'
+              : 'Cloud Live'}
           </span>
         </button>
 
