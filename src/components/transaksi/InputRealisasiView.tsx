@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Realisasi } from '../../types';
+import { GoogleSheetSyncModal } from '../common/GoogleSheetSyncModal';
 import * as XLSX from 'xlsx';
 import { safeDownloadExcel } from '../../utils/downloadHelper';
 import {
@@ -73,6 +74,7 @@ export const InputRealisasiView: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showClearModal, setShowClearModal] = useState(false);
+  const [showSheetModal, setShowSheetModal] = useState(false);
 
   // Edit and Delete Modal States
   const [editingRealisasi, setEditingRealisasi] = useState<Realisasi | null>(null);
@@ -485,6 +487,16 @@ export const InputRealisasiView: React.FC = () => {
 
         {!isReadOnly && (
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setShowSheetModal(true)}
+              className="flex items-center gap-2 rounded-xl border border-emerald-600/70 bg-emerald-950/40 px-3.5 py-2.5 text-xs font-bold text-emerald-300 hover:bg-emerald-900/60 hover:border-emerald-500 transition shadow-sm"
+              id="btn-open-spreadsheet-sync"
+              title="Kirim / Tarik Data Google Spreadsheet"
+            >
+              <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
+              <span>Google Spreadsheet Sync</span>
+            </button>
+
             <button
               onClick={() => setShowClearModal(true)}
               className="flex items-center gap-2 rounded-xl border border-rose-900/60 bg-rose-950/40 px-3.5 py-2.5 text-xs font-bold text-rose-400 hover:bg-rose-900/60 hover:border-rose-700 transition"
@@ -1227,6 +1239,12 @@ export const InputRealisasiView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Google Spreadsheet Sync Modal */}
+      <GoogleSheetSyncModal
+        isOpen={showSheetModal}
+        onClose={() => setShowSheetModal(false)}
+      />
     </div>
   );
 };

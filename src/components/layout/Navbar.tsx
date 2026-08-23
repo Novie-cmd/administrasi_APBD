@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { NTBLogo } from '../common/NTBLogo';
 import { UserRole } from '../../types';
 import { PWAInstallModal } from '../common/PWAInstallModal';
+import { GoogleSheetSyncModal } from '../common/GoogleSheetSyncModal';
 import {
   Bell,
   Calendar,
@@ -19,7 +20,8 @@ import {
   Smartphone,
   Cloud,
   CloudCheck,
-  Radio
+  Radio,
+  FileSpreadsheet
 } from 'lucide-react';
 
 export const Navbar: React.FC<{
@@ -45,6 +47,7 @@ export const Navbar: React.FC<{
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [showNotifMenu, setShowNotifMenu] = useState(false);
   const [showPwaModal, setShowPwaModal] = useState(false);
+  const [showSheetModal, setShowSheetModal] = useState(false);
 
   const roles: UserRole[] = [
     'Administrator',
@@ -174,27 +177,20 @@ export const Navbar: React.FC<{
           </span>
         </button>
 
-        {/* Google Spreadsheet Sync Status */}
+        {/* Google Spreadsheet Sync Status & Action */}
         <button
-          onClick={syncWithSpreadsheet}
-          disabled={syncStatus === 'syncing'}
-          className={`hidden items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-all xl:flex ${
+          onClick={() => setShowSheetModal(true)}
+          className={`flex items-center gap-1.5 rounded-xl border px-2.5 sm:px-3 py-1.5 text-xs font-medium transition-all ${
             syncStatus === 'syncing'
-              ? 'border-emerald-500/50 bg-emerald-900/30 text-emerald-300'
-              : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-emerald-500 hover:text-white'
+              ? 'border-emerald-500/50 bg-emerald-900/30 text-emerald-300 animate-pulse'
+              : 'border-emerald-700/60 bg-emerald-950/40 text-emerald-300 hover:border-emerald-400 hover:text-white'
           }`}
-          title="Sinkronisasi otomatis dengan Google Spreadsheet"
+          title="Buka Menu Sinkronisasi Google Spreadsheet (Kirim / Tarik Data)"
           id="btn-sync-spreadsheet"
         >
-          <RefreshCw
-            className={`h-3.5 w-3.5 text-emerald-400 ${
-              syncStatus === 'syncing' ? 'animate-spin' : ''
-            }`}
-          />
-          <span className="hidden xl:inline">Sheet:</span>
-          <span className="font-semibold text-emerald-400">
-            {syncStatus === 'syncing' ? 'Syncing...' : 'Connected'}
-          </span>
+          <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-400" />
+          <span className="hidden sm:inline font-semibold">Google Sheet</span>
+          <span className="inline sm:hidden font-semibold">Sheet</span>
         </button>
 
         {/* Notifications Alert Dropdown */}
@@ -325,6 +321,7 @@ export const Navbar: React.FC<{
       </div>
 
       <PWAInstallModal isOpen={showPwaModal} onClose={() => setShowPwaModal(false)} />
+      <GoogleSheetSyncModal isOpen={showSheetModal} onClose={() => setShowSheetModal(false)} />
     </header>
   );
 };
