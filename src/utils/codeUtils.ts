@@ -44,6 +44,45 @@ export const isCodeEqual = (a: any, b: any): boolean => {
 };
 
 /**
+ * Checks whether a budget/expenditure account is classified as Belanja Hibah based on:
+ * 1. Specific Hibah codes such as:
+ *    - 5.1.02.01.001.00040 / 5.1.02.01.01.00040 / 5.1.02.01.01.0040 (Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat)
+ * 2. Standard Hibah account prefixes: 5.1.05, 5.1.5, 5.4
+ * 3. Text in namaBelanja or jenisBelanja containing 'hibah'
+ */
+export const isHibahAccount = (
+  kodeBelanja?: string | null,
+  namaBelanja?: string | null,
+  jenisBelanja?: string | null
+): boolean => {
+  const kb = (kodeBelanja || '').trim();
+  const nb = (namaBelanja || '').toLowerCase();
+  const jb = (jenisBelanja || '').toLowerCase();
+
+  // Normalized segment check for 5.1.02.01.001.00040 (5.1.2.1.1.40)
+  const normSeg = normalizeSegmentCode(kb);
+  const isTargetHibahCode =
+    normSeg === '5.1.2.1.1.40' ||
+    isCodeEqual(kb, '5.1.02.01.001.00040') ||
+    isCodeEqual(kb, '5.1.02.01.01.00040') ||
+    isCodeEqual(kb, '5.1.02.01.01.0040') ||
+    isCodeEqual(kb, '5.1.02.01.001.0040') ||
+    kb.startsWith('5.1.02.01.001.00040') ||
+    kb.startsWith('5.1.02.01.01.00040') ||
+    kb.startsWith('5.1.02.01.01.0040') ||
+    kb.startsWith('5.1.02.01.001.0040');
+
+  return (
+    isTargetHibahCode ||
+    kb.startsWith('5.1.05') ||
+    kb.startsWith('5.1.5') ||
+    kb.startsWith('5.4') ||
+    nb.includes('hibah') ||
+    jb.includes('hibah')
+  );
+};
+
+/**
  * Formats a budget expenditure code according to fiscal year specifications:
  * - TA 2026 and above: 5 digits for the final sub-object segment (e.g. 5.1.05.01.01.00001, 5.1.02.01.01.00040)
  * - TA 2025 and earlier: 4 digits for the final sub-object segment (e.g. 5.1.05.01.01.0001, 5.1.02.01.01.0040)

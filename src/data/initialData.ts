@@ -219,7 +219,7 @@ export const INITIAL_BELANJA: Belanja[] = [
   {
     kodeBelanja: '5.1.02.01.01.0040',
     namaBelanja: 'Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat',
-    jenisBelanja: 'Belanja Barang dan Jasa',
+    jenisBelanja: 'Belanja Hibah',
     tahun: 2025
   },
   {
@@ -275,7 +275,13 @@ export const INITIAL_BELANJA: Belanja[] = [
   {
     kodeBelanja: '5.1.02.01.01.00040',
     namaBelanja: 'Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat',
-    jenisBelanja: 'Belanja Barang dan Jasa',
+    jenisBelanja: 'Belanja Hibah',
+    tahun: 2026
+  },
+  {
+    kodeBelanja: '5.1.02.01.001.00040',
+    namaBelanja: 'Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat',
+    jenisBelanja: 'Belanja Hibah',
     tahun: 2026
   },
   {

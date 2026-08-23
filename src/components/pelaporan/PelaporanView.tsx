@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { isCodeEqual } from '../../utils/codeUtils';
+import { isCodeEqual, isHibahAccount } from '../../utils/codeUtils';
 import { NTBLogo } from '../common/NTBLogo';
 import * as XLSX from 'xlsx';
 import { safeDownloadExcel } from '../../utils/downloadHelper';
@@ -1015,26 +1015,13 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
   });
 
   // Calculation for Laporan Semua Belanja Hibah
-  const isHibahAccount = (kodeBelanja: string, namaBelanja: string, jenisBelanja?: string) => {
-    const kb = (kodeBelanja || '').trim();
-    const nb = (namaBelanja || '').toLowerCase();
-    const jb = (jenisBelanja || '').toLowerCase();
-    return (
-      kb.startsWith('5.1.05') ||
-      kb.startsWith('5.1.5') ||
-      kb.startsWith('5.4') ||
-      nb.includes('hibah') ||
-      jb.includes('hibah')
-    );
-  };
-
   const hibahAnggaranList = currentAnggaran.filter(a => {
     const belObj = belanjaList.find(b => isCodeEqual(b.kodeBelanja, a.kodeBelanja));
     return isHibahAccount(a.kodeBelanja, a.namaBelanja || belObj?.namaBelanja || '', belObj?.jenisBelanja);
   });
 
-  // Also include any realisasi that belongs to hibah even if not in anggaran
-  const hibahReportData = hibahAnggaranList.map((ang, idx) => {
+  // Calculate items from anggaran
+  const hibahReportDataFromAnggaran = hibahAnggaranList.map((ang, idx) => {
     const subObj = subKegiatanList.find(s => isCodeEqual(s.kodeSub, ang.kodeSub));
     const belObj = belanjaList.find(b => isCodeEqual(b.kodeBelanja, ang.kodeBelanja));
 
@@ -1080,6 +1067,51 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
       kodeKegiatan: ang.kodeKegiatan
     };
   });
+
+  // Also include any realisasi that belongs to hibah even if not in anggaran
+  const standaloneHibahRealisasi: typeof hibahReportDataFromAnggaran = [];
+  const uncoveredMap = new Map<string, { kodeSub: string; kodeBelanja: string; totalReal: number }>();
+  currentRealisasi.forEach(r => {
+    const belObj = belanjaList.find(b => isCodeEqual(b.kodeBelanja, r.kodeBelanja));
+    const isHibah = isHibahAccount(r.kodeBelanja, r.namaBelanja || belObj?.namaBelanja || '', belObj?.jenisBelanja);
+    if (isHibah) {
+      const isCovered = hibahAnggaranList.some(a => isCodeEqual(a.kodeBelanja, r.kodeBelanja) && (isCodeEqual(a.kodeSub, r.kodeSub) || !r.kodeSub));
+      if (!isCovered) {
+        const key = `${r.kodeSub || 'SUB-LAIN'}_${r.kodeBelanja}`;
+        if (!uncoveredMap.has(key)) {
+          uncoveredMap.set(key, { kodeSub: r.kodeSub || '', kodeBelanja: r.kodeBelanja, totalReal: 0 });
+        }
+        uncoveredMap.get(key)!.totalReal += r.nilai;
+      }
+    }
+  });
+
+  uncoveredMap.forEach((val, key) => {
+    const subObj = subKegiatanList.find(s => isCodeEqual(s.kodeSub, val.kodeSub));
+    const belObj = belanjaList.find(b => isCodeEqual(b.kodeBelanja, val.kodeBelanja));
+    standaloneHibahRealisasi.push({
+      id: `real-hibah-${key}`,
+      no: hibahReportDataFromAnggaran.length + standaloneHibahRealisasi.length + 1,
+      kodeSub: val.kodeSub,
+      namaSub: subObj?.namaSub || val.kodeSub || 'Belanja Hibah',
+      kodeBelanja: val.kodeBelanja,
+      namaBelanja: belObj?.namaBelanja || 'Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat',
+      sumberDana: 'DAU',
+      paguMurni: 0,
+      revisi: 0,
+      nilaiSPD: 0,
+      paguAkhir: 0,
+      realisasi: val.totalReal,
+      sisa: 0 - val.totalReal,
+      persen: 100,
+      status: 'full',
+      statusText: 'Terserap Penuh',
+      kodeProgram: subObj?.kodeProgram || '',
+      kodeKegiatan: subObj?.kodeKegiatan || ''
+    });
+  });
+
+  const hibahReportData = [...hibahReportDataFromAnggaran, ...standaloneHibahRealisasi];
 
   const filteredHibahData = hibahReportData.filter(item => {
     if (hibahFilterStatus === 'unexecuted' && item.status !== 'unexecuted') return false;
@@ -2276,7 +2308,7 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                         <AlertCircle className="h-8 w-8 text-emerald-500/60 mx-auto mb-2" />
                         <p className="font-semibold text-sm">Tidak ada data Rekening Belanja Hibah yang sesuai filter.</p>
                         <p className="text-xs text-slate-500 mt-1">
-                          Pastikan rekening belanja hibah sudah diinput pada menu Input Anggaran atau Master Belanja (dengan kode 5.1.05.x atau memiliki kata "Hibah").
+                          Pastikan rekening belanja hibah sudah diinput pada menu Input Anggaran atau Master Belanja (dengan kode 5.1.05.x, 5.1.02.01.001.00040, atau memiliki kata "Hibah").
                         </p>
                       </td>
                     </tr>

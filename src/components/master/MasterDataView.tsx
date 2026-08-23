@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { NTBLogo } from '../common/NTBLogo';
+import { isHibahAccount, isCodeEqual } from '../../utils/codeUtils';
 import { OPD, Program, Kegiatan, SubKegiatan, Belanja, TahunAnggaran, SumberDana, Rekanan } from '../../types';
 import { INITIAL_OPD } from '../../data/initialData';
 import * as XLSX from 'xlsx';
@@ -593,7 +594,19 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
           } else if (importCategory === 'belanja') {
             const kodeBelanja = getVal('koderekening', 'kodebelanja', 'kode', 'rekening');
             const namaBelanja = getVal('uraianbelanja', 'namabelanja', 'uraian', 'namarekening');
-            const jenisBelanja = getVal('jenisbelanja', 'jenis') || 'Belanja Barang dan Jasa';
+            const userJenis = getVal('jenisbelanja', 'jenis');
+            let jenisBelanja = userJenis;
+            if (!jenisBelanja) {
+              if (isHibahAccount(kodeBelanja, namaBelanja)) {
+                jenisBelanja = 'Belanja Hibah';
+              } else if (kodeBelanja.startsWith('5.1.01') || (namaBelanja && namaBelanja.toLowerCase().includes('gaji'))) {
+                jenisBelanja = 'Belanja Pegawai';
+              } else if (kodeBelanja.startsWith('5.2')) {
+                jenisBelanja = 'Belanja Modal';
+              } else {
+                jenisBelanja = 'Belanja Barang dan Jasa';
+              }
+            }
 
             if (!kodeBelanja || !namaBelanja) {
               errs.push(`Baris ${idx + 2}: Kode Rekening atau Uraian Belanja kosong.`);
