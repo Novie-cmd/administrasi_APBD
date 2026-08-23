@@ -179,6 +179,8 @@ interface AppContextType {
   resetAllData: () => void;
   restoreFromBackup: () => { success: boolean; realisasiCount: number; anggaranCount: number; message: string };
   importBackupJSON: (jsonData: string) => { success: boolean; message: string };
+  pushToGoogleSheet: (customUrl?: string) => Promise<{ success: boolean; message: string }>;
+  pullFromGoogleSheet: (customUrl?: string) => Promise<{ success: boolean; realisasiCount: number; anggaranCount: number; message: string }>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -1425,14 +1427,173 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActivityLogs([]);
   };
 
-  // Google Spreadsheet Sync
-  const syncWithSpreadsheet = async () => {
+  // Google Spreadsheet Sync - Push & Pull implementation
+  const pushToGoogleSheet = async (customUrl?: string): Promise<{ success: boolean; message: string }> => {
+    const targetUrl = (customUrl || sheetConfig.webAppUrl || '').trim();
+    if (!targetUrl) {
+      return { success: false, message: 'URL Web App Google Apps Script belum diisi. Silakan masukkan URL di pengaturan.' };
+    }
+
     setSyncStatus('syncing');
-    logActivity(`Memulai sinkronisasi data dengan Google Spreadsheet`);
+    logActivity(`Mengirim seluruh data transaksi & pagu ke Google Spreadsheet`);
 
     try {
-      // Simulate Apps Script webhook fetch or push
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      const payload = {
+        action: 'saveAll',
+        timestamp: new Date().toISOString(),
+        realisasiList,
+        anggaranList,
+        programs,
+        kegiatanList,
+        subKegiatanList,
+        belanjaList,
+        tahunList,
+        opdList
+      };
+
+      // Send to Apps Script WebApp
+      await fetch(targetUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+        mode: 'no-cors' // Google Apps Script Web App redirects work with no-cors or JSONP
+      });
+
+      const timeStr = new Date().toLocaleTimeString('id-ID');
+      setSheetConfig(prev => ({
+        ...prev,
+        lastSyncedAt: new Date().toISOString().replace('T', ' ').substring(0, 19),
+        status: 'Connected'
+      }));
+      setSyncStatus('success');
+      logActivity(`Berhasil mencadangkan ${realisasiList.length} realisasi & ${anggaranList.length} pagu ke Google Spreadsheet`);
+      return {
+        success: true,
+        message: `Berhasil mengirim ${realisasiList.length} data realisasi & ${anggaranList.length} pagu anggaran ke Google Spreadsheet pada pukul ${timeStr}.`
+      };
+    } catch (err: any) {
+      console.error('Push to Google Sheet error:', err);
+      setSyncStatus('error');
+      setSheetConfig(prev => ({ ...prev, status: 'Error' }));
+      logActivity(`Gagal mengirim data ke Google Spreadsheet: ${err?.message || ''}`);
+      return {
+        success: false,
+        message: `Gagal mengirim data ke Google Spreadsheet: ${err?.message || 'Pastikan URL Web App valid dan hak akses diset ke Anyone.'}`
+      };
+    } finally {
+      setTimeout(() => setSyncStatus('idle'), 3000);
+    }
+  };
+
+  const pullFromGoogleSheet = async (customUrl?: string): Promise<{
+    success: boolean;
+    realisasiCount: number;
+    anggaranCount: number;
+    message: string;
+  }> => {
+    const targetUrl = (customUrl || sheetConfig.webAppUrl || '').trim();
+    if (!targetUrl) {
+      return {
+        success: false,
+        realisasiCount: 0,
+        anggaranCount: 0,
+        message: 'URL Web App Google Apps Script belum diisi. Silakan masukkan URL di pengaturan.'
+      };
+    }
+
+    setSyncStatus('syncing');
+    logActivity(`Menarik data dari Google Spreadsheet`);
+
+    try {
+      const fetchUrl = targetUrl.includes('?') ? `${targetUrl}&action=getAll` : `${targetUrl}?action=getAll`;
+      const res = await fetch(fetchUrl);
+      if (!res.ok) {
+        throw new Error(`HTTP Error ${res.status}: ${res.statusText}`);
+      }
+      const data = await res.json();
+
+      let rCount = 0;
+      let aCount = 0;
+
+      if (data.realisasiList && Array.isArray(data.realisasiList)) {
+        setRealisasiList(prev => {
+          const map = new Map<string, Realisasi>();
+          prev.forEach(r => {
+            const key = makeRealisasiCompositeKey(r.noSP2D, r.kodeBelanja, r.kodeSub, r.nilai, r.uraian, r.tahun) || r.id;
+            map.set(key, r);
+          });
+          data.realisasiList.forEach((r: any) => {
+            const tgl = r.tanggal || new Date().toISOString().split('T')[0];
+            const parsedDate = new Date(tgl);
+            const bln = !isNaN(parsedDate.getMonth()) ? parsedDate.getMonth() + 1 : 1;
+            const sub = subKegiatanList.find(s => s.kodeSub === r.kodeSub);
+            const kdProg = r.kodeProgram || sub?.kodeProgram || (r.kodeSub ? r.kodeSub.split('.').slice(0, 3).join('.') : '5.01.01');
+            const kdKeg = r.kodeKegiatan || sub?.kodeKegiatan || (r.kodeSub ? r.kodeSub.split('.').slice(0, 5).join('.') : '5.01.01.2.01');
+
+            const item: Realisasi = {
+              id: r.id || `REAL-${r.tahun || selectedTahun}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+              tahun: Number(r.tahun) || selectedTahun,
+              tanggal: tgl,
+              bulan: Number(r.bulan) || bln,
+              kodeProgram: kdProg,
+              kodeKegiatan: kdKeg,
+              kodeSub: r.kodeSub || '5.01.01.2.01.01',
+              kodeBelanja: r.kodeBelanja || '',
+              uraian: r.uraian || '',
+              nilai: Number(r.nilai) || 0,
+              noSP2D: r.noSP2D || '',
+              noSPM: r.noSPM || '',
+              rekanan: r.rekanan || '',
+              operator: r.operator || 'Spreadsheet Import',
+              statusValidation: r.statusValidation || 'Disetujui PPK',
+              catatanValidation: r.catatanValidation || '',
+              buktiUrl: r.buktiUrl || ''
+            };
+            const key = makeRealisasiCompositeKey(item.noSP2D, item.kodeBelanja, item.kodeSub, item.nilai, item.uraian, item.tahun) || item.id;
+            map.set(key, item);
+          });
+          const merged = Array.from(map.values());
+          rCount = merged.length;
+          return merged;
+        });
+      }
+
+      if (data.anggaranList && Array.isArray(data.anggaranList)) {
+        setAnggaranList(prev => {
+          const map = new Map<string, Anggaran>();
+          prev.forEach(a => map.set(`${a.kodeBelanja}_${a.kodeSub}_${a.tahun}`, a));
+          data.anggaranList.forEach((a: any) => {
+            const sub = subKegiatanList.find(s => s.kodeSub === a.kodeSub);
+            const bel = belanjaList.find(b => b.kodeBelanja === a.kodeBelanja);
+            const kdProg = a.kodeProgram || sub?.kodeProgram || (a.kodeSub ? a.kodeSub.split('.').slice(0, 3).join('.') : '5.01.01');
+            const kdKeg = a.kodeKegiatan || sub?.kodeKegiatan || (a.kodeSub ? a.kodeSub.split('.').slice(0, 5).join('.') : '5.01.01.2.01');
+            const pagu = Number(a.pagu) || Number(a.nilaiMurni) || Number(a.nilai) || 0;
+            const revisi = Number(a.revisi) || (a.nilaiPerubahan ? Number(a.nilaiPerubahan) - pagu : 0);
+            const paguAkhir = Number(a.paguAkhir) || (pagu + revisi) || Number(a.nilai) || 0;
+
+            const item: Anggaran = {
+              id: a.id || `ANG-${a.tahun || selectedTahun}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+              tahun: Number(a.tahun) || selectedTahun,
+              kodeProgram: kdProg,
+              kodeKegiatan: kdKeg,
+              kodeSub: a.kodeSub || '5.01.01.2.01.01',
+              kodeBelanja: a.kodeBelanja || '',
+              namaBelanja: a.namaBelanja || bel?.namaBelanja || `Belanja Rekening ${a.kodeBelanja || ''}`,
+              pagu: pagu,
+              revisi: revisi,
+              nilaiSPD: Number(a.nilaiSPD) || paguAkhir,
+              paguAkhir: paguAkhir,
+              tanggalInput: a.tanggalInput || new Date().toISOString().split('T')[0],
+              operator: a.operator || 'Spreadsheet Import',
+              sumberDana: a.sumberDana || 'DAU'
+            };
+            map.set(`${item.kodeBelanja}_${item.kodeSub}_${item.tahun}`, item);
+          });
+          const merged = Array.from(map.values());
+          aCount = merged.length;
+          return merged;
+        });
+      }
 
       setSheetConfig(prev => ({
         ...prev,
@@ -1440,14 +1601,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         status: 'Connected'
       }));
       setSyncStatus('success');
-      logActivity(`Sinkronisasi Google Spreadsheet BERHASIL`);
-    } catch (err) {
+      logActivity(`Berhasil menarik data dari Google Spreadsheet: ${rCount} realisasi & ${aCount} pagu anggaran`);
+
+      return {
+        success: true,
+        realisasiCount: rCount,
+        anggaranCount: aCount,
+        message: `Berhasil menarik data dari Google Spreadsheet! Total data di aplikasi sekarang: ${rCount} transaksi realisasi dan ${aCount} rekening pagu anggaran.`
+      };
+    } catch (err: any) {
+      console.error('Pull from Google Sheet error:', err);
       setSyncStatus('error');
       setSheetConfig(prev => ({ ...prev, status: 'Error' }));
-      logActivity(`Sinkronisasi Google Spreadsheet GAGAL`);
+      return {
+        success: false,
+        realisasiCount: 0,
+        anggaranCount: 0,
+        message: `Gagal menarik data dari Google Spreadsheet: ${err?.message || 'Pastikan Apps Script telah di-deploy sebagai Web App dengan akses "Anyone".'}`
+      };
     } finally {
       setTimeout(() => setSyncStatus('idle'), 3000);
     }
+  };
+
+  // Google Spreadsheet Sync
+  const syncWithSpreadsheet = async () => {
+    return await pushToGoogleSheet();
   };
 
   const resetFilters = () => {
@@ -1651,7 +1830,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         clearAllActivityLogs,
         resetAllData,
         restoreFromBackup,
-        importBackupJSON
+        importBackupJSON,
+        pushToGoogleSheet,
+        pullFromGoogleSheet
       }}
     >
       {children}

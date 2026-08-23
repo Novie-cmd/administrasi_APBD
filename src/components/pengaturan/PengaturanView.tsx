@@ -23,7 +23,13 @@ import {
   FileText,
   Cloud,
   Smartphone,
-  Laptop
+  Laptop,
+  Copy,
+  Check,
+  FileSpreadsheet,
+  ArrowDownCircle,
+  ExternalLink,
+  Code
 } from 'lucide-react';
 
 export const PengaturanView: React.FC = () => {
@@ -37,6 +43,8 @@ export const PengaturanView: React.FC = () => {
     setSheetConfig,
     syncStatus,
     syncWithSpreadsheet,
+    pushToGoogleSheet,
+    pullFromGoogleSheet,
     cloudSync,
     forceSyncCloud,
     activityLogs,
@@ -60,8 +68,12 @@ export const PengaturanView: React.FC = () => {
     currentUser
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'users' | 'cloud' | 'spreadsheet' | 'backup' | 'logs'>('cloud');
+  const [activeTab, setActiveTab] = useState<'users' | 'cloud' | 'spreadsheet' | 'backup' | 'logs'>('spreadsheet');
   const [backupMessage, setBackupMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [sheetMessage, setSheetMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [copiedScript, setCopiedScript] = useState(false);
+  const [isPushingSheet, setIsPushingSheet] = useState(false);
+  const [isPullingSheet, setIsPullingSheet] = useState(false);
 
   // Search filter
   const [searchTerm, setSearchTerm] = useState('');
@@ -473,11 +485,105 @@ export const PengaturanView: React.FC = () => {
       {/* TAB 2: GOOGLE SPREADSHEET */}
       {activeTab === 'spreadsheet' && (
         <div className="space-y-6">
+          {/* Status Alert Banner */}
+          {sheetMessage && (
+            <div
+              className={`flex items-center justify-between rounded-2xl border p-4 text-xs font-semibold ${
+                sheetMessage.type === 'success'
+                  ? 'border-emerald-700/60 bg-emerald-950/60 text-emerald-300'
+                  : 'border-rose-700/60 bg-rose-950/60 text-rose-300'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                {sheetMessage.type === 'success' ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                ) : (
+                  <AlertTriangle className="h-4 w-4 text-rose-400 shrink-0" />
+                )}
+                <span>{sheetMessage.text}</span>
+              </div>
+              <button
+                onClick={() => setSheetMessage(null)}
+                className="text-slate-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          {/* Quick Push & Pull Actions Banner */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="rounded-2xl border border-emerald-700/50 bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-900 p-5 space-y-3 shadow-xl">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400">
+                  <Upload className="h-6 w-6" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white">1. Kirim & Simpan Data ke Spreadsheet</h4>
+                  <p className="text-xs text-slate-400">Mencadangkan {realisasiList.length} transaksi realisasi & {anggaranList.length} pagu anggaran ke Google Sheet Anda.</p>
+                </div>
+              </div>
+              <button
+                onClick={async () => {
+                  if (!sheetConfig.webAppUrl) {
+                    setSheetMessage({ type: 'error', text: 'Silakan masukkan URL Web App Google Apps Script Anda terlebih dahulu di bawah.' });
+                    return;
+                  }
+                  setIsPushingSheet(true);
+                  const res = await pushToGoogleSheet();
+                  setIsPushingSheet(false);
+                  setSheetMessage({
+                    type: res.success ? 'success' : 'error',
+                    text: res.message
+                  });
+                }}
+                disabled={isPushingSheet || syncStatus === 'syncing'}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 py-2.5 px-4 text-xs font-bold text-white shadow-lg transition"
+              >
+                <RefreshCw className={`h-4 w-4 ${isPushingSheet ? 'animate-spin' : ''}`} />
+                <span>{isPushingSheet ? 'Sedang Mengirim ke Google Sheet...' : 'Kirim Seluruh Data ke Google Sheet'}</span>
+              </button>
+            </div>
+
+            <div className="rounded-2xl border border-sky-700/50 bg-gradient-to-br from-sky-950/40 via-slate-900 to-slate-900 p-5 space-y-3 shadow-xl">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-sky-500/20 text-sky-400">
+                  <ArrowDownCircle className="h-6 w-6" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white">2. Tarik Data dari Spreadsheet ke Aplikasi</h4>
+                  <p className="text-xs text-slate-400">Memulihkan data transaksi saat tampilan aplikasi kosong atau setelah ganti perangkat.</p>
+                </div>
+              </div>
+              <button
+                onClick={async () => {
+                  if (!sheetConfig.webAppUrl) {
+                    setSheetMessage({ type: 'error', text: 'Silakan masukkan URL Web App Google Apps Script Anda terlebih dahulu di bawah.' });
+                    return;
+                  }
+                  setIsPullingSheet(true);
+                  const res = await pullFromGoogleSheet();
+                  setIsPullingSheet(false);
+                  setSheetMessage({
+                    type: res.success ? 'success' : 'error',
+                    text: res.message
+                  });
+                }}
+                disabled={isPullingSheet || syncStatus === 'syncing'}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 hover:bg-sky-500 py-2.5 px-4 text-xs font-bold text-white shadow-lg transition"
+              >
+                <Download className={`h-4 w-4 ${isPullingSheet ? 'animate-spin' : ''}`} />
+                <span>{isPullingSheet ? 'Sedang Menarik Data dari Google Sheet...' : 'Tarik Data dari Spreadsheet'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Konfigurasi URL */}
           <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-4 shadow-xl">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <Database className="h-5 w-5 text-emerald-400" />
-                <h3 className="text-sm font-bold text-white">Konfigurasi Google Apps Script WebApp</h3>
+                <h3 className="text-sm font-bold text-white">Konfigurasi URL Google Apps Script WebApp</h3>
               </div>
               <span className="rounded-full bg-emerald-950 px-3 py-1 text-xs font-bold text-emerald-300 border border-emerald-700">
                 Status: {sheetConfig.status}
@@ -485,37 +591,122 @@ export const PengaturanView: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-300">Spreadsheet ID:</label>
+              <label className="text-xs font-bold text-slate-300">Google Apps Script Web App URL (Penting):</label>
               <input
                 type="text"
-                value={sheetConfig.spreadsheetId}
-                onChange={e => setSheetConfig({ ...sheetConfig, spreadsheetId: e.target.value })}
-                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-emerald-300 font-mono"
+                placeholder="https://script.google.com/macros/s/.../exec"
+                value={sheetConfig.webAppUrl}
+                onChange={e => setSheetConfig({ ...sheetConfig, webAppUrl: e.target.value })}
+                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-emerald-300 font-mono focus:border-emerald-500 focus:outline-none"
               />
+              <p className="text-[11px] text-slate-400 mt-1">Dapatkan URL ini setelah menerapkan (Deploy) kode Google Apps Script di bawah sebagai Web App.</p>
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-300">Google Apps Script Web App URL:</label>
+              <label className="text-xs font-bold text-slate-300">Spreadsheet ID (Opsional):</label>
               <input
                 type="text"
-                value={sheetConfig.webAppUrl}
-                onChange={e => setSheetConfig({ ...sheetConfig, webAppUrl: e.target.value })}
-                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white font-mono"
+                placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+                value={sheetConfig.spreadsheetId}
+                onChange={e => setSheetConfig({ ...sheetConfig, spreadsheetId: e.target.value })}
+                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-slate-300 font-mono"
               />
             </div>
 
             <div className="flex items-center justify-between pt-2">
               <span className="text-xs text-slate-400">
-                Terakhir Sinkronisasi: {sheetConfig.lastSyncedAt || 'Belum'}
+                Terakhir Sinkronisasi: <strong className="text-white">{sheetConfig.lastSyncedAt || 'Belum pernah'}</strong>
               </span>
               <button
-                onClick={syncWithSpreadsheet}
-                disabled={syncStatus === 'syncing'}
-                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 shadow-md"
+                onClick={async () => {
+                  if (!sheetConfig.webAppUrl) {
+                    setSheetMessage({ type: 'error', text: 'Masukkan Web App URL terlebih dahulu.' });
+                    return;
+                  }
+                  setIsPushingSheet(true);
+                  const res = await pushToGoogleSheet();
+                  setIsPushingSheet(false);
+                  setSheetMessage({
+                    type: res.success ? 'success' : 'error',
+                    text: res.message
+                  });
+                }}
+                disabled={isPushingSheet || syncStatus === 'syncing'}
+                className="flex items-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-2 text-xs font-bold text-white border border-slate-700 shadow"
               >
-                <RefreshCw className={`h-4 w-4 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
-                <span>Test & Sinkronkan Sekarang</span>
+                <RefreshCw className={`h-3.5 w-3.5 ${isPushingSheet ? 'animate-spin' : ''}`} />
+                <span>Simpan & Tes Koneksi</span>
               </button>
+            </div>
+          </div>
+
+          {/* PETUNJUK & KODE GOOGLE APPS SCRIPT */}
+          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-5 shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Code className="h-5 w-5 text-amber-400" />
+                <h3 className="text-sm font-bold text-white">Kode Google Apps Script & Petunjuk Setup 3 Menit</h3>
+              </div>
+              <button
+                onClick={() => {
+                  const scriptText = getGoogleAppsScriptCode();
+                  navigator.clipboard.writeText(scriptText);
+                  setCopiedScript(true);
+                  setTimeout(() => setCopiedScript(false), 2500);
+                }}
+                className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition shadow ${
+                  copiedScript
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-amber-600 hover:bg-amber-500 text-white'
+                }`}
+              >
+                {copiedScript ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                <span>{copiedScript ? 'Kode Berhasil Disalin!' : 'Salin Seluruh Kode Script'}</span>
+              </button>
+            </div>
+
+            {/* Langkah-langkah */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">1</span>
+                  <h5 className="text-xs font-bold text-white">Buka Apps Script di Sheet</h5>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Buka Google Spreadsheet baru di browser Anda, lalu klik menu <strong className="text-white">Ekstensi (Extensions)</strong> &gt; <strong className="text-white">Apps Script</strong>.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">2</span>
+                  <h5 className="text-xs font-bold text-white">Paste Kode & Simpan</h5>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Hapus kode default di editor, klik tombol <strong className="text-amber-300">"Salin Seluruh Kode Script"</strong> di atas, lalu tempelkan (*paste*) kode tersebut dan tekan <strong>Ctrl + S</strong>.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">3</span>
+                  <h5 className="text-xs font-bold text-white">Terapkan (Deploy) Web App</h5>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Klik <strong className="text-white">Deploy &gt; New deployment</strong>. Pilih tipe <strong className="text-white">Web app</strong>, ubah <em>Who has access</em> ke <strong className="text-emerald-400">Anyone (Siapa saja)</strong>, lalu salin Web App URL ke aplikasi ini.
+                </p>
+              </div>
+            </div>
+
+            {/* Code Snippet Box */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span className="font-mono">Code.gs (Google Apps Script)</span>
+                <span className="text-[11px] text-slate-500">Mendukung otomatis pembuatan sheet Realisasi_SP2D &amp; Pagu_Anggaran</span>
+              </div>
+              <div className="relative rounded-xl border border-slate-800 bg-slate-950 p-4 overflow-x-auto max-h-80 font-mono text-xs text-emerald-300 leading-relaxed">
+                <pre>{getGoogleAppsScriptCode()}</pre>
+              </div>
             </div>
           </div>
         </div>
@@ -1009,3 +1200,221 @@ export const PengaturanView: React.FC = () => {
     </div>
   );
 };
+
+// Helper function that returns Google Apps Script code for 2-way sync
+function getGoogleAppsScriptCode(): string {
+  return `/**
+ * ============================================================================
+ * GOOGLE APPS SCRIPT - SISTEM INFORMASI KEUANGAN (BFMS NTB)
+ * Web App Penghubung Database Google Spreadsheet & Aplikasi Web
+ * ============================================================================
+ * PETUNJUK PENERAPAN:
+ * 1. Buka Google Spreadsheet baru Anda di Google Drive
+ * 2. Klik menu 'Extensions' (Ekstensi) > 'Apps Script'
+ * 3. Hapus seluruh isi kode bawaan, lalu paste (tempel) kode di bawah ini
+ * 4. Klik icon 'Save' (Simpan) atau tekan Ctrl + S
+ * 5. Klik tombol biru 'Deploy' (Terapkan) > 'New deployment' (Penerapan baru)
+ * 6. Klik ikon roda gigi ⚙️ di sebelah 'Select type' > pilih 'Web app'
+ *    - Description: BFMS NTB Sync
+ *    - Execute as: Me (email akun Anda)
+ *    - Who has access: Anyone (Siapa saja)  <-- PENTING!
+ * 7. Klik 'Deploy', izinkan akses (Authorize Access), lalu salin 'Web App URL'
+ * 8. Tempelkan URL tersebut ke kolom Pengaturan Google Spreadsheet di Aplikasi
+ * ============================================================================
+ */
+
+function doGet(e) {
+  try {
+    var action = (e && e.parameter && e.parameter.action) ? e.parameter.action : 'getAll';
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    if (action === 'ping') {
+      return createJsonResponse({ status: 'ok', message: 'Google Apps Script WebApp Aktif & Terhubung', time: new Date().toISOString() });
+    }
+    
+    var realisasiSheet = getOrCreateSheet(ss, 'Realisasi_SP2D');
+    var anggaranSheet = getOrCreateSheet(ss, 'Pagu_Anggaran');
+    
+    var realisasiData = getSheetRowsAsJson(realisasiSheet);
+    var anggaranData = getSheetRowsAsJson(anggaranSheet);
+    
+    return createJsonResponse({
+      success: true,
+      message: 'Data berhasil ditarik dari Google Spreadsheet',
+      timestamp: new Date().toISOString(),
+      realisasiCount: realisasiData.length,
+      anggaranCount: anggaranData.length,
+      realisasiList: realisasiData,
+      anggaranList: anggaranData
+    });
+  } catch (err) {
+    return createJsonResponse({
+      success: false,
+      error: err.toString()
+    });
+  }
+}
+
+function doPost(e) {
+  try {
+    var payload = {};
+    if (e && e.postData && e.postData.contents) {
+      payload = JSON.parse(e.postData.contents);
+    }
+    
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var savedRealisasi = 0;
+    var savedAnggaran = 0;
+    
+    // 1. Simpan Data Realisasi SP2D
+    if (payload.realisasiList && Array.isArray(payload.realisasiList)) {
+      var sheetRealisasi = getOrCreateSheet(ss, 'Realisasi_SP2D');
+      var headers = [
+        'ID', 'Tahun', 'Tanggal', 'No_SP2D', 'No_SPM', 
+        'Kode_Sub_Kegiatan', 'Kode_Rekening_Belanja', 'Uraian_Belanja', 
+        'Nilai_Realisasi_Rp', 'Rekanan_Penerima', 'Status_Validasi', 'Operator'
+      ];
+      
+      sheetRealisasi.clear();
+      sheetRealisasi.appendRow(headers);
+      formatHeader(sheetRealisasi, '#047857'); // Emerald green
+      
+      if (payload.realisasiList.length > 0) {
+        var rows = payload.realisasiList.map(function(r) {
+          return [
+            r.id || '',
+            r.tahun || '',
+            r.tanggal || '',
+            r.noSP2D || '',
+            r.noSPM || '',
+            r.kodeSub || '',
+            r.kodeBelanja || '',
+            r.uraian || '',
+            Number(r.nilai) || 0,
+            r.rekanan || '',
+            r.statusValidation || 'Disetujui PPK',
+            r.operator || ''
+          ];
+        });
+        sheetRealisasi.getRange(2, 1, rows.length, headers.length).setValues(rows);
+        sheetRealisasi.getRange(2, 9, rows.length, 1).setNumberFormat('#,##0');
+        savedRealisasi = rows.length;
+      }
+    }
+    
+    // 2. Simpan Data Pagu Anggaran
+    if (payload.anggaranList && Array.isArray(payload.anggaranList)) {
+      var sheetAnggaran = getOrCreateSheet(ss, 'Pagu_Anggaran');
+      var headersAnggaran = [
+        'ID', 'Tahun', 'Kode_Sub_Kegiatan', 'Kode_Rekening_Belanja', 
+        'Pagu_Murni_Rp', 'Pagu_Perubahan_Rp', 'Nilai_Pagu_Efektif_Rp', 'Sumber_Dana'
+      ];
+      
+      sheetAnggaran.clear();
+      sheetAnggaran.appendRow(headersAnggaran);
+      formatHeader(sheetAnggaran, '#0284c7'); // Sky blue
+      
+      if (payload.anggaranList.length > 0) {
+        var rowsAnggaran = payload.anggaranList.map(function(a) {
+          return [
+            a.id || '',
+            a.tahun || '',
+            a.kodeSub || '',
+            a.kodeBelanja || '',
+            Number(a.nilaiMurni) || 0,
+            Number(a.nilaiPerubahan) || 0,
+            Number(a.nilai) || 0,
+            a.sumberDana || 'PAD'
+          ];
+        });
+        sheetAnggaran.getRange(2, 1, rowsAnggaran.length, headersAnggaran.length).setValues(rowsAnggaran);
+        sheetAnggaran.getRange(2, 5, rowsAnggaran.length, 3).setNumberFormat('#,##0');
+        savedAnggaran = rowsAnggaran.length;
+      }
+    }
+    
+    return createJsonResponse({
+      success: true,
+      message: 'Berhasil menyimpan ' + savedRealisasi + ' data realisasi dan ' + savedAnggaran + ' data anggaran ke Spreadsheet.',
+      savedRealisasi: savedRealisasi,
+      savedAnggaran: savedAnggaran,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    return createJsonResponse({
+      success: false,
+      error: err.toString()
+    });
+  }
+}
+
+function getOrCreateSheet(ss, name) {
+  var sheet = ss.getSheetByName(name);
+  if (!sheet) {
+    sheet = ss.insertSheet(name);
+  }
+  return sheet;
+}
+
+function formatHeader(sheet, bgColor) {
+  var range = sheet.getRange(1, 1, 1, sheet.getLastColumn() || 1);
+  range.setBackground(bgColor);
+  range.setFontColor('#FFFFFF');
+  range.setFontWeight('bold');
+  range.setHorizontalAlignment('center');
+  sheet.setFrozenRows(1);
+}
+
+function getSheetRowsAsJson(sheet) {
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  if (lastRow <= 1 || lastCol < 1) return [];
+  
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var data = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+  
+  var results = [];
+  for (var i = 0; i < data.length; i++) {
+    var row = data[i];
+    var obj = {};
+    for (var j = 0; j < headers.length; j++) {
+      var key = headers[j].toString().trim();
+      obj[key] = row[j];
+    }
+    
+    if (sheet.getName() === 'Realisasi_SP2D') {
+      results.push({
+        id: String(obj['ID'] || 'R_' + (i + 1)),
+        tahun: Number(obj['Tahun']) || new Date().getFullYear(),
+        tanggal: obj['Tanggal'] ? (obj['Tanggal'] instanceof Date ? Utilities.formatDate(obj['Tanggal'], Session.getScriptTimeZone(), 'yyyy-MM-dd') : String(obj['Tanggal'])) : '',
+        noSP2D: String(obj['No_SP2D'] || ''),
+        noSPM: String(obj['No_SPM'] || ''),
+        kodeSub: String(obj['Kode_Sub_Kegiatan'] || ''),
+        kodeBelanja: String(obj['Kode_Rekening_Belanja'] || ''),
+        uraian: String(obj['Uraian_Belanja'] || ''),
+        nilai: Number(obj['Nilai_Realisasi_Rp']) || 0,
+        rekanan: String(obj['Rekanan_Penerima'] || ''),
+        statusValidation: String(obj['Status_Validasi'] || 'Disetujui PPK'),
+        operator: String(obj['Operator'] || 'Sistem')
+      });
+    } else if (sheet.getName() === 'Pagu_Anggaran') {
+      results.push({
+        id: String(obj['ID'] || 'A_' + (i + 1)),
+        tahun: Number(obj['Tahun']) || new Date().getFullYear(),
+        kodeSub: String(obj['Kode_Sub_Kegiatan'] || ''),
+        kodeBelanja: String(obj['Kode_Rekening_Belanja'] || ''),
+        nilaiMurni: Number(obj['Pagu_Murni_Rp']) || 0,
+        nilaiPerubahan: Number(obj['Pagu_Perubahan_Rp']) || 0,
+        nilai: Number(obj['Nilai_Pagu_Efektif_Rp']) || Number(obj['Pagu_Perubahan_Rp']) || Number(obj['Pagu_Murni_Rp']) || 0,
+        sumberDana: String(obj['Sumber_Dana'] || 'PAD')
+      });
+    }
+  }
+  return results;
+}
+
+function createJsonResponse(data) {
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}`;
+}
