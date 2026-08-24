@@ -218,7 +218,7 @@ export const INITIAL_BELANJA: Belanja[] = [
   },
   {
     kodeBelanja: '5.1.02.01.01.0040',
-    namaBelanja: 'Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat',
+    namaBelanja: 'Belanja Barang yang Diserahkan kepada Masyarakat/Pihak Ketiga',
     jenisBelanja: 'Belanja Hibah',
     tahun: 2025
   },
@@ -274,13 +274,13 @@ export const INITIAL_BELANJA: Belanja[] = [
   },
   {
     kodeBelanja: '5.1.02.01.01.00040',
-    namaBelanja: 'Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat',
+    namaBelanja: 'Belanja Barang yang Diserahkan kepada Masyarakat/Pihak Ketiga',
     jenisBelanja: 'Belanja Hibah',
     tahun: 2026
   },
   {
     kodeBelanja: '5.1.02.01.001.00040',
-    namaBelanja: 'Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat',
+    namaBelanja: 'Belanja Barang yang Diserahkan kepada Masyarakat/Pihak Ketiga',
     jenisBelanja: 'Belanja Hibah',
     tahun: 2026
   },
@@ -497,7 +497,7 @@ export const INITIAL_ANGGARAN: Anggaran[] = [
     kodeKegiatan: '5.01.04.2.01',
     kodeSub: '5.01.04.2.01.01',
     kodeBelanja: '5.1.02.01.01.0040',
-    namaBelanja: 'Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat',
+    namaBelanja: 'Belanja Barang yang Diserahkan kepada Masyarakat/Pihak Ketiga',
     pagu: 6500000000,
     revisi: 0,
     nilaiSPD: 6500000000,
@@ -513,7 +513,7 @@ export const INITIAL_ANGGARAN: Anggaran[] = [
     kodeKegiatan: '5.01.04.2.01',
     kodeSub: '5.01.04.2.01.01',
     kodeBelanja: '5.1.02.01.001.00040',
-    namaBelanja: 'Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat',
+    namaBelanja: 'Belanja Barang yang Diserahkan kepada Masyarakat/Pihak Ketiga',
     pagu: 7200000000,
     revisi: 0,
     nilaiSPD: 7200000000,
@@ -843,7 +843,7 @@ export const INITIAL_REALISASI: Realisasi[] = [
     nilai: 3250000000,
     noSP2D: '900/1024/SP2D-LS/KESBANG/2025',
     noSPM: '900/1024/SPM-LS/KESBANG/2025',
-    uraian: 'Pencairan Realisasi Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat Tahap I',
+    uraian: 'Pencairan Realisasi Belanja Barang yang Diserahkan kepada Masyarakat/Pihak Ketiga Tahap I',
     rekanan: 'Lembaga Kemasyarakatan & Pemuda NTB',
     operator: 'Ahmad Subadri, S.STP',
     statusValidation: 'Disetujui PPK'
@@ -1065,7 +1065,7 @@ export const INITIAL_REALISASI: Realisasi[] = [
     nilai: 3600000000,
     noSP2D: '900/0825/SP2D-LS/KESBANG/2026',
     noSPM: '900/0825/SPM-LS/KESBANG/2026',
-    uraian: 'Pencairan Realisasi Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat TA 2026',
+    uraian: 'Pencairan Realisasi Belanja Barang yang Diserahkan kepada Masyarakat/Pihak Ketiga TA 2026',
     rekanan: 'Lembaga Kemasyarakatan & Pemuda NTB',
     operator: 'Ahmad Subadri, S.STP',
     statusValidation: 'Disetujui PPK'

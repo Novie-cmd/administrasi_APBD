@@ -46,9 +46,9 @@ export const isCodeEqual = (a: any, b: any): boolean => {
 /**
  * Checks whether a budget/expenditure account is classified as Belanja Hibah based on:
  * 1. Specific Hibah codes such as:
- *    - 5.1.02.01.001.00040 / 5.1.02.01.01.00040 / 5.1.02.01.01.0040 (Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat)
+ *    - 5.1.02.01.001.00040 / 5.1.02.01.01.00040 / 5.1.02.01.01.0040 / 5.1.02.01.001.0040 (Belanja Barang yang Diserahkan kepada Masyarakat/Pihak Ketiga)
  * 2. Standard Hibah account prefixes: 5.1.05, 5.1.5, 5.4
- * 3. Text in namaBelanja or jenisBelanja containing 'hibah'
+ * 3. Text in namaBelanja or jenisBelanja containing 'hibah', 'diserahkan', 'barang yang diserahkan'
  */
 export const isHibahAccount = (
   kodeBelanja?: string | null,
@@ -59,26 +59,34 @@ export const isHibahAccount = (
   const nb = (namaBelanja || '').toLowerCase();
   const jb = (jenisBelanja || '').toLowerCase();
 
-  // Normalized segment check for 5.1.02.01.001.00040 (5.1.2.1.1.40)
+  // Normalized segment check for 5.1.02.01.001.00040 (5.1.2.1.1.40 or 5.1.2.1.0.40)
   const normSeg = normalizeSegmentCode(kb);
   const isTargetHibahCode =
     normSeg === '5.1.2.1.1.40' ||
+    normSeg === '5.1.2.1.0.40' ||
     isCodeEqual(kb, '5.1.02.01.001.00040') ||
     isCodeEqual(kb, '5.1.02.01.01.00040') ||
     isCodeEqual(kb, '5.1.02.01.01.0040') ||
     isCodeEqual(kb, '5.1.02.01.001.0040') ||
+    isCodeEqual(kb, '5.1.02.01.0001.00040') ||
     kb.startsWith('5.1.02.01.001.00040') ||
     kb.startsWith('5.1.02.01.01.00040') ||
     kb.startsWith('5.1.02.01.01.0040') ||
     kb.startsWith('5.1.02.01.001.0040');
+
+  const isTextMatch =
+    nb.includes('hibah') ||
+    jb.includes('hibah') ||
+    nb.includes('diserahkan') ||
+    nb.includes('barang yang diserahkan') ||
+    (nb.includes('barang') && (nb.includes('masyarakat') || nb.includes('pihak ketiga')));
 
   return (
     isTargetHibahCode ||
     kb.startsWith('5.1.05') ||
     kb.startsWith('5.1.5') ||
     kb.startsWith('5.4') ||
-    nb.includes('hibah') ||
-    jb.includes('hibah')
+    isTextMatch
   );
 };
 

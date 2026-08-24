@@ -1095,7 +1095,7 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
       kodeSub: val.kodeSub,
       namaSub: subObj?.namaSub || val.kodeSub || 'Belanja Hibah',
       kodeBelanja: val.kodeBelanja,
-      namaBelanja: belObj?.namaBelanja || 'Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat',
+      namaBelanja: belObj?.namaBelanja || 'Belanja Barang yang Diserahkan kepada Masyarakat/Pihak Ketiga',
       sumberDana: 'DAU',
       paguMurni: 0,
       revisi: 0,
@@ -2141,7 +2141,7 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                   <span>V. Laporan Realisasi Semua Belanja Hibah</span>
                 </h3>
                 <p className="text-[11px] text-slate-400 print:text-slate-700 mt-0.5">
-                  Daftar seluruh alokasi dan realisasi anggaran Belanja Hibah (Organisasi Kemasyarakatan, Partai Politik, Lembaga, dan Hibah Lainnya) TA {selectedTahun}.
+                  Daftar seluruh alokasi dan realisasi anggaran Belanja Hibah (Organisasi Kemasyarakatan, Partai Politik, Lembaga, Belanja Barang yang Diserahkan, dan Hibah Lainnya) TA {selectedTahun}.
                 </p>
               </div>
 
@@ -2308,7 +2308,7 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                         <AlertCircle className="h-8 w-8 text-emerald-500/60 mx-auto mb-2" />
                         <p className="font-semibold text-sm">Tidak ada data Rekening Belanja Hibah yang sesuai filter.</p>
                         <p className="text-xs text-slate-500 mt-1">
-                          Pastikan rekening belanja hibah sudah diinput pada menu Input Anggaran atau Master Belanja (dengan kode 5.1.05.x, 5.1.02.01.001.00040, atau memiliki kata "Hibah").
+                          Pastikan rekening belanja hibah sudah diinput pada menu Input Anggaran atau Master Belanja (dengan kode 5.1.05.x, 5.1.02.01.001.00040 / Belanja Barang yang Diserahkan, atau memiliki kata "Hibah").
                         </p>
                       </td>
                     </tr>
