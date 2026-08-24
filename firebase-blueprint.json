@@ -1,0 +1,52 @@
+{
+  "entities": {
+    "bfmsSharedState": {
+      "title": "BFMS Shared State",
+      "description": "Shared application state containing users, programs, activities, budgets, and transactions.",
+      "type": "object",
+      "properties": {
+        "users": { "type": "array" },
+        "selectedTahun": { "type": "number" },
+        "tahunList": { "type": "array" },
+        "opdList": { "type": "array" },
+        "programs": { "type": "array" },
+        "kegiatanList": { "type": "array" },
+        "subKegiatanList": { "type": "array" },
+        "belanjaList": { "type": "array" },
+        "sumberDanaList": { "type": "array" },
+        "rekananList": { "type": "array" },
+        "anggaranList": { "type": "array" },
+        "realisasiList": { "type": "array" },
+        "importLogs": { "type": "array" },
+        "activityLogs": { "type": "array" },
+        "updatedAt": { "type": "string" },
+        "updatedBy": { "type": "string" }
+      }
+    },
+    "bfmsChunk": {
+      "title": "BFMS Data Chunk",
+      "description": "Partitioned realisasi or anggaran data items.",
+      "type": "object",
+      "properties": {
+        "chunkIndex": { "type": "number" },
+        "totalChunks": { "type": "number" },
+        "items": { "type": "array" },
+        "updatedAt": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/bfms_shared_state/{docId}": {
+      "schema": "bfmsSharedState",
+      "description": "Master shared state document"
+    },
+    "/bfms_realisasi_chunks/{chunkId}": {
+      "schema": "bfmsChunk",
+      "description": "Realisasi chunk documents"
+    },
+    "/bfms_anggaran_chunks/{chunkId}": {
+      "schema": "bfmsChunk",
+      "description": "Anggaran chunk documents"
+    }
+  }
+}

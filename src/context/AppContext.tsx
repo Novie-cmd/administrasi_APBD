@@ -26,7 +26,8 @@ import {
   fetchSharedDataOnce,
   getIsFirestoreQuotaExceeded,
   resetFirestoreQuotaFlag,
-  isQuotaError
+  isQuotaError,
+  isOfflineOrUnavailable
 } from '../services/firestoreSync';
 import {
 
@@ -438,8 +439,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }, 200);
       },
       err => {
-        console.warn('Cloud sync offline or error:', err);
-        setCloudSync(prev => ({ ...prev, status: 'error' }));
+        if (isOfflineOrUnavailable(err)) {
+          console.info('Cloud sync is operating in offline mode (local cache active).');
+          setCloudSync(prev => ({ ...prev, status: 'offline' }));
+        } else if (isQuotaError(err)) {
+          setCloudSync(prev => ({ ...prev, status: 'quota_exceeded' }));
+        } else {
+          console.warn('Cloud sync offline or error:', err);
+          setCloudSync(prev => ({ ...prev, status: 'error' }));
+        }
       }
     );
 
@@ -559,7 +567,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             });
           })
           .catch(err => {
-            if (isQuotaError(err)) {
+            if (isOfflineOrUnavailable(err)) {
+              console.info('Cloud sync deferred: client is currently offline or reconnecting.');
+              setCloudSync(prev => ({ ...prev, status: 'offline' }));
+            } else if (isQuotaError(err)) {
               console.warn('Firestore write quota exceeded for the day. Local & Google Sheet storage active.');
               setCloudSync(prev => ({ ...prev, status: 'quota_exceeded' }));
             } else {
@@ -623,7 +634,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       logActivity(`Sinkronisasi Database Cloud (Firebase) manual berhasil`);
     } catch (err) {
-      if (isQuotaError(err)) {
+      if (isOfflineOrUnavailable(err)) {
+        setCloudSync(prev => ({ ...prev, status: 'offline' }));
+      } else if (isQuotaError(err)) {
         setCloudSync(prev => ({ ...prev, status: 'quota_exceeded' }));
       } else {
         setCloudSync(prev => ({ ...prev, status: 'error' }));

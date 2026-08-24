@@ -90,6 +90,20 @@ export function isQuotaError(err: any): boolean {
 }
 
 /**
+ * Checks if an error is due to transient offline / connectivity issues.
+ */
+export function isOfflineOrUnavailable(err: any): boolean {
+  if (!err) return false;
+  const msg = typeof err === 'string' ? err : (err.message || err.code || String(err));
+  return (
+    msg.includes('unavailable') ||
+    msg.includes('offline') ||
+    msg.includes('Could not reach Cloud Firestore backend') ||
+    msg.includes('network')
+  );
+}
+
+/**
  * Loads all realisasi chunks from Firestore using collection query with fallback.
  */
 async function loadRealisasiChunks(chunkCount?: number): Promise<any[]> {
