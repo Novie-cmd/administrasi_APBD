@@ -101,6 +101,11 @@ export const INITIAL_PROGRAMS: Program[] = [
     tahun: 2025
   },
   {
+    kodeProgram: '8.01.03',
+    namaProgram: 'PROGRAM PENYELENGGARAAN POLITIK DALAM NEGERI DAN KEWASPADAAN DINI',
+    tahun: 2025
+  },
+  {
     kodeProgram: '5.01.04',
     namaProgram: 'PROGRAM PEMBINAAN KERUKUNAN UMAT BERAGAMA DAN ORGANISASI MASYARAKAT',
     tahun: 2025
@@ -114,6 +119,21 @@ export const INITIAL_PROGRAMS: Program[] = [
   {
     kodeProgram: '5.01.02',
     namaProgram: 'PROGRAM BINA IDEOLOGI PANCASILA DAN WAWASAN KEBANGSAAN',
+    tahun: 2026
+  },
+  {
+    kodeProgram: '5.01.03',
+    namaProgram: 'PROGRAM PENYELENGGARAAN POLITIK DALAM NEGERI DAN KEWASPADAAN DINI',
+    tahun: 2026
+  },
+  {
+    kodeProgram: '8.01.03',
+    namaProgram: 'PROGRAM PENYELENGGARAAN POLITIK DALAM NEGERI DAN KEWASPADAAN DINI',
+    tahun: 2026
+  },
+  {
+    kodeProgram: '5.01.04',
+    namaProgram: 'PROGRAM PEMBINAAN KERUKUNAN UMAT BERAGAMA DAN ORGANISASI MASYARAKAT',
     tahun: 2026
   }
 ];
@@ -150,10 +170,29 @@ export const INITIAL_KEGIATAN: Kegiatan[] = [
     tahun: 2025
   },
   {
+    kodeProgram: '8.01.03',
+    kodeKegiatan: '8.01.03.1.01',
+    namaKegiatan: 'Penyelenggaraan Pendidikan Politik dan Fasilitasi Kelembagaan Politik',
+    tahun: 2025
+  },
+  {
     kodeProgram: '5.01.04',
     kodeKegiatan: '5.01.04.2.01',
     namaKegiatan: 'Pemberdayaan dan Pengawasan Organisasi Kemasyarakatan serta FKUB',
     tahun: 2025
+  },
+  // 2026
+  {
+    kodeProgram: '8.01.03',
+    kodeKegiatan: '8.01.03.1.01',
+    namaKegiatan: 'Penyelenggaraan Pendidikan Politik dan Fasilitasi Kelembagaan Politik',
+    tahun: 2026
+  },
+  {
+    kodeProgram: '5.01.03',
+    kodeKegiatan: '5.01.03.2.01',
+    namaKegiatan: 'Fasilitasi Organisasi Politik dan Pendidikan Politik Masyarakat NTB',
+    tahun: 2026
   }
 ];
 
@@ -194,6 +233,20 @@ export const INITIAL_SUBKEGIATAN: SubKegiatan[] = [
     tahun: 2025
   },
   {
+    kodeProgram: '8.01.03',
+    kodeKegiatan: '8.01.03.1.01',
+    kodeSub: '8.01.03.1.01.0003',
+    namaSub: 'Pelaksanaan Kebijakan di Bidang Pendidikan Politik, Etika Budaya Politik, Peningkatan Demokrasi, Fasilitasi Kelembagaan Pemerintahan, Perwakilan dan Partai Politik, Pemilihan Umum/Pemilihan Umum Kepala Daerah, serta Pemantauan Situasi Politik di Daerah',
+    tahun: 2025
+  },
+  {
+    kodeProgram: '8.01.03',
+    kodeKegiatan: '8.01.03.1.01',
+    kodeSub: '8.01.03.1.01.0003',
+    namaSub: 'Pelaksanaan Kebijakan di Bidang Pendidikan Politik, Etika Budaya Politik, Peningkatan Demokrasi, Fasilitasi Kelembagaan Pemerintahan, Perwakilan dan Partai Politik, Pemilihan Umum/Pemilihan Umum Kepala Daerah, serta Pemantauan Situasi Politik di Daerah',
+    tahun: 2026
+  },
+  {
     kodeProgram: '5.01.04',
     kodeKegiatan: '5.01.04.2.01',
     kodeSub: '5.01.04.2.01.01',
@@ -218,7 +271,19 @@ export const INITIAL_BELANJA: Belanja[] = [
   },
   {
     kodeBelanja: '5.1.02.01.01.0040',
-    namaBelanja: 'Belanja Barang yang Diserahkan kepada Masyarakat/Pihak Ketiga',
+    namaBelanja: 'Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat',
+    jenisBelanja: 'Belanja Hibah',
+    tahun: 2025
+  },
+  {
+    kodeBelanja: '5.1.02.01.001.0040',
+    namaBelanja: 'Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat',
+    jenisBelanja: 'Belanja Hibah',
+    tahun: 2025
+  },
+  {
+    kodeBelanja: '5.1.05.01.001.0001',
+    namaBelanja: 'Belanja Hibah Uang kepada Pemerintah Pusat / Daerah / Badan / Lembaga',
     jenisBelanja: 'Belanja Hibah',
     tahun: 2025
   },
@@ -274,13 +339,13 @@ export const INITIAL_BELANJA: Belanja[] = [
   },
   {
     kodeBelanja: '5.1.02.01.01.00040',
-    namaBelanja: 'Belanja Barang yang Diserahkan kepada Masyarakat/Pihak Ketiga',
+    namaBelanja: 'Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat',
     jenisBelanja: 'Belanja Hibah',
     tahun: 2026
   },
   {
     kodeBelanja: '5.1.02.01.001.00040',
-    namaBelanja: 'Belanja Barang yang Diserahkan kepada Masyarakat/Pihak Ketiga',
+    namaBelanja: 'Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat',
     jenisBelanja: 'Belanja Hibah',
     tahun: 2026
   },
@@ -310,6 +375,12 @@ export const INITIAL_BELANJA: Belanja[] = [
   },
   {
     kodeBelanja: '5.1.05.01.01.00001',
+    namaBelanja: 'Belanja Hibah Uang kepada Pemerintah Pusat / Daerah / Badan / Lembaga',
+    jenisBelanja: 'Belanja Hibah',
+    tahun: 2026
+  },
+  {
+    kodeBelanja: '5.1.05.01.001.00001',
     namaBelanja: 'Belanja Hibah Uang kepada Pemerintah Pusat / Daerah / Badan / Lembaga',
     jenisBelanja: 'Belanja Hibah',
     tahun: 2026
@@ -497,11 +568,43 @@ export const INITIAL_ANGGARAN: Anggaran[] = [
     kodeKegiatan: '5.01.04.2.01',
     kodeSub: '5.01.04.2.01.01',
     kodeBelanja: '5.1.02.01.01.0040',
-    namaBelanja: 'Belanja Barang yang Diserahkan kepada Masyarakat/Pihak Ketiga',
+    namaBelanja: 'Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat',
     pagu: 6500000000,
     revisi: 0,
     nilaiSPD: 6500000000,
     paguAkhir: 6500000000,
+    tanggalInput: '2025-01-15',
+    operator: 'Ahmad Subadri, S.STP',
+    sumberDana: 'DAU'
+  },
+  {
+    id: 'ANG-2025-HIB-01',
+    tahun: 2025,
+    kodeProgram: '8.01.03',
+    kodeKegiatan: '8.01.03.1.01',
+    kodeSub: '8.01.03.1.01.0003',
+    kodeBelanja: '5.1.02.01.01.0040',
+    namaBelanja: 'Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat',
+    pagu: 22421000000,
+    revisi: 0,
+    nilaiSPD: 22421000000,
+    paguAkhir: 22421000000,
+    tanggalInput: '2025-01-15',
+    operator: 'Ahmad Subadri, S.STP',
+    sumberDana: 'DAU'
+  },
+  {
+    id: 'ANG-2025-HIB-02',
+    tahun: 2025,
+    kodeProgram: '8.01.03',
+    kodeKegiatan: '8.01.03.1.01',
+    kodeSub: '8.01.03.1.01.0003',
+    kodeBelanja: '5.1.05.01.01.0001',
+    namaBelanja: 'Belanja Hibah Uang kepada Pemerintah Pusat / Daerah / Badan / Lembaga',
+    pagu: 650000000,
+    revisi: 0,
+    nilaiSPD: 650000000,
+    paguAkhir: 650000000,
     tanggalInput: '2025-01-15',
     operator: 'Ahmad Subadri, S.STP',
     sumberDana: 'DAU'
@@ -513,11 +616,43 @@ export const INITIAL_ANGGARAN: Anggaran[] = [
     kodeKegiatan: '5.01.04.2.01',
     kodeSub: '5.01.04.2.01.01',
     kodeBelanja: '5.1.02.01.001.00040',
-    namaBelanja: 'Belanja Barang yang Diserahkan kepada Masyarakat/Pihak Ketiga',
+    namaBelanja: 'Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat',
     pagu: 7200000000,
     revisi: 0,
     nilaiSPD: 7200000000,
     paguAkhir: 7200000000,
+    tanggalInput: '2026-01-15',
+    operator: 'Ahmad Subadri, S.STP',
+    sumberDana: 'DAU'
+  },
+  {
+    id: 'ANG-2026-HIB-01',
+    tahun: 2026,
+    kodeProgram: '8.01.03',
+    kodeKegiatan: '8.01.03.1.01',
+    kodeSub: '8.01.03.1.01.0003',
+    kodeBelanja: '5.1.02.01.001.00040',
+    namaBelanja: 'Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat',
+    pagu: 22421000000,
+    revisi: 0,
+    nilaiSPD: 22421000000,
+    paguAkhir: 22421000000,
+    tanggalInput: '2026-01-15',
+    operator: 'Ahmad Subadri, S.STP',
+    sumberDana: 'DAU'
+  },
+  {
+    id: 'ANG-2026-HIB-02',
+    tahun: 2026,
+    kodeProgram: '8.01.03',
+    kodeKegiatan: '8.01.03.1.01',
+    kodeSub: '8.01.03.1.01.0003',
+    kodeBelanja: '5.1.05.01.001.00001',
+    namaBelanja: 'Belanja Hibah Uang kepada Pemerintah Pusat / Daerah / Badan / Lembaga',
+    pagu: 650000000,
+    revisi: 0,
+    nilaiSPD: 650000000,
+    paguAkhir: 650000000,
     tanggalInput: '2026-01-15',
     operator: 'Ahmad Subadri, S.STP',
     sumberDana: 'DAU'
@@ -1066,6 +1201,74 @@ export const INITIAL_REALISASI: Realisasi[] = [
     noSP2D: '900/0825/SP2D-LS/KESBANG/2026',
     noSPM: '900/0825/SPM-LS/KESBANG/2026',
     uraian: 'Pencairan Realisasi Belanja Barang yang Diserahkan kepada Masyarakat/Pihak Ketiga TA 2026',
+    rekanan: 'Lembaga Kemasyarakatan & Pemuda NTB',
+    operator: 'Ahmad Subadri, S.STP',
+    statusValidation: 'Disetujui PPK'
+  },
+  {
+    id: 'REAL-2025-HIB-01',
+    tanggal: '2025-04-10',
+    bulan: 4,
+    tahun: 2025,
+    kodeProgram: '8.01.03',
+    kodeKegiatan: '8.01.03.1.01',
+    kodeSub: '8.01.03.1.01.0003',
+    kodeBelanja: '5.1.02.01.01.0040',
+    nilai: 2720000000,
+    noSP2D: '900/0412/SP2D-LS/KESBANG/2025',
+    noSPM: '900/0412/SPM-LS/KESBANG/2025',
+    uraian: 'Pencairan Realisasi Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat Tahap I',
+    rekanan: 'Lembaga Kemasyarakatan & Pemuda NTB',
+    operator: 'Ahmad Subadri, S.STP',
+    statusValidation: 'Disetujui PPK'
+  },
+  {
+    id: 'REAL-2025-HIB-02',
+    tanggal: '2025-05-15',
+    bulan: 5,
+    tahun: 2025,
+    kodeProgram: '8.01.03',
+    kodeKegiatan: '8.01.03.1.01',
+    kodeSub: '8.01.03.1.01.0003',
+    kodeBelanja: '5.1.05.01.01.0001',
+    nilai: 300000000,
+    noSP2D: '900/0515/SP2D-LS/KESBANG/2025',
+    noSPM: '900/0515/SPM-LS/KESBANG/2025',
+    uraian: 'Pencairan Realisasi Belanja Hibah Uang kepada Pemerintah Pusat / Badan / Lembaga Tahap I',
+    rekanan: 'Lembaga Kemasyarakatan & Pemuda NTB',
+    operator: 'Ahmad Subadri, S.STP',
+    statusValidation: 'Disetujui PPK'
+  },
+  {
+    id: 'REAL-2026-HIB-01',
+    tanggal: '2026-03-20',
+    bulan: 3,
+    tahun: 2026,
+    kodeProgram: '8.01.03',
+    kodeKegiatan: '8.01.03.1.01',
+    kodeSub: '8.01.03.1.01.0003',
+    kodeBelanja: '5.1.02.01.001.00040',
+    nilai: 2720000000,
+    noSP2D: '900/0320/SP2D-LS/KESBANG/2026',
+    noSPM: '900/0320/SPM-LS/KESBANG/2026',
+    uraian: 'Pencairan Realisasi Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat Tahap I',
+    rekanan: 'Lembaga Kemasyarakatan & Pemuda NTB',
+    operator: 'Ahmad Subadri, S.STP',
+    statusValidation: 'Disetujui PPK'
+  },
+  {
+    id: 'REAL-2026-HIB-02',
+    tanggal: '2026-04-18',
+    bulan: 4,
+    tahun: 2026,
+    kodeProgram: '8.01.03',
+    kodeKegiatan: '8.01.03.1.01',
+    kodeSub: '8.01.03.1.01.0003',
+    kodeBelanja: '5.1.05.01.001.00001',
+    nilai: 300000000,
+    noSP2D: '900/0418/SP2D-LS/KESBANG/2026',
+    noSPM: '900/0418/SPM-LS/KESBANG/2026',
+    uraian: 'Pencairan Realisasi Belanja Hibah Uang kepada Pemerintah Pusat / Badan / Lembaga Tahap I',
     rekanan: 'Lembaga Kemasyarakatan & Pemuda NTB',
     operator: 'Ahmad Subadri, S.STP',
     statusValidation: 'Disetujui PPK'

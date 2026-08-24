@@ -264,18 +264,78 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       });
 
-      const mergedRealisasi = realisasiMap.size > 0 ? Array.from(realisasiMap.values()) : primary?.realisasiList;
-      const mergedAnggaran = anggaranMap.size > 0 ? Array.from(anggaranMap.values()) : primary?.anggaranList;
+      const mergedRealisasi = realisasiMap.size > 0 ? Array.from(realisasiMap.values()) : (primary?.realisasiList || []);
+      const mergedAnggaran = anggaranMap.size > 0 ? Array.from(anggaranMap.values()) : (primary?.anggaranList || []);
 
-      return {
+      const result = {
         ...primary,
         realisasiList: mergedRealisasi,
         anggaranList: mergedAnggaran,
-        programs: primary?.programs?.length > (backup?.programs?.length || 0) ? primary.programs : (backup?.programs || primary?.programs),
-        kegiatanList: primary?.kegiatanList?.length > (backup?.kegiatanList?.length || 0) ? primary.kegiatanList : (backup?.kegiatanList || primary?.kegiatanList),
-        subKegiatanList: primary?.subKegiatanList?.length > (backup?.subKegiatanList?.length || 0) ? primary.subKegiatanList : (backup?.subKegiatanList || primary?.subKegiatanList),
-        belanjaList: primary?.belanjaList?.length > (backup?.belanjaList?.length || 0) ? primary.belanjaList : (backup?.belanjaList || primary?.belanjaList),
+        programs: primary?.programs?.length > (backup?.programs?.length || 0) ? primary.programs : (backup?.programs || primary?.programs || INITIAL_PROGRAMS),
+        kegiatanList: primary?.kegiatanList?.length > (backup?.kegiatanList?.length || 0) ? primary.kegiatanList : (backup?.kegiatanList || primary?.kegiatanList || INITIAL_KEGIATAN),
+        subKegiatanList: primary?.subKegiatanList?.length > (backup?.subKegiatanList?.length || 0) ? primary.subKegiatanList : (backup?.subKegiatanList || primary?.subKegiatanList || INITIAL_SUBKEGIATAN),
+        belanjaList: primary?.belanjaList?.length > (backup?.belanjaList?.length || 0) ? primary.belanjaList : (backup?.belanjaList || primary?.belanjaList || INITIAL_BELANJA),
       };
+
+      // Enrich result with initial master data and default hibah items if not present
+      if (result.programs) {
+        const progKeys = new Set(result.programs.map((p: Program) => `${p.kodeProgram}_${p.tahun}`));
+        INITIAL_PROGRAMS.forEach(ip => {
+          if (!progKeys.has(`${ip.kodeProgram}_${ip.tahun}`)) {
+            result.programs.push(ip);
+            progKeys.add(`${ip.kodeProgram}_${ip.tahun}`);
+          }
+        });
+      }
+      if (result.kegiatanList) {
+        const kegKeys = new Set(result.kegiatanList.map((k: Kegiatan) => `${k.kodeKegiatan}_${k.tahun}`));
+        INITIAL_KEGIATAN.forEach(ik => {
+          if (!kegKeys.has(`${ik.kodeKegiatan}_${ik.tahun}`)) {
+            result.kegiatanList.push(ik);
+            kegKeys.add(`${ik.kodeKegiatan}_${ik.tahun}`);
+          }
+        });
+      }
+      if (result.subKegiatanList) {
+        const subKeys = new Set(result.subKegiatanList.map((s: SubKegiatan) => `${s.kodeSub}_${s.tahun}`));
+        INITIAL_SUBKEGIATAN.forEach(is => {
+          if (!subKeys.has(`${is.kodeSub}_${is.tahun}`)) {
+            result.subKegiatanList.push(is);
+            subKeys.add(`${is.kodeSub}_${is.tahun}`);
+          }
+        });
+      }
+      if (result.belanjaList) {
+        const belKeys = new Set(result.belanjaList.map((b: Belanja) => `${b.kodeBelanja}_${b.tahun}`));
+        INITIAL_BELANJA.forEach(ib => {
+          if (!belKeys.has(`${ib.kodeBelanja}_${ib.tahun}`)) {
+            result.belanjaList.push(ib);
+            belKeys.add(`${ib.kodeBelanja}_${ib.tahun}`);
+          }
+        });
+      }
+      if (result.anggaranList) {
+        INITIAL_ANGGARAN.forEach(ia => {
+          const exists = result.anggaranList.some((a: Anggaran) => 
+            a.tahun === ia.tahun && isCodeEqual(a.kodeSub, ia.kodeSub) && isCodeEqual(a.kodeBelanja, ia.kodeBelanja)
+          );
+          if (!exists) {
+            result.anggaranList.push(ia);
+          }
+        });
+      }
+      if (result.realisasiList) {
+        INITIAL_REALISASI.forEach(ir => {
+          const exists = result.realisasiList.some((r: Realisasi) => 
+            r.id === ir.id || (r.tahun === ir.tahun && r.noSP2D === ir.noSP2D && isCodeEqual(r.kodeBelanja, ir.kodeBelanja))
+          );
+          if (!exists) {
+            result.realisasiList.push(ir);
+          }
+        });
+      }
+
+      return result;
     } catch (err) {
       console.error('Failed to load local storage:', err);
     }
