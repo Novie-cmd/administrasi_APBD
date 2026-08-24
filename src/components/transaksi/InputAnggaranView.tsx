@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Anggaran } from '../../types';
+import { isCodeEqual } from '../../utils/codeUtils';
 import * as XLSX from 'xlsx';
 import { safeDownloadExcel } from '../../utils/downloadHelper';
 import {
@@ -453,7 +454,7 @@ export const InputAnggaranView: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const belObj = belanjaList.find(b => b.kodeBelanja === kodeBelanja);
+    const belObj = belanjaList.find(b => isCodeEqual(b.kodeBelanja, kodeBelanja));
     addAnggaran({
       tahun: selectedTahun,
       kodeProgram,

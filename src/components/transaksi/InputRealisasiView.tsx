@@ -426,10 +426,12 @@ export const InputRealisasiView: React.FC = () => {
     }
 
     // Validation 2: Check remaining budget
-    const angObj = anggaranList.find(a => a.kodeBelanja === kodeBelanja && Number(a.tahun) === Number(selectedTahun));
+    const angObj = anggaranList.find(
+      a => isCodeEqual(a.kodeBelanja, kodeBelanja) && (isCodeEqual(a.kodeSub, kodeSub) || !kodeSub) && Number(a.tahun) === Number(selectedTahun)
+    ) || anggaranList.find(a => isCodeEqual(a.kodeBelanja, kodeBelanja) && Number(a.tahun) === Number(selectedTahun));
     const paguAkhir = angObj ? angObj.paguAkhir : 0;
     const existingRealSum = realisasiList
-      .filter(r => r.kodeBelanja === kodeBelanja && Number(r.tahun) === Number(selectedTahun))
+      .filter(r => isCodeEqual(r.kodeBelanja, kodeBelanja) && (isCodeEqual(r.kodeSub, kodeSub) || !kodeSub) && Number(r.tahun) === Number(selectedTahun))
       .reduce((s, r) => s + r.nilai, 0);
 
     if (paguAkhir > 0 && existingRealSum + nilai > paguAkhir) {

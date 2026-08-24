@@ -489,6 +489,38 @@ export const INITIAL_ANGGARAN: Anggaran[] = [
     tanggalInput: '2025-01-12',
     operator: 'Ahmad Subadri, S.STP',
     sumberDana: 'PAD'
+  },
+  {
+    id: 'ANG-2025-08',
+    tahun: 2025,
+    kodeProgram: '5.01.04',
+    kodeKegiatan: '5.01.04.2.01',
+    kodeSub: '5.01.04.2.01.01',
+    kodeBelanja: '5.1.02.01.01.0040',
+    namaBelanja: 'Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat',
+    pagu: 6500000000,
+    revisi: 0,
+    nilaiSPD: 6500000000,
+    paguAkhir: 6500000000,
+    tanggalInput: '2025-01-15',
+    operator: 'Ahmad Subadri, S.STP',
+    sumberDana: 'DAU'
+  },
+  {
+    id: 'ANG-2026-08',
+    tahun: 2026,
+    kodeProgram: '5.01.04',
+    kodeKegiatan: '5.01.04.2.01',
+    kodeSub: '5.01.04.2.01.01',
+    kodeBelanja: '5.1.02.01.001.00040',
+    namaBelanja: 'Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat',
+    pagu: 7200000000,
+    revisi: 0,
+    nilaiSPD: 7200000000,
+    paguAkhir: 7200000000,
+    tanggalInput: '2026-01-15',
+    operator: 'Ahmad Subadri, S.STP',
+    sumberDana: 'DAU'
   }
 ];
 
@@ -799,6 +831,23 @@ export const INITIAL_REALISASI: Realisasi[] = [
     operator: 'Ahmad Subadri, S.STP',
     statusValidation: 'Disetujui PPK'
   },
+  {
+    id: 'REAL-2025-019',
+    tanggal: '2025-10-24',
+    bulan: 10,
+    tahun: 2025,
+    kodeProgram: '5.01.04',
+    kodeKegiatan: '5.01.04.2.01',
+    kodeSub: '5.01.04.2.01.01',
+    kodeBelanja: '5.1.02.01.01.0040',
+    nilai: 3250000000,
+    noSP2D: '900/1024/SP2D-LS/KESBANG/2025',
+    noSPM: '900/1024/SPM-LS/KESBANG/2025',
+    uraian: 'Pencairan Realisasi Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat Tahap I',
+    rekanan: 'Lembaga Kemasyarakatan & Pemuda NTB',
+    operator: 'Ahmad Subadri, S.STP',
+    statusValidation: 'Disetujui PPK'
+  },
   // Realisasi 2026 (Total: Rp 13.264.888.381)
   {
     id: 'REAL-2026-001',
@@ -1001,6 +1050,23 @@ export const INITIAL_REALISASI: Realisasi[] = [
     noSPM: '900/1212/SPM-LS/KESBANG/2026',
     uraian: 'Pembayaran Realisasi SP2D Akhir Tahun Bulan Desember TA 2026',
     rekanan: 'PT Bank NTB Syariah Cabang Utama Mataram',
+    operator: 'Ahmad Subadri, S.STP',
+    statusValidation: 'Disetujui PPK'
+  },
+  {
+    id: 'REAL-2026-013',
+    tanggal: '2026-08-25',
+    bulan: 8,
+    tahun: 2026,
+    kodeProgram: '5.01.04',
+    kodeKegiatan: '5.01.04.2.01',
+    kodeSub: '5.01.04.2.01.01',
+    kodeBelanja: '5.1.02.01.001.00040',
+    nilai: 3600000000,
+    noSP2D: '900/0825/SP2D-LS/KESBANG/2026',
+    noSPM: '900/0825/SPM-LS/KESBANG/2026',
+    uraian: 'Pencairan Realisasi Belanja Hibah Barang / Jasa kepada Pihak Ketiga/Masyarakat TA 2026',
+    rekanan: 'Lembaga Kemasyarakatan & Pemuda NTB',
     operator: 'Ahmad Subadri, S.STP',
     statusValidation: 'Disetujui PPK'
   }
