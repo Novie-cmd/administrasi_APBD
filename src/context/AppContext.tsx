@@ -191,12 +191,57 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const STORAGE_KEY = 'BFMS_NTB_STORE_V1';
 export const BACKUP_STORAGE_KEY = 'BFMS_NTB_PERMANENT_BACKUP_V1';
+export const LOCAL_TIMESTAMP_KEY = 'BFMS_NTB_LOCAL_TIMESTAMP_V1';
+export const SELECTED_TAHUN_KEY = 'BFMS_NTB_SELECTED_TAHUN_V1';
 const LEGACY_STORAGE_KEYS = ['BFMS_STORE_V1', 'BFMS_NTB_SNAPSHOT_V2', 'BFMS_APP_DATA'];
 
+// Fast state fingerprint calculation to detect actual data updates (including amount edits, status changes, etc.)
+const computeStateFingerprint = (data: any): string => {
+  if (!data) return '';
+  const rList = data.realisasiList || [];
+  const aList = data.anggaranList || [];
+  const rCount = rList.length;
+  const aCount = aList.length;
+  const rSum = rList.reduce((sum: number, r: any) => sum + (Number(r.nilai) || 0), 0);
+  const aSum = aList.reduce((sum: number, a: any) => sum + (Number(a.paguAkhir || a.pagu) || 0), 0);
+  const rHeadTail = rCount > 0 ? `${rList[0]?.id}_${rList[0]?.nilai}_${rList[0]?.statusValidation}_${rList[rCount - 1]?.id}` : '';
+  const aHeadTail = aCount > 0 ? `${aList[0]?.id}_${aList[0]?.paguAkhir || aList[0]?.pagu}_${aList[aCount - 1]?.id}` : '';
+  
+  return [
+    rCount,
+    rSum,
+    rHeadTail,
+    aCount,
+    aSum,
+    aHeadTail,
+    data.programs?.length || 0,
+    data.kegiatanList?.length || 0,
+    data.subKegiatanList?.length || 0,
+    data.belanjaList?.length || 0,
+    data.selectedTahun || 2025,
+    data.users?.length || 0,
+    data.opdList?.length || 0,
+    data.importLogs?.length || 0,
+    data.activityLogs?.length || 0
+  ].join('::');
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Local modification timestamp tracker
+  const localModifiedAtRef = useRef<number>(() => {
+    const saved = localStorage.getItem(LOCAL_TIMESTAMP_KEY);
+    return saved ? Number(saved) : Date.now();
+  });
+
   // Helper to persist snapshot to both primary and backup storage synchronously
   const persistToLocalStorage = (data: any) => {
     try {
+      const now = Date.now();
+      localModifiedAtRef.current = now;
+      localStorage.setItem(LOCAL_TIMESTAMP_KEY, String(now));
+      if (data.selectedTahun) {
+        localStorage.setItem(SELECTED_TAHUN_KEY, String(data.selectedTahun));
+      }
       const serialized = JSON.stringify(data);
       localStorage.setItem(STORAGE_KEY, serialized);
       if (
@@ -236,106 +281,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       if (!primary && !backup) return null;
-      if (!primary && backup) return backup;
-      if (primary && !backup) return primary;
+      if (!primary && backup) primary = backup;
 
-      // If both exist, merge intelligently to ensure no transaction or budget item is ever lost
-      const realisasiPrimary: Realisasi[] = Array.isArray(primary?.realisasiList) ? primary.realisasiList : [];
-      const realisasiBackup: Realisasi[] = Array.isArray(backup?.realisasiList) ? backup.realisasiList : [];
-
-      const anggaranPrimary: Anggaran[] = Array.isArray(primary?.anggaranList) ? primary.anggaranList : [];
-      const anggaranBackup: Anggaran[] = Array.isArray(backup?.anggaranList) ? backup.anggaranList : [];
-
-      // Combine realisasi items without duplicates using composite keys & IDs
-      const realisasiMap = new Map<string, Realisasi>();
-      [...realisasiBackup, ...realisasiPrimary].forEach((r: Realisasi) => {
-        if (r && r.id) {
-          const compKey = makeRealisasiCompositeKey(r.noSP2D, r.kodeBelanja, r.kodeSub, r.nilai, r.uraian, r.tahun);
-          const mapKey = compKey || r.id;
-          realisasiMap.set(mapKey, r);
-        }
-      });
-
-      const anggaranMap = new Map<string, Anggaran>();
-      [...anggaranBackup, ...anggaranPrimary].forEach((a: Anggaran) => {
-        if (a && a.id) {
-          const compKey = `${a.kodeBelanja}_${a.kodeSub}_${a.tahun}`;
-          anggaranMap.set(compKey, a);
-        }
-      });
-
-      const mergedRealisasi = realisasiMap.size > 0 ? Array.from(realisasiMap.values()) : (primary?.realisasiList || []);
-      const mergedAnggaran = anggaranMap.size > 0 ? Array.from(anggaranMap.values()) : (primary?.anggaranList || []);
-
-      const result = {
+      // When primary exists, return it with safe fallbacks for arrays
+      return {
         ...primary,
-        realisasiList: mergedRealisasi,
-        anggaranList: mergedAnggaran,
-        programs: primary?.programs?.length > (backup?.programs?.length || 0) ? primary.programs : (backup?.programs || primary?.programs || INITIAL_PROGRAMS),
-        kegiatanList: primary?.kegiatanList?.length > (backup?.kegiatanList?.length || 0) ? primary.kegiatanList : (backup?.kegiatanList || primary?.kegiatanList || INITIAL_KEGIATAN),
-        subKegiatanList: primary?.subKegiatanList?.length > (backup?.subKegiatanList?.length || 0) ? primary.subKegiatanList : (backup?.subKegiatanList || primary?.subKegiatanList || INITIAL_SUBKEGIATAN),
-        belanjaList: primary?.belanjaList?.length > (backup?.belanjaList?.length || 0) ? primary.belanjaList : (backup?.belanjaList || primary?.belanjaList || INITIAL_BELANJA),
+        users: primary?.users && Array.isArray(primary.users) && primary.users.length > 0 ? primary.users : INITIAL_USERS,
+        tahunList: primary?.tahunList && Array.isArray(primary.tahunList) && primary.tahunList.length > 0 ? primary.tahunList : INITIAL_TAHUN,
+        opdList: primary?.opdList && Array.isArray(primary.opdList) && primary.opdList.length > 0 ? primary.opdList : (primary?.opd ? [primary.opd] : [INITIAL_OPD]),
+        programs: primary?.programs && Array.isArray(primary.programs) && primary.programs.length > 0 ? primary.programs : INITIAL_PROGRAMS,
+        kegiatanList: primary?.kegiatanList && Array.isArray(primary.kegiatanList) && primary.kegiatanList.length > 0 ? primary.kegiatanList : INITIAL_KEGIATAN,
+        subKegiatanList: primary?.subKegiatanList && Array.isArray(primary.subKegiatanList) && primary.subKegiatanList.length > 0 ? primary.subKegiatanList : INITIAL_SUBKEGIATAN,
+        belanjaList: primary?.belanjaList && Array.isArray(primary.belanjaList) && primary.belanjaList.length > 0 ? primary.belanjaList : INITIAL_BELANJA,
+        sumberDanaList: primary?.sumberDanaList && Array.isArray(primary.sumberDanaList) && primary.sumberDanaList.length > 0 ? primary.sumberDanaList : INITIAL_SUMBER_DANA,
+        rekananList: primary?.rekananList && Array.isArray(primary.rekananList) && primary.rekananList.length > 0 ? primary.rekananList : INITIAL_REKANAN,
+        anggaranList: primary?.anggaranList && Array.isArray(primary.anggaranList) ? primary.anggaranList : INITIAL_ANGGARAN,
+        realisasiList: primary?.realisasiList && Array.isArray(primary.realisasiList) ? primary.realisasiList : INITIAL_REALISASI,
+        importLogs: primary?.importLogs && Array.isArray(primary.importLogs) ? primary.importLogs : INITIAL_IMPORT_LOGS,
+        activityLogs: primary?.activityLogs && Array.isArray(primary.activityLogs) ? primary.activityLogs : INITIAL_ACTIVITY_LOGS,
+        sheetConfig: primary?.sheetConfig || INITIAL_SHEET_CONFIG
       };
-
-      // Enrich result with initial master data and default hibah items if not present
-      if (result.programs) {
-        const progKeys = new Set(result.programs.map((p: Program) => `${p.kodeProgram}_${p.tahun}`));
-        INITIAL_PROGRAMS.forEach(ip => {
-          if (!progKeys.has(`${ip.kodeProgram}_${ip.tahun}`)) {
-            result.programs.push(ip);
-            progKeys.add(`${ip.kodeProgram}_${ip.tahun}`);
-          }
-        });
-      }
-      if (result.kegiatanList) {
-        const kegKeys = new Set(result.kegiatanList.map((k: Kegiatan) => `${k.kodeKegiatan}_${k.tahun}`));
-        INITIAL_KEGIATAN.forEach(ik => {
-          if (!kegKeys.has(`${ik.kodeKegiatan}_${ik.tahun}`)) {
-            result.kegiatanList.push(ik);
-            kegKeys.add(`${ik.kodeKegiatan}_${ik.tahun}`);
-          }
-        });
-      }
-      if (result.subKegiatanList) {
-        const subKeys = new Set(result.subKegiatanList.map((s: SubKegiatan) => `${s.kodeSub}_${s.tahun}`));
-        INITIAL_SUBKEGIATAN.forEach(is => {
-          if (!subKeys.has(`${is.kodeSub}_${is.tahun}`)) {
-            result.subKegiatanList.push(is);
-            subKeys.add(`${is.kodeSub}_${is.tahun}`);
-          }
-        });
-      }
-      if (result.belanjaList) {
-        const belKeys = new Set(result.belanjaList.map((b: Belanja) => `${b.kodeBelanja}_${b.tahun}`));
-        INITIAL_BELANJA.forEach(ib => {
-          if (!belKeys.has(`${ib.kodeBelanja}_${ib.tahun}`)) {
-            result.belanjaList.push(ib);
-            belKeys.add(`${ib.kodeBelanja}_${ib.tahun}`);
-          }
-        });
-      }
-      if (result.anggaranList) {
-        INITIAL_ANGGARAN.forEach(ia => {
-          const exists = result.anggaranList.some((a: Anggaran) => 
-            a.tahun === ia.tahun && isCodeEqual(a.kodeSub, ia.kodeSub) && isCodeEqual(a.kodeBelanja, ia.kodeBelanja)
-          );
-          if (!exists) {
-            result.anggaranList.push(ia);
-          }
-        });
-      }
-      if (result.realisasiList) {
-        INITIAL_REALISASI.forEach(ir => {
-          const exists = result.realisasiList.some((r: Realisasi) => 
-            r.id === ir.id || (r.tahun === ir.tahun && r.noSP2D === ir.noSP2D && isCodeEqual(r.kodeBelanja, ir.kodeBelanja))
-          );
-          if (!exists) {
-            result.realisasiList.push(ir);
-          }
-        });
-      }
-
-      return result;
     } catch (err) {
       console.error('Failed to load local storage:', err);
     }
@@ -350,9 +315,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [users, setUsers] = useState<User[]>(
     storedData?.users || INITIAL_USERS
   );
-  const [selectedTahun, setSelectedTahun] = useState<number>(
-    storedData?.selectedTahun || 2025
-  );
+  const [selectedTahun, setSelectedTahunState] = useState<number>(() => {
+    const savedTahun = localStorage.getItem(SELECTED_TAHUN_KEY);
+    if (savedTahun && !isNaN(Number(savedTahun))) return Number(savedTahun);
+    return storedData?.selectedTahun || 2025;
+  });
+
+  const setSelectedTahun = (tahun: number) => {
+    const num = Number(tahun);
+    setSelectedTahunState(num);
+    try {
+      localStorage.setItem(SELECTED_TAHUN_KEY, String(num));
+    } catch {}
+  };
+
   const [tahunList, setTahunList] = useState<TahunAnggaran[]>(
     storedData?.tahunList || INITIAL_TAHUN
   );
@@ -403,22 +379,81 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Ref to prevent circular updates between Firestore listener and local state
   const isApplyingRemoteChange = useRef(false);
-  const isInitialCloudLoad = useRef(false);
   const isInitialMount = useRef(true);
   const lastSavedDataSignature = useRef<string>('');
 
-  // 1. Subscribe to Firestore Real-Time Updates (Live single source of truth from Firebase)
+  // Save latest state bundle to cloud helper
+  const saveStateBundleToCloud = (overrideData?: any) => {
+    if (getIsFirestoreQuotaExceeded()) {
+      setCloudSync(prev => ({ ...prev, status: 'quota_exceeded' }));
+      return;
+    }
+
+    const payload = overrideData || {
+      users,
+      selectedTahun,
+      tahunList,
+      opdList,
+      programs,
+      kegiatanList,
+      subKegiatanList,
+      belanjaList,
+      sumberDanaList,
+      rekananList,
+      anggaranList,
+      realisasiList,
+      importLogs,
+      activityLogs,
+      sheetConfig
+    };
+
+    setCloudSync(prev => ({ ...prev, status: 'syncing' }));
+
+    saveSharedDataToFirestore(payload, currentUser.nama || currentUser.username)
+      .then(() => {
+        lastSavedDataSignature.current = computeStateFingerprint(payload);
+        setCloudSync({
+          status: 'connected',
+          lastSyncedAt: new Date().toISOString(),
+          lastUpdatedBy: currentUser.nama
+        });
+      })
+      .catch(err => {
+        if (isOfflineOrUnavailable(err)) {
+          console.info('Cloud sync deferred: client is currently offline or reconnecting.');
+          setCloudSync(prev => ({ ...prev, status: 'offline' }));
+        } else if (isQuotaError(err)) {
+          console.warn('Firestore write quota exceeded. Local storage active.');
+          setCloudSync(prev => ({ ...prev, status: 'quota_exceeded' }));
+        } else {
+          console.error('Failed to sync to Cloud Firestore:', err);
+          setCloudSync(prev => ({ ...prev, status: 'error' }));
+        }
+      });
+  };
+
+  // 1. Subscribe to Firestore Real-Time Updates (Live single source of truth with conflict protection)
   useEffect(() => {
     const unsubscribe = subscribeToSharedData(
       remoteData => {
         if (!remoteData) return;
+
+        const remoteUpdatedTime = remoteData.updatedAt ? new Date(remoteData.updatedAt).getTime() : 0;
+        const localSavedTimestampStr = localStorage.getItem(LOCAL_TIMESTAMP_KEY);
+        const localUpdatedTime = localSavedTimestampStr ? Number(localSavedTimestampStr) : (localModifiedAtRef.current || 0);
+
+        // Conflict check: if local changes were made more recently than the remote Firestore snapshot (e.g. recent inputs not yet synced),
+        // DO NOT let the stale snapshot overwrite the user's latest inputs! Instead, push local data to Firestore.
+        if (localUpdatedTime > remoteUpdatedTime + 1000) {
+          console.info('Local state is newer than remote Firestore snapshot. Retaining local inputs and updating cloud...');
+          saveStateBundleToCloud();
+          return;
+        }
+
         isApplyingRemoteChange.current = true;
 
         if (remoteData.users && Array.isArray(remoteData.users) && remoteData.users.length > 0) {
           setUsers(remoteData.users);
-        }
-        if (remoteData.selectedTahun) {
-          setSelectedTahun(remoteData.selectedTahun);
         }
         if (remoteData.tahunList && Array.isArray(remoteData.tahunList) && remoteData.tahunList.length > 0) {
           setTahunList(remoteData.tahunList);
@@ -461,7 +496,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         if (remoteData.realisasiList && Array.isArray(remoteData.realisasiList)) {
           setRealisasiList(prevLocal => {
-            // If remote is empty but local has items, never wipe local state
             if (remoteData.realisasiList!.length === 0 && prevLocal.length > 0) {
               return prevLocal;
             }
@@ -511,7 +545,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     );
 
-    return () => unsubscribe();
+    // Save pending local storage on tab close/unload
+    const handleBeforeUnload = () => {
+      try {
+        const dataToStore = {
+          currentUser,
+          users,
+          selectedTahun,
+          tahunList,
+          opd,
+          opdList,
+          programs,
+          kegiatanList,
+          subKegiatanList,
+          belanjaList,
+          sumberDanaList,
+          rekananList,
+          anggaranList,
+          realisasiList,
+          importLogs,
+          activityLogs,
+          sheetConfig
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToStore));
+        localStorage.setItem(SELECTED_TAHUN_KEY, String(selectedTahun));
+      } catch {}
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, []);
 
   // Filter State
@@ -554,20 +620,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       sheetConfig
     };
 
-    // Save to local cache with redundant permanent snapshot
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToStore));
-      if (realisasiList.length > 0 || anggaranList.length > 0) {
-        localStorage.setItem(BACKUP_STORAGE_KEY, JSON.stringify(dataToStore));
-      }
-    } catch (e) {
-      console.error('Error writing to localStorage:', e);
-    }
+    // Save to local cache synchronously
+    persistToLocalStorage(dataToStore);
 
-    // Compute data signature to detect real modifications
-    const currentSignature = `${realisasiList.length}_${anggaranList.length}_${selectedTahun}_${users.length}_${programs.length}_${kegiatanList.length}_${subKegiatanList.length}_${belanjaList.length}_${sumberDanaList.length}_${rekananList.length}_${importLogs.length}_${activityLogs.length}`;
+    // Compute detailed data fingerprint to detect any real modification (value edit, status change, additions)
+    const currentSignature = computeStateFingerprint(dataToStore);
 
-    // On initial mount or when applying updates from remote Firestore listener, do not trigger a write back
+    // On initial mount or when applying updates from remote Firestore listener, do not trigger an outgoing write back
     if (isInitialMount.current) {
       isInitialMount.current = false;
       lastSavedDataSignature.current = currentSignature;
@@ -579,69 +638,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    // If data has not changed compared to last saved state, skip writing
+    // If data fingerprint has not changed compared to last saved state, skip write
     if (lastSavedDataSignature.current === currentSignature) {
       return;
     }
 
-    // Sync to Cloud Firestore only when local data has actually changed
-    if (!isInitialCloudLoad.current) {
-      if (getIsFirestoreQuotaExceeded()) {
-        setCloudSync(prev => ({ ...prev, status: 'quota_exceeded' }));
-        return;
-      }
-
-      setCloudSync(prev => ({ ...prev, status: 'syncing' }));
-      const timeoutId = setTimeout(() => {
-        if (getIsFirestoreQuotaExceeded()) {
-          setCloudSync(prev => ({ ...prev, status: 'quota_exceeded' }));
-          return;
-        }
-
-        saveSharedDataToFirestore(
-          {
-            users,
-            selectedTahun,
-            tahunList,
-            opdList,
-            programs,
-            kegiatanList,
-            subKegiatanList,
-            belanjaList,
-            sumberDanaList,
-            rekananList,
-            anggaranList,
-            realisasiList,
-            importLogs,
-            activityLogs,
-            sheetConfig
-          },
-          currentUser.nama || currentUser.username
-        )
-          .then(() => {
-            lastSavedDataSignature.current = currentSignature;
-            setCloudSync({
-              status: 'connected',
-              lastSyncedAt: new Date().toISOString(),
-              lastUpdatedBy: currentUser.nama
-            });
-          })
-          .catch(err => {
-            if (isOfflineOrUnavailable(err)) {
-              console.info('Cloud sync deferred: client is currently offline or reconnecting.');
-              setCloudSync(prev => ({ ...prev, status: 'offline' }));
-            } else if (isQuotaError(err)) {
-              console.warn('Firestore write quota exceeded for the day. Local & Google Sheet storage active.');
-              setCloudSync(prev => ({ ...prev, status: 'quota_exceeded' }));
-            } else {
-              console.error('Failed to sync to Cloud Firestore:', err);
-              setCloudSync(prev => ({ ...prev, status: 'error' }));
-            }
-          });
-      }, 3000); // 3s debounce to batch rapid edits and save write quota
-
-      return () => clearTimeout(timeoutId);
+    // Fast 600ms debounce to save to Cloud Firestore while batching rapid keystrokes
+    if (getIsFirestoreQuotaExceeded()) {
+      setCloudSync(prev => ({ ...prev, status: 'quota_exceeded' }));
+      return;
     }
+
+    setCloudSync(prev => ({ ...prev, status: 'syncing' }));
+    const timeoutId = setTimeout(() => {
+      saveSharedDataToFirestore(
+        {
+          users,
+          selectedTahun,
+          tahunList,
+          opdList,
+          programs,
+          kegiatanList,
+          subKegiatanList,
+          belanjaList,
+          sumberDanaList,
+          rekananList,
+          anggaranList,
+          realisasiList,
+          importLogs,
+          activityLogs,
+          sheetConfig
+        },
+        currentUser.nama || currentUser.username
+      )
+        .then(() => {
+          lastSavedDataSignature.current = currentSignature;
+          setCloudSync({
+            status: 'connected',
+            lastSyncedAt: new Date().toISOString(),
+            lastUpdatedBy: currentUser.nama
+          });
+        })
+        .catch(err => {
+          if (isOfflineOrUnavailable(err)) {
+            console.info('Cloud sync deferred: client is currently offline or reconnecting.');
+            setCloudSync(prev => ({ ...prev, status: 'offline' }));
+          } else if (isQuotaError(err)) {
+            console.warn('Firestore write quota exceeded for the day. Local storage active.');
+            setCloudSync(prev => ({ ...prev, status: 'quota_exceeded' }));
+          } else {
+            console.error('Failed to sync to Cloud Firestore:', err);
+            setCloudSync(prev => ({ ...prev, status: 'error' }));
+          }
+        });
+    }, 600);
+
+    return () => clearTimeout(timeoutId);
   }, [
     currentUser,
     users,

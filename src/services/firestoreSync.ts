@@ -338,11 +338,6 @@ export const saveSharedDataToFirestore = async (
     throw quotaErr;
   }
 
-  // Generate a quick signature to prevent redundant identical writes
-  const realCount = data.realisasiList?.length || 0;
-  const angCount = data.anggaranList?.length || 0;
-  const currentSignature = `${realCount}_${angCount}_${data.selectedTahun}_${data.users?.length || 0}`;
-
   try {
     const nowIso = new Date().toISOString();
     const docRef = doc(db, SHARED_DATA_COLLECTION, SHARED_DATA_DOC_ID);
@@ -413,8 +408,6 @@ export const saveSharedDataToFirestore = async (
       },
       { merge: true }
     );
-
-    lastSavedSignature = currentSignature;
   } catch (error) {
     if (isQuotaError(error)) {
       markFirestoreQuotaExceeded();
