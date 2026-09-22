@@ -315,6 +315,24 @@ interface RealisasiDetailFilter {
   bulan?: number;
 }
 
+export const getRealisasiMonth = (r: Realisasi): number => {
+  let m = Number(r.bulan);
+  if (m >= 1 && m <= 12) return m;
+  if (r.tanggal) {
+    const parts = String(r.tanggal).split(/[-/.]/);
+    if (parts.length >= 2) {
+      if (parts[0].length === 4) {
+        const parsed = parseInt(parts[1], 10);
+        if (parsed >= 1 && parsed <= 12) return parsed;
+      } else {
+        const parsed = parseInt(parts[1], 10);
+        if (parsed >= 1 && parsed <= 12) return parsed;
+      }
+    }
+  }
+  return 1;
+};
+
 interface RealisasiDetailModalProps {
   filter: RealisasiDetailFilter;
   onClose: () => void;
@@ -336,14 +354,7 @@ const RealisasiDetailModal: React.FC<RealisasiDetailModalProps> = ({
 
   const matchingRealisasi = currentRealisasi.filter(r => {
     if (filter.bulan !== undefined && filter.bulan !== null) {
-      let m = Number(r.bulan);
-      if (!m || isNaN(m)) {
-        if (r.tanggal) {
-          const parts = r.tanggal.split('-');
-          if (parts.length >= 2) m = parseInt(parts[1], 10);
-        }
-      }
-      if (m !== filter.bulan) return false;
+      if (getRealisasiMonth(r) !== Number(filter.bulan)) return false;
     }
     if (filter.kodeSub && !isCodeEqual(r.kodeSub, filter.kodeSub)) return false;
     if (filter.kodeBelanja && !isCodeEqual(r.kodeBelanja, filter.kodeBelanja)) return false;
@@ -640,7 +651,7 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
   const [silpaSearchTerm, setSilpaSearchTerm] = useState<string>('');
 
   const currentAnggaran = anggaranList.filter(a => Number(a.tahun) === Number(selectedTahun));
-  const currentRealisasi = realisasiList.filter(r => Number(r.tahun) === Number(selectedTahun));
+  const currentRealisasi = realisasiList.filter(r => !r.tahun || Number(r.tahun) === Number(selectedTahun));
 
   // Helper calculation for Laporan Per Program (Syced with Input Anggaran Pagu & Realisasi)
   const allProgramKodes = Array.from(
@@ -1142,10 +1153,10 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
   const monthlyReportData = monthNames.map((mName, idx) => {
     const monthNum = idx + 1;
     const realBulanIni = currentRealisasi
-      .filter(r => Number(r.bulan) === monthNum)
+      .filter(r => getRealisasiMonth(r) === monthNum)
       .reduce((s, r) => s + r.nilai, 0);
 
-    const transCount = currentRealisasi.filter(r => Number(r.bulan) === monthNum).length;
+    const transCount = currentRealisasi.filter(r => getRealisasiMonth(r) === monthNum).length;
 
     accumRealBulanan += realBulanIni;
     const sisaPagu = totalPaguTahun - accumRealBulanan;
@@ -1184,7 +1195,10 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
   const triwulanReportData = triwulanList.map(tw => {
     const targetTw = totalPaguTahun / 4;
     const realTw = currentRealisasi
-      .filter(r => Number(r.bulan) >= tw.bulanStart && Number(r.bulan) <= tw.bulanEnd)
+      .filter(r => {
+        const m = getRealisasiMonth(r);
+        return m >= tw.bulanStart && m <= tw.bulanEnd;
+      })
       .reduce((s, r) => s + r.nilai, 0);
 
     accumRealTw += realTw;
@@ -1213,7 +1227,10 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
   const semesterReportData = semesterList.map(sem => {
     const targetSem = totalPaguTahun / 2;
     const realSem = currentRealisasi
-      .filter(r => Number(r.bulan) >= sem.bulanStart && Number(r.bulan) <= sem.bulanEnd)
+      .filter(r => {
+        const m = getRealisasiMonth(r);
+        return m >= sem.bulanStart && m <= sem.bulanEnd;
+      })
       .reduce((s, r) => s + r.nilai, 0);
 
     accumRealSem += realSem;
@@ -2896,14 +2913,7 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
             {/* RINCIAN TRANSAKSI BULAN YBS JIKA BULAN DIPILIH */}
             {filterBulan !== 'all' && (() => {
               const bulanSelectedTransactions = currentRealisasi.filter(r => {
-                let m = Number(r.bulan);
-                if (!m || isNaN(m)) {
-                  if (r.tanggal) {
-                    const parts = r.tanggal.split('-');
-                    if (parts.length >= 2) m = parseInt(parts[1], 10);
-                  }
-                }
-                return m === Number(filterBulan);
+                return getRealisasiMonth(r) === Number(filterBulan);
               });
 
               return (

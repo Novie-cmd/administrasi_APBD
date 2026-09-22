@@ -51,6 +51,7 @@ interface PreviewRow {
   uraian: string;
   rekanan: string;
   tanggal: string;
+  bulan: number;
   isValid: boolean;
   isDuplicate: boolean;
   validationError?: string;
@@ -227,6 +228,7 @@ export const UploadExcelView: React.FC = () => {
               uraian: r.uraian,
               rekanan: r.rekanan,
               tanggal: r.tanggal,
+              bulan: r.bulan || parseExcelDate(r.tanggal, rowThn).month,
               isValid: r.nilai > 0,
               isDuplicate: isDup,
               validationError: err || (isDup ? 'Baris Duplikat (Nilai tetap ditampilkan & dapat diimpor)' : '')
@@ -309,7 +311,8 @@ export const UploadExcelView: React.FC = () => {
         nilai: r.nilai,
         uraian: r.uraian,
         rekanan: r.rekanan,
-        tanggal: r.tanggal
+        tanggal: r.tanggal,
+        bulan: r.bulan
       }));
 
     if (validRows.length === 0) {

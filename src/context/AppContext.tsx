@@ -1,5 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { extractCode, isCodeEqual, parseExcelDate, makeRealisasiCompositeKey } from '../utils/codeUtils';
+import {
+  extractCode,
+  isCodeEqual,
+  parseExcelDate,
+  makeRealisasiCompositeKey,
+  sanitizeRealisasiList,
+  extractMonthFromText
+} from '../utils/codeUtils';
 import {
   User,
   UserRole,
@@ -127,6 +134,7 @@ interface AppContextType {
       uraian: string;
       rekanan: string;
       tanggal: string;
+      bulan?: number;
     }[],
     fileName: string,
     overwriteExisting?: boolean,
@@ -228,16 +236,19 @@ const computeStateFingerprint = (data: any): string => {
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Local modification timestamp tracker
-  const localModifiedAtRef = useRef<number>(() => {
-    const saved = localStorage.getItem(LOCAL_TIMESTAMP_KEY);
-    return saved ? Number(saved) : Date.now();
-  });
+  const localModifiedAtRef = useRef<number>(
+    typeof window !== 'undefined' && localStorage.getItem(LOCAL_TIMESTAMP_KEY)
+      ? Number(localStorage.getItem(LOCAL_TIMESTAMP_KEY))
+      : Date.now()
+  );
+  const latestStateRef = useRef<any>(null);
 
   // Helper to persist snapshot to both primary and backup storage synchronously
   const persistToLocalStorage = (data: any) => {
     try {
       const now = Date.now();
       localModifiedAtRef.current = now;
+      latestStateRef.current = data;
       localStorage.setItem(LOCAL_TIMESTAMP_KEY, String(now));
       if (data.selectedTahun) {
         localStorage.setItem(SELECTED_TAHUN_KEY, String(data.selectedTahun));
@@ -358,7 +369,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     storedData?.anggaranList || INITIAL_ANGGARAN
   );
   const [realisasiList, setRealisasiList] = useState<Realisasi[]>(
-    storedData?.realisasiList || INITIAL_REALISASI
+    storedData?.realisasiList ? sanitizeRealisasiList(storedData.realisasiList) : INITIAL_REALISASI
   );
   const [importLogs, setImportLogs] = useState<ImportLog[]>(
     storedData?.importLogs || INITIAL_IMPORT_LOGS
@@ -509,7 +520,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               const k = makeRealisasiCompositeKey(l.noSP2D, l.kodeBelanja, l.kodeSub, l.nilai, l.uraian, l.tahun);
               return !remoteIds.has(l.id) && (!k || !remoteKeys.has(k));
             });
-            return [...remoteData.realisasiList!, ...pendingLocal];
+            return sanitizeRealisasiList([...remoteData.realisasiList!, ...pendingLocal]);
           });
         }
         if (remoteData.importLogs && Array.isArray(remoteData.importLogs) && remoteData.importLogs.length > 0) {
@@ -545,30 +556,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     );
 
-    // Save pending local storage on tab close/unload
+    // Save pending local storage on tab close/unload using the latest state reference
     const handleBeforeUnload = () => {
       try {
-        const dataToStore = {
-          currentUser,
-          users,
-          selectedTahun,
-          tahunList,
-          opd,
-          opdList,
-          programs,
-          kegiatanList,
-          subKegiatanList,
-          belanjaList,
-          sumberDanaList,
-          rekananList,
-          anggaranList,
-          realisasiList,
-          importLogs,
-          activityLogs,
-          sheetConfig
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToStore));
-        localStorage.setItem(SELECTED_TAHUN_KEY, String(selectedTahun));
+        if (latestStateRef.current) {
+          persistToLocalStorage(latestStateRef.current);
+        }
       } catch {}
     };
 
@@ -1028,24 +1021,66 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addRealisasi = (newReal: Omit<Realisasi, 'id'>) => {
     const id = `REAL-${selectedTahun}-${Date.now().toString().slice(-4)}`;
+    const rowTahun = Number(newReal.tahun) || Number(selectedTahun);
+    let finalMonth = Number(newReal.bulan);
+    if (isNaN(finalMonth) || finalMonth < 1 || finalMonth > 12) {
+      const parsed = parseExcelDate(newReal.tanggal, rowTahun);
+      finalMonth = parsed.month;
+    }
+    const parsedDate = parseExcelDate(newReal.tanggal, rowTahun, finalMonth);
+
     const fullReal: Realisasi = {
       ...newReal,
       id,
+      tahun: rowTahun,
+      bulan: finalMonth,
+      tanggal: parsedDate.isoDate,
       statusValidation: currentUser.role === 'PPK' || currentUser.role === 'Administrator' ? 'Disetujui PPK' : 'Draft'
     };
-    setRealisasiList(prev => [...prev, fullReal]);
+    setRealisasiList(prev => {
+      const nextList = [...prev, fullReal];
+      if (latestStateRef.current) {
+        const nextState = { ...latestStateRef.current, realisasiList: nextList };
+        latestStateRef.current = nextState;
+        persistToLocalStorage(nextState);
+      }
+      return nextList;
+    });
     logActivity(`Menginput Realisasi Baru No SP2D: ${fullReal.noSP2D} Nilai: Rp ${fullReal.nilai.toLocaleString('id-ID')}`);
   };
 
   const updateRealisasi = (id: string, updated: Partial<Realisasi>) => {
-    setRealisasiList(prev =>
-      prev.map(item => (item.id === id ? { ...item, ...updated } : item))
-    );
+    setRealisasiList(prev => {
+      const nextList = prev.map(item => {
+        if (item.id !== id) return item;
+        const merged = { ...item, ...updated };
+        if (updated.tanggal && (!updated.bulan || updated.bulan < 1 || updated.bulan > 12)) {
+          const parsed = parseExcelDate(updated.tanggal, merged.tahun || selectedTahun);
+          merged.bulan = parsed.month;
+          merged.tanggal = parsed.isoDate;
+        }
+        return merged;
+      });
+      if (latestStateRef.current) {
+        const nextState = { ...latestStateRef.current, realisasiList: nextList };
+        latestStateRef.current = nextState;
+        persistToLocalStorage(nextState);
+      }
+      return nextList;
+    });
     logActivity(`Mengoreksi Transaksi Realisasi ID ${id}`);
   };
 
   const deleteRealisasi = (id: string) => {
-    setRealisasiList(prev => prev.filter(r => r.id !== id));
+    setRealisasiList(prev => {
+      const nextList = prev.filter(r => r.id !== id);
+      if (latestStateRef.current) {
+        const nextState = { ...latestStateRef.current, realisasiList: nextList };
+        latestStateRef.current = nextState;
+        persistToLocalStorage(nextState);
+      }
+      return nextList;
+    });
     logActivity(`Menghapus Transaksi Realisasi ID ${id}`);
   };
 
@@ -1089,6 +1124,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       uraian: string;
       rekanan: string;
       tanggal: string;
+      bulan?: number;
     }[],
     fileName: string,
     overwriteExistingYear: boolean = false,
@@ -1154,8 +1190,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         }
 
-        const parsedDate = parseExcelDate(row.tanggal, rowTahun);
-        const finalMonth = parsedDate.month;
+        let finalMonth = 0;
+        if (row.bulan && Number(row.bulan) >= 1 && Number(row.bulan) <= 12) {
+          finalMonth = Number(row.bulan);
+        } else {
+          const parsedDate = parseExcelDate(row.tanggal, rowTahun);
+          finalMonth = parsedDate.month;
+        }
+
+        if (finalMonth < 1 || finalMonth > 12) {
+          finalMonth = extractMonthFromText(row.uraian) || extractMonthFromText(sp2dStr) || 1;
+        }
+
+        const parsedDate = parseExcelDate(row.tanggal, rowTahun, finalMonth);
         const finalIsoDate = parsedDate.isoDate;
 
         newRealisasiItems.push({
@@ -1183,7 +1230,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
 
       // Append new items below the existing list to maintain sequential order (File 1 -> File 2 below File 1)
-      return [...baseList, ...newRealisasiItems];
+      const nextList = [...baseList, ...newRealisasiItems];
+      if (latestStateRef.current) {
+        const nextState = { ...latestStateRef.current, realisasiList: nextList };
+        latestStateRef.current = nextState;
+        persistToLocalStorage(nextState);
+      }
+      return nextList;
     });
 
     const importLogEntry: ImportLog = {

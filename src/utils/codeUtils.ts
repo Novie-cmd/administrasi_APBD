@@ -256,7 +256,12 @@ export const isValidKodeSub = (val: any): boolean => {
   return /^\d+(\.\d+){2,}$/.test(code);
 };
 
-const INDO_MONTH_MAP: Record<string, number> = {
+export const ROMAN_MONTH_MAP: Record<string, number> = {
+  i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6,
+  vii: 7, viii: 8, ix: 9, x: 10, xi: 11, xii: 12
+};
+
+export const INDO_MONTH_MAP: Record<string, number> = {
   januari: 1, jan: 1, january: 1,
   februari: 2, feb: 2, february: 2, febr: 2,
   maret: 3, mar: 3, march: 3,
@@ -271,133 +276,314 @@ const INDO_MONTH_MAP: Record<string, number> = {
   desember: 12, des: 12, dec: 12, december: 12, dsb: 12
 };
 
-export const parseExcelDate = (val: any, fallbackYear: number): { isoDate: string; month: number; year: number } => {
+export const parseMonthValue = (val: any): number => {
+  if (val === undefined || val === null || val === '') return 0;
+  if (typeof val === 'number') {
+    if (val >= 1 && val <= 12) return Math.floor(val);
+    if (val > 30000 && val < 70000) {
+      const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+      return d.getUTCMonth() + 1;
+    }
+    return 0;
+  }
+  if (val instanceof Date && !isNaN(val.getTime())) {
+    return val.getMonth() + 1;
+  }
+  const rawStr = String(val).trim().toLowerCase();
+  if (!rawStr) return 0;
+
+  // Clean prefixes like 'bulan', 'bln', 'periode', 'ke-', 'b'
+  const clean = rawStr.replace(/^(bulan|bln|periode|ke|b)\s*[-:]*\s*/i, '').trim();
+
+  // Pure digits 1-12
+  if (/^(0?[1-9]|1[0-2])$/.test(clean)) {
+    return parseInt(clean, 10);
+  }
+
+  // Roman numerals alone
+  if (ROMAN_MONTH_MAP[clean]) {
+    return ROMAN_MONTH_MAP[clean];
+  }
+
+  // Indonesian / English month names
+  for (const [mName, mNum] of Object.entries(INDO_MONTH_MAP)) {
+    const reg = new RegExp('(^|[^a-z0-9])' + mName + '($|[^a-z0-9])', 'i');
+    if (reg.test(clean) || clean.includes(mName)) {
+      return mNum;
+    }
+  }
+
+  return 0;
+};
+
+export const extractMonthFromText = (text: any): number => {
+  if (!text) return 0;
+  const str = String(text).toLowerCase();
+
+  // 1. Indonesian month names
+  for (const [mName, mNum] of Object.entries(INDO_MONTH_MAP)) {
+    const reg = new RegExp('(^|[^a-z0-9])' + mName + '($|[^a-z0-9])', 'i');
+    if (reg.test(str)) {
+      return mNum;
+    }
+  }
+
+  // 2. Roman numerals in slash/dash pattern (e.g. /V/, /XI/, -XII-)
+  const romanMatch = str.match(/[\/\-\.](i|ii|iii|iv|v|vi|vii|viii|ix|x|xi|xii)[\/\-\.]/i);
+  if (romanMatch && ROMAN_MONTH_MAP[romanMatch[1].toLowerCase()]) {
+    return ROMAN_MONTH_MAP[romanMatch[1].toLowerCase()];
+  }
+
+  // 3. 'bulan 05' or 'bln-5' or 'bulan 11'
+  const bulanNumMatch = str.match(/(?:bulan|bln|periode)\s*[-:]*\s*(0?[1-9]|1[0-2])(?![0-9])/i);
+  if (bulanNumMatch) {
+    return parseInt(bulanNumMatch[1], 10);
+  }
+
+  return 0;
+};
+
+export const parseExcelDate = (
+  val: any,
+  fallbackYear: number,
+  explicitMonth?: number
+): { isoDate: string; month: number; year: number } => {
+  const targetYear = fallbackYear || 2025;
+  const targetExplicitMonth =
+    explicitMonth && explicitMonth >= 1 && explicitMonth <= 12
+      ? Math.floor(explicitMonth)
+      : 0;
+
   if (val === undefined || val === null || val === '') {
-    return { isoDate: `${fallbackYear}-01-01`, month: 1, year: fallbackYear };
+    const m = targetExplicitMonth || 1;
+    return {
+      isoDate: `${targetYear}-${String(m).padStart(2, '0')}-15`,
+      month: m,
+      year: targetYear
+    };
   }
 
   // 1. JS Date object
   if (val instanceof Date && !isNaN(val.getTime())) {
-    const y = val.getFullYear() || fallbackYear;
-    const m = val.getMonth() + 1;
-    const d = val.getDate();
+    const y = val.getFullYear() || targetYear;
+    const m = targetExplicitMonth || (val.getMonth() + 1);
+    const d = val.getDate() || 15;
     const iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     return { isoDate: iso, month: m, year: y };
   }
 
-  // 2. Excel Serial Number (e.g. 35000 to 60000)
-  const num = typeof val === 'number' ? val : parseFloat(String(val).trim());
-  if (!isNaN(num) && num > 30000 && num < 70000) {
-    const jsDate = new Date(Math.round((num - 25569) * 86400 * 1000));
-    if (!isNaN(jsDate.getTime())) {
-      const y = jsDate.getUTCFullYear() || fallbackYear;
-      const m = jsDate.getUTCMonth() + 1;
-      const d = jsDate.getUTCDate();
+  // 2. Pure Numeric values
+  if (typeof val === 'number') {
+    if (val >= 1 && val <= 12) {
+      const m = Math.floor(val);
+      return {
+        isoDate: `${targetYear}-${String(m).padStart(2, '0')}-15`,
+        month: m,
+        year: targetYear
+      };
+    }
+    // Excel Serial Number (e.g. 35000 to 70000)
+    if (val > 30000 && val < 70000) {
+      const jsDate = new Date(Math.round((val - 25569) * 86400 * 1000));
+      if (!isNaN(jsDate.getTime())) {
+        const y = jsDate.getUTCFullYear() || targetYear;
+        const m = targetExplicitMonth || (jsDate.getUTCMonth() + 1);
+        const d = jsDate.getUTCDate() || 15;
+        const iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        return { isoDate: iso, month: m, year: y };
+      }
+    }
+  }
+
+  const rawStr = String(val).trim();
+  const lowerStr = rawStr.toLowerCase();
+  if (!lowerStr) {
+    const m = targetExplicitMonth || 1;
+    return {
+      isoDate: `${targetYear}-${String(m).padStart(2, '0')}-15`,
+      month: m,
+      year: targetYear
+    };
+  }
+
+  // 3. Pure month digits: '1' to '12' or '01' to '12'
+  if (/^(0?[1-9]|1[0-2])$/.test(lowerStr)) {
+    const m = parseInt(lowerStr, 10);
+    return {
+      isoDate: `${targetYear}-${String(m).padStart(2, '0')}-15`,
+      month: m,
+      year: targetYear
+    };
+  }
+
+  // 4. Roman numerals alone
+  if (ROMAN_MONTH_MAP[lowerStr]) {
+    const m = ROMAN_MONTH_MAP[lowerStr];
+    return {
+      isoDate: `${targetYear}-${String(m).padStart(2, '0')}-15`,
+      month: m,
+      year: targetYear
+    };
+  }
+
+  // 5. YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD (with optional time)
+  const ymdMatch = lowerStr.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/);
+  if (ymdMatch) {
+    const y = parseInt(ymdMatch[1], 10) || targetYear;
+    const m = targetExplicitMonth || parseInt(ymdMatch[2], 10);
+    const d = parseInt(ymdMatch[3], 10);
+    if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
       const iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       return { isoDate: iso, month: m, year: y };
     }
   }
 
-  const rawStr = String(val).trim();
-  const str = rawStr.toLowerCase();
-  if (!str) {
-    return { isoDate: `${fallbackYear}-01-01`, month: 1, year: fallbackYear };
-  }
-
-  // 3. Match Indonesian/English month names (e.g., "10 November 2025", "Desember 2025", "10-Nov-2025", "15 Des 2025", "Nopember")
-  let foundMonth = 0;
-  for (const [mName, mNum] of Object.entries(INDO_MONTH_MAP)) {
-    // Check boundary or delimiter match
-    const reg = new RegExp(`(?:^|[^a-z0-9])${mName}(?:$|[^a-z0-9])`, 'i');
-    if (reg.test(str) || str.includes(mName)) {
-      foundMonth = mNum;
-      break;
-    }
-  }
-
-  if (foundMonth > 0) {
-    const digits = str.match(/\d+/g) || [];
-    let year = fallbackYear;
-    let day = 15;
-
-    digits.forEach(numStr => {
-      const n = parseInt(numStr, 10);
-      if (n >= 2000 && n <= 2050) {
-        year = n;
-      } else if (n >= 1 && n <= 31 && day === 15) {
-        day = n;
-      }
-    });
-
-    const iso = `${year}-${String(foundMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return { isoDate: iso, month: foundMonth, year };
-  }
-
-  // 4. Standard Numeric Formats:
-  // 4a. YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD
-  const ymdMatch = str.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/);
-  if (ymdMatch) {
-    const year = parseInt(ymdMatch[1], 10) || fallbackYear;
-    const month = parseInt(ymdMatch[2], 10);
-    const day = parseInt(ymdMatch[3], 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      const iso = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      return { isoDate: iso, month, year };
-    }
-  }
-
-  // 4b. DD-MM-YYYY or DD/MM/YYYY or DD.MM.YYYY
-  const dmyMatch = str.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/);
+  // 6. DD-MM-YYYY or DD/MM/YYYY or DD.MM.YYYY (with optional time)
+  const dmyMatch = lowerStr.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/);
   if (dmyMatch) {
     const p1 = parseInt(dmyMatch[1], 10);
     const p2 = parseInt(dmyMatch[2], 10);
-    const year = parseInt(dmyMatch[3], 10) || fallbackYear;
+    const y = parseInt(dmyMatch[3], 10) || targetYear;
 
-    let day = p1;
-    let month = p2;
+    let d = p1;
+    let m = targetExplicitMonth || p2;
 
-    if (p1 <= 12 && p2 > 12) {
-      month = p1;
-      day = p2;
-    } else if (p1 > 12 && p2 <= 12) {
-      day = p1;
-      month = p2;
-    } else {
-      day = p1;
-      month = p2;
+    if (!targetExplicitMonth) {
+      if (p1 <= 12 && p2 > 12) {
+        m = p1;
+        d = p2;
+      } else {
+        d = p1;
+        m = p2;
+      }
     }
 
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      const iso = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      return { isoDate: iso, month, year };
+    if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+      const iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      return { isoDate: iso, month: m, year: y };
     }
   }
 
-  // 4c. Check if only month number or digits exist (e.g., "11", "12", "11/2025", "12/2025")
-  const monthYearMatch = str.match(/^(\d{1,2})[\/\-\.](\d{4})$/);
-  if (monthYearMatch) {
-    const m = parseInt(monthYearMatch[1], 10);
-    const y = parseInt(monthYearMatch[2], 10) || fallbackYear;
+  // 7. DD/MM/YY (two digit year)
+  const dmyShortMatch = lowerStr.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2})(?!\d)/);
+  if (dmyShortMatch) {
+    const p1 = parseInt(dmyShortMatch[1], 10);
+    const p2 = parseInt(dmyShortMatch[2], 10);
+    const rawY = parseInt(dmyShortMatch[3], 10);
+    const y = rawY < 50 ? 2000 + rawY : 1900 + rawY;
+
+    let d = p1;
+    let m = targetExplicitMonth || p2;
+
+    if (!targetExplicitMonth) {
+      if (p1 <= 12 && p2 > 12) {
+        m = p1;
+        d = p2;
+      } else {
+        d = p1;
+        m = p2;
+      }
+    }
+
+    if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+      const iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      return { isoDate: iso, month: m, year: y };
+    }
+  }
+
+  // 8. Month-Year: MM/YYYY or MM-YYYY
+  const myMatch = lowerStr.match(/^(\d{1,2})[\/\-\.](\d{4})/);
+  if (myMatch) {
+    const m = targetExplicitMonth || parseInt(myMatch[1], 10);
+    const y = parseInt(myMatch[2], 10) || targetYear;
     if (m >= 1 && m <= 12) {
-      return { isoDate: `${y}-${String(m).padStart(2, '0')}-15`, month: m, year: y };
+      return {
+        isoDate: `${y}-${String(m).padStart(2, '0')}-15`,
+        month: m,
+        year: y
+      };
     }
   }
 
-  // 4d. Standard JS Date fallback
-  const d = new Date(str);
+  // 9. Match Indonesian/English month names (e.g., "10 November 2025", "Desember 2025", "10-Nov-2025")
+  for (const [mName, mNum] of Object.entries(INDO_MONTH_MAP)) {
+    const reg = new RegExp('(^|[^a-z0-9])' + mName + '($|[^a-z0-9])', 'i');
+    if (reg.test(lowerStr) || lowerStr.includes(mName)) {
+      const m = targetExplicitMonth || mNum;
+      const digits = lowerStr.match(/\d+/g) || [];
+      let year = targetYear;
+      let day = 15;
+
+      digits.forEach(numStr => {
+        const n = parseInt(numStr, 10);
+        if (n >= 2000 && n <= 2050) {
+          year = n;
+        } else if (n >= 1 && n <= 31 && day === 15) {
+          day = n;
+        }
+      });
+
+      const iso = `${year}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      return { isoDate: iso, month: m, year };
+    }
+  }
+
+  // 10. Standard JS Date fallback
+  const d = new Date(rawStr);
   if (!isNaN(d.getTime())) {
-    const y = d.getFullYear() || fallbackYear;
-    const m = d.getMonth() + 1;
-    const dayVal = d.getDate();
+    const y = d.getFullYear() || targetYear;
+    const m = targetExplicitMonth || (d.getMonth() + 1);
+    const dayVal = d.getDate() || 15;
     const iso = `${y}-${String(m).padStart(2, '0')}-${String(dayVal).padStart(2, '0')}`;
     return { isoDate: iso, month: m, year: y };
   }
 
+  const mFallback = targetExplicitMonth || 1;
   return {
-    isoDate: `${fallbackYear}-01-01`,
-    month: 1,
-    year: fallbackYear
+    isoDate: `${targetYear}-${String(mFallback).padStart(2, '0')}-15`,
+    month: mFallback,
+    year: targetYear
   };
+};
+
+export const sanitizeRealisasiItem = (r: any, fallbackYear: number = 2025): any => {
+  const rowThn =
+    Number(r.tahun) ||
+    (r.tanggal ? parseInt(String(r.tanggal).split('-')[0], 10) : 0) ||
+    fallbackYear;
+
+  let finalMonth = Number(r.bulan);
+  if (isNaN(finalMonth) || finalMonth < 1 || finalMonth > 12) {
+    if (r.tanggal) {
+      const parsed = parseExcelDate(r.tanggal, rowThn);
+      finalMonth = parsed.month;
+    } else {
+      finalMonth =
+        extractMonthFromText(r.uraian || '') ||
+        extractMonthFromText(r.noSP2D || '') ||
+        1;
+    }
+  }
+
+  let finalTanggal = r.tanggal;
+  if (!finalTanggal || !/^\d{4}-\d{2}-\d{2}$/.test(String(finalTanggal))) {
+    const parsed = parseExcelDate(finalTanggal || finalMonth, rowThn, finalMonth);
+    finalTanggal = parsed.isoDate;
+  }
+
+  return {
+    ...r,
+    id: r.id || `REAL-${rowThn}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    tahun: rowThn,
+    bulan: finalMonth,
+    tanggal: finalTanggal,
+    nilai: Number(r.nilai) || 0
+  };
+};
+
+export const sanitizeRealisasiList = (list: any[], fallbackYear: number = 2025): any[] => {
+  if (!Array.isArray(list)) return [];
+  return list.map(item => sanitizeRealisasiItem(item, fallbackYear));
 };
 
 export const makeRealisasiCompositeKey = (
@@ -462,6 +648,7 @@ export const parseRealisasiFromExcelData = (
     rekanan: string;
     keterangan: string;
     tanggal: string;
+    bulan: number;
   }[] = [];
 
   // Sticky Context Variables for hierarchical/grouped Excel sheets
@@ -471,10 +658,11 @@ export const parseRealisasiFromExcelData = (
   let activeBelName = 'Belanja Alat/Bahan untuk Kegiatan Kantor-Alat Tulis Kantor';
 
   if (sheet2D && sheet2D.length > 0) {
-    // 1. Detect dynamic column headers if present in top 15 rows
+    // 1. Detect dynamic column headers if present in top 25 rows
     let colSP2D = -1;
     let colSPM = -1;
     let colTanggal = -1;
+    let colBulan = -1;
     let colSubCode = -1;
     let colSubName = -1;
     let colBelCode = -1;
@@ -486,7 +674,7 @@ export const parseRealisasiFromExcelData = (
     let colTahun = -1;
     let headerRowIndex = -1;
 
-    for (let r = 0; r < Math.min(sheet2D.length, 15); r++) {
+    for (let r = 0; r < Math.min(sheet2D.length, 25); r++) {
       const row = sheet2D[r];
       if (!row || row.length === 0) continue;
       let matchedHeaders = 0;
@@ -502,8 +690,29 @@ export const parseRealisasiFromExcelData = (
         } else if (text.includes('spm') || text.includes('nospm') || text.includes('nomorspm')) {
           colSPM = cIdx;
           matchedHeaders++;
-        } else if (text.includes('tanggal') || text.includes('tglsp2d') || text.includes('tgl')) {
-          colTanggal = cIdx;
+        } else if (
+          text.includes('tanggalsp2d') ||
+          text.includes('tglsp2d') ||
+          text.includes('tglcair') ||
+          text.includes('tanggaldokumen') ||
+          text.includes('tgldok') ||
+          text.includes('tanggal') ||
+          text.includes('tgl') ||
+          text.includes('date')
+        ) {
+          if (colTanggal === -1 || text.includes('sp2d') || text.includes('cair')) {
+            colTanggal = cIdx;
+          }
+          matchedHeaders++;
+        } else if (
+          text.includes('bulan') ||
+          text.includes('bln') ||
+          text.includes('periode') ||
+          text === 'm' ||
+          text === 'mon' ||
+          text === 'month'
+        ) {
+          colBulan = cIdx;
           matchedHeaders++;
         } else if (
           (text.includes('subkegiatan') || text.includes('kodesub') || text.includes('subkeg')) &&
@@ -763,6 +972,12 @@ export const parseRealisasiFromExcelData = (
         }
       }
 
+      // 5. Month & Date Detection
+      let explicitMonth = 0;
+      if (colBulan >= 0 && row[colBulan] !== undefined && row[colBulan] !== null && String(row[colBulan]).trim()) {
+        explicitMonth = parseMonthValue(row[colBulan]);
+      }
+
       let tglRaw: any = null;
       if (colTanggal >= 0 && row[colTanggal] !== undefined && row[colTanggal] !== null && String(row[colTanggal]).trim()) {
         tglRaw = row[colTanggal];
@@ -772,8 +987,9 @@ export const parseRealisasiFromExcelData = (
         for (const c of candCols) {
           if (row[c] !== undefined && row[c] !== null && String(row[c]).trim()) {
             const p = parseExcelDate(row[c], selectedTahun);
-            if (p.isoDate !== `${selectedTahun}-01-01` || String(row[c]).toLowerCase().includes('jan')) {
+            if (p.isoDate !== `${selectedTahun}-01-01` || String(row[c]).toLowerCase().includes('jan') || p.month > 1) {
               tglRaw = row[c];
+              if (explicitMonth === 0) explicitMonth = p.month;
               break;
             }
           }
@@ -786,11 +1002,18 @@ export const parseRealisasiFromExcelData = (
             const cellVal = row[c];
             if (cellVal !== undefined && cellVal !== null) {
               const strC = String(cellVal).trim();
-              if (strC && (strC.includes('-') || strC.includes('/') || strC.includes('.') || /[a-zA-Z]/.test(strC))) {
-                const testDate = parseExcelDate(cellVal, selectedTahun);
-                if (testDate.isoDate !== `${selectedTahun}-01-01` || strC.toLowerCase().includes('jan')) {
-                  tglRaw = cellVal;
-                  break;
+              if (strC) {
+                const mCand = parseMonthValue(cellVal);
+                if (mCand > 0 && explicitMonth === 0) {
+                  explicitMonth = mCand;
+                }
+                if (strC.includes('-') || strC.includes('/') || strC.includes('.') || /[a-zA-Z]/.test(strC)) {
+                  const testDate = parseExcelDate(cellVal, selectedTahun, explicitMonth);
+                  if (testDate.isoDate !== `${selectedTahun}-01-01` || strC.toLowerCase().includes('jan') || testDate.month > 1) {
+                    tglRaw = cellVal;
+                    if (explicitMonth === 0) explicitMonth = testDate.month;
+                    break;
+                  }
                 }
               }
             }
@@ -802,7 +1025,13 @@ export const parseRealisasiFromExcelData = (
         }
       }
 
-      const parsedDate = parseExcelDate(tglRaw, selectedTahun);
+      // Check if uraian or sp2d mentions a month name or roman numeral if explicitMonth is still 0
+      if (explicitMonth === 0) {
+        explicitMonth = extractMonthFromText(uraianVal) || extractMonthFromText(rowSp2d) || 0;
+      }
+
+      const parsedDate = parseExcelDate(tglRaw, selectedTahun, explicitMonth);
+      const finalMonth = explicitMonth > 0 ? explicitMonth : parsedDate.month;
 
       const { prog, keg, sub } = deriveCodesFromSub(rowSubCode || activeSubCode);
       const bel = rowBelCode || activeBelCode || '5.1.02.01.01.0024';
@@ -823,7 +1052,8 @@ export const parseRealisasiFromExcelData = (
         uraian: uraianVal || 'Realisasi Keuangan',
         rekanan: rekananVal || 'PT Bank NTB Syariah',
         keterangan: ketVal,
-        tanggal: parsedDate.isoDate
+        tanggal: parsedDate.isoDate,
+        bulan: finalMonth
       });
     }
   }
@@ -856,8 +1086,17 @@ export const parseRealisasiFromExcelData = (
       const uraianVal = findRowValueByKeys(row, ['uraian', 'keterangan', 'uraianrealisasi', 'rincian', 'keperluan', 'deskripsi']);
       const rekananVal = findRowValueByKeys(row, ['penyedia', 'rekanan', 'penerima', 'namarekanan', 'pihakketiga', 'perusahaan']);
       const ketVal = findRowValueByKeys(row, ['keterangan', 'ket', 'catatan']);
-      const tglRaw = findRowValueByKeys(row, ['tanggal', 'tgl', 'tanggalsp2d', 'bulan', 'bln', 'tgl_sp2d', 'tglspm']);
-      const parsedDate = parseExcelDate(tglRaw, thn);
+
+      const bulanRaw = findRowValueByKeys(row, ['bulan', 'bln', 'periode', 'month', 'bulanke', 'bulanrealisasi']);
+      let explicitMonth = parseMonthValue(bulanRaw);
+      const tglRaw = findRowValueByKeys(row, ['tanggal', 'tgl', 'tanggalsp2d', 'tglsp2d', 'tgl_sp2d', 'tglspm']);
+
+      if (explicitMonth === 0) {
+        explicitMonth = extractMonthFromText(uraianVal) || extractMonthFromText(sp2dVal) || 0;
+      }
+
+      const parsedDate = parseExcelDate(tglRaw || bulanRaw, thn, explicitMonth);
+      const finalMonth = explicitMonth > 0 ? explicitMonth : parsedDate.month;
 
       results.push({
         rowNum: idx + 1,
@@ -874,7 +1113,8 @@ export const parseRealisasiFromExcelData = (
         uraian: uraianVal || 'Realisasi Keuangan',
         rekanan: rekananVal || 'PT Bank NTB Syariah',
         keterangan: ketVal,
-        tanggal: parsedDate.isoDate
+        tanggal: parsedDate.isoDate,
+        bulan: finalMonth
       });
     });
   }
