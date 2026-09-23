@@ -96,6 +96,7 @@ interface AppContextType {
   addAnggaran: (anggaran: Omit<Anggaran, 'id' | 'paguAkhir' | 'tanggalInput'>) => void;
   updateAnggaran: (id: string, updated: Partial<Anggaran>) => void;
   deleteAnggaran: (id: string) => void;
+  deleteBatchAnggaran: (ids: string[]) => void;
   clearAnggaranDatabase: (tahun?: number) => void;
   importAnggaranBatch: (
     items: {
@@ -892,6 +893,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteAnggaran = (id: string) => {
     setAnggaranList(prev => prev.filter(a => a.id !== id));
     logActivity(`Menghapus data Anggaran ID ${id}`);
+  };
+
+  const deleteBatchAnggaran = (ids: string[]) => {
+    if (!ids || ids.length === 0) return;
+    const idSet = new Set(ids);
+    setAnggaranList(prev => {
+      const nextList = prev.filter(a => !idSet.has(a.id));
+      if (latestStateRef.current) {
+        const nextState = { ...latestStateRef.current, anggaranList: nextList };
+        latestStateRef.current = nextState;
+        persistToLocalStorage(nextState);
+      }
+      return nextList;
+    });
+    logActivity(`Menghapus Massal ${ids.length} data Pagu Anggaran`);
   };
 
   const clearAnggaranDatabase = (tahun?: number) => {
@@ -2016,6 +2032,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addAnggaran,
         updateAnggaran,
         deleteAnggaran,
+        deleteBatchAnggaran,
         clearAnggaranDatabase,
         importAnggaranBatch,
         addRealisasi,

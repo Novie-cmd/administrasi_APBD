@@ -21,7 +21,8 @@ import {
   FileCheck,
   Sparkles,
   AlertCircle,
-  X
+  X,
+  CheckSquare
 } from 'lucide-react';
 
 interface PreviewAnggaranRow {
@@ -53,6 +54,7 @@ export const InputAnggaranView: React.FC = () => {
     addAnggaran,
     updateAnggaran,
     deleteAnggaran,
+    deleteBatchAnggaran,
     clearAnggaranDatabase,
     importAnggaranBatch,
     currentUser
@@ -61,6 +63,10 @@ export const InputAnggaranView: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showClearModal, setShowClearModal] = useState(false);
+
+  // Selection & Bulk Actions
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
 
   // Edit and Delete Modal States
   const [editingAnggaran, setEditingAnggaran] = useState<Anggaran | null>(null);
@@ -480,6 +486,52 @@ export const InputAnggaranView: React.FC = () => {
   const totalNilaiSPD = currentAnggaran.reduce((s, a) => s + (a.nilaiSPD !== undefined ? a.nilaiSPD : a.paguAkhir), 0);
   const totalPaguAkhir = currentAnggaran.reduce((s, a) => s + a.paguAkhir, 0);
 
+  const filteredAnggaran = currentAnggaran.filter(a => {
+    const subObj = subKegiatanList.find(s => s.kodeSub === a.kodeSub);
+    const subSearchText = subObj ? `${subObj.kodeSub} ${subObj.namaSub}` : a.kodeSub || '';
+    const term = searchTerm.toLowerCase();
+    return (
+      a.kodeBelanja.toLowerCase().includes(term) ||
+      a.namaBelanja.toLowerCase().includes(term) ||
+      (a.kodeSub && a.kodeSub.toLowerCase().includes(term)) ||
+      subSearchText.toLowerCase().includes(term)
+    );
+  });
+
+  const allFilteredIds = filteredAnggaran.map(a => a.id);
+  const isAllSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selectedIds.includes(id));
+  const isPartiallySelected = allFilteredIds.some(id => selectedIds.includes(id)) && !isAllSelected;
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds(prev => prev.filter(id => !allFilteredIds.includes(id)));
+    } else {
+      setSelectedIds(prev => Array.from(new Set([...prev, ...allFilteredIds])));
+    }
+  };
+
+  const handleToggleSelectRow = (id: string, e?: React.MouseEvent) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds([]);
+  };
+
+  const handleConfirmBulkDelete = () => {
+    if (selectedIds.length === 0) return;
+    deleteBatchAnggaran(selectedIds);
+    setSelectedIds([]);
+    setShowBulkDeleteModal(false);
+  };
+
+  const totalSelectedPagu = currentAnggaran
+    .filter(a => selectedIds.includes(a.id))
+    .reduce((sum, a) => sum + (Number(a.paguAkhir) || 0), 0);
+
   const validPreviewCount = previewData.filter(r => r.isValid).length;
 
   return (
@@ -713,23 +765,99 @@ export const InputAnggaranView: React.FC = () => {
 
       {/* TABLE DATA ANGGARAN */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden shadow-xl">
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-          <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-            Rincian Pagu Anggaran TA {selectedTahun}
-          </h3>
-          <input
-            type="text"
-            placeholder="Cari kode, sub kegiatan, atau belanja..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-white placeholder-slate-500 w-64"
-          />
+        <div className="p-4 border-b border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+              Rincian Pagu Anggaran TA {selectedTahun} ({filteredAnggaran.length} Data)
+            </h3>
+            {selectedIds.length > 0 && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold animate-pulse">
+                <CheckSquare className="h-3.5 w-3.5" />
+                <span>{selectedIds.length} Dipilih</span>
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {selectedIds.length > 0 && !isReadOnly && (
+              <button
+                type="button"
+                onClick={() => setShowBulkDeleteModal(true)}
+                className="flex items-center gap-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-md transition shrink-0"
+                title="Hapus semua data Pagu Anggaran yang dipilih"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Hapus Terpilih ({selectedIds.length})</span>
+              </button>
+            )}
+
+            <div className="relative flex-1 sm:w-64">
+              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Cari kode, sub kegiatan, belanja..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
+              />
+            </div>
+          </div>
         </div>
+
+        {/* Bulk Selection Notification & Action Strip */}
+        {selectedIds.length > 0 && !isReadOnly && (
+          <div className="bg-gradient-to-r from-emerald-950/90 via-slate-900 to-rose-950/60 border-b border-emerald-500/30 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-3">
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">
+                <CheckSquare className="h-4 w-4" />
+              </span>
+              <span className="font-bold text-white">
+                {selectedIds.length} baris Pagu Anggaran terpilih
+              </span>
+              <span className="hidden md:inline text-slate-500">|</span>
+              <span className="hidden md:inline text-emerald-400 font-mono font-bold">
+                Total Pagu: Rp {totalSelectedPagu.toLocaleString('id-ID')}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleClearSelection}
+                className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition"
+              >
+                Batal Pilih
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowBulkDeleteModal(true)}
+                className="flex items-center gap-1.5 px-3.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow transition"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Hapus {selectedIds.length} Data Terpilih</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-950 text-slate-300 font-bold uppercase tracking-wider border-b border-slate-800">
               <tr>
+                {!isReadOnly && (
+                  <th className="px-3 py-3 text-center w-10">
+                    <input
+                      type="checkbox"
+                      checked={isAllSelected}
+                      ref={el => {
+                        if (el) el.indeterminate = isPartiallySelected;
+                      }}
+                      onChange={handleToggleSelectAll}
+                      className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
+                      title={isAllSelected ? "Batal pilih semua" : "Pilih semua data"}
+                    />
+                  </th>
+                )}
+                <th className="px-3 py-3 text-center w-12">No.</th>
                 <th className="px-4 py-3">Sub Kegiatan</th>
                 <th className="px-4 py-3">Kode Belanja</th>
                 <th className="px-4 py-3">Uraian Belanja</th>
@@ -743,23 +871,56 @@ export const InputAnggaranView: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800 text-slate-300">
-              {currentAnggaran
-                .filter(a => {
-                  const subObj = subKegiatanList.find(s => s.kodeSub === a.kodeSub);
-                  const subSearchText = subObj ? `${subObj.kodeSub} ${subObj.namaSub}` : a.kodeSub || '';
-                  const term = searchTerm.toLowerCase();
-                  return (
-                    a.kodeBelanja.toLowerCase().includes(term) ||
-                    a.namaBelanja.toLowerCase().includes(term) ||
-                    (a.kodeSub && a.kodeSub.toLowerCase().includes(term)) ||
-                    subSearchText.toLowerCase().includes(term)
-                  );
-                })
-                .map(a => {
+              {filteredAnggaran.length === 0 ? (
+                <tr>
+                  <td colSpan={isReadOnly ? 10 : 12} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="h-12 w-12 rounded-2xl bg-slate-800 flex items-center justify-center text-slate-400">
+                        <FileSpreadsheet className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-200">
+                          {searchTerm.trim()
+                            ? 'Tidak ada data anggaran yang cocok dengan pencarian'
+                            : `Belum ada data pagu anggaran untuk Tahun Anggaran ${selectedTahun}`}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">
+                          {searchTerm.trim()
+                            ? 'Coba gunakan kata kunci pencarian yang lain'
+                            : 'Gunakan tombol "Input Pagu Manual" atau "Import dari Excel" di atas untuk menambahkan data'}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredAnggaran.map((a, idx) => {
                   const subObj = subKegiatanList.find(s => s.kodeSub === a.kodeSub);
                   const namaSub = subObj ? subObj.namaSub : '';
+                  const isChecked = selectedIds.includes(a.id);
                   return (
-                    <tr key={a.id} className="hover:bg-slate-800/50">
+                    <tr
+                      key={a.id}
+                      onClick={() => !isReadOnly && handleToggleSelectRow(a.id)}
+                      className={`transition cursor-pointer select-none ${
+                        isChecked
+                          ? 'bg-emerald-950/40 hover:bg-emerald-950/60 text-white'
+                          : 'hover:bg-slate-800/50'
+                      }`}
+                    >
+                      {!isReadOnly && (
+                        <td className="px-3 py-3 text-center" onClick={e => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={e => handleToggleSelectRow(a.id, e as any)}
+                            className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
+                          />
+                        </td>
+                      )}
+                      <td className="px-3 py-3 text-center font-mono font-bold text-slate-400">
+                        {idx + 1}
+                      </td>
                       <td className="px-4 py-3 max-w-xs">
                         <div className="font-mono text-[11px] font-bold text-amber-400">{a.kodeSub || '-'}</div>
                         {namaSub && (
@@ -783,7 +944,7 @@ export const InputAnggaranView: React.FC = () => {
                       <td className="px-4 py-3 font-mono text-slate-300">{a.sumberDana || 'DAU'}</td>
                       <td className="px-4 py-3 text-slate-400">{a.operator}</td>
                       {!isReadOnly && (
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-1">
                             <button
                               onClick={() => handleOpenEdit(a)}
@@ -804,7 +965,8 @@ export const InputAnggaranView: React.FC = () => {
                       )}
                     </tr>
                   );
-                })}
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -947,6 +1109,57 @@ export const InputAnggaranView: React.FC = () => {
         </div>
       )}
 
+      {/* BULK DELETE CONFIRMATION MODAL */}
+      {showBulkDeleteModal && selectedIds.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-md rounded-3xl border border-rose-800/60 bg-slate-900 p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-rose-400">
+              <div className="p-2.5 rounded-2xl bg-rose-950 border border-rose-800/80">
+                <AlertCircle className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Hapus Data Anggaran Terpilih</h3>
+                <p className="text-xs text-slate-400">Tindakan ini akan menghapus {selectedIds.length} data pagu anggaran secara permanen.</p>
+              </div>
+            </div>
+
+            <div className="rounded-xl bg-slate-950 border border-slate-800 p-3.5 text-xs space-y-2">
+              <div className="flex justify-between text-slate-300">
+                <span>Total Data Terpilih:</span>
+                <span className="font-bold text-emerald-300">{selectedIds.length} Baris Anggaran</span>
+              </div>
+              <div className="flex justify-between text-slate-300">
+                <span>Total Nilai Pagu Akhir:</span>
+                <span className="font-mono font-bold text-emerald-400">
+                  Rp {totalSelectedPagu.toLocaleString('id-ID')}
+                </span>
+              </div>
+              <div className="pt-2 border-t border-slate-800 text-[11px] text-rose-300 leading-relaxed">
+                * Seluruh data pagu yang dipilih akan dihapus secara serentak dan tidak dapat dikembalikan.
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setShowBulkDeleteModal(false)}
+                className="rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-2.5 text-xs font-bold text-slate-300 transition"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmBulkDelete}
+                className="flex items-center gap-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 px-5 py-2.5 text-xs font-bold text-white transition shadow-md"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Hapus {selectedIds.length} Data</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* IMPORT EXCEL MODAL */}
       {showImportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm animate-fadeIn">
@@ -1029,6 +1242,39 @@ export const InputAnggaranView: React.FC = () => {
                 </label>
               </div>
             </div>
+
+            {/* Selected File Badge with Delete/Reset button */}
+            {(importedFileName || previewData.length > 0) && (
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-emerald-950/30 border border-emerald-500/40 text-xs animate-fadeIn">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 shrink-0">
+                    <FileSpreadsheet className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="font-bold text-white truncate block">
+                      {importedFileName || 'File Spreadsheet Terpilih'}
+                    </span>
+                    <span className="text-[11px] text-emerald-300">
+                      {previewData.length} baris data terbaca ({validPreviewCount} data valid siap diimpor)
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImportedFileName('');
+                    setPreviewData([]);
+                    setImportErrors([]);
+                    setImportSuccessMsg(null);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/60 font-bold text-xs transition shrink-0 ml-2 shadow-sm"
+                  title="Hapus file Excel yang dipilih"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Hapus File Terpilih</span>
+                </button>
+              </div>
+            )}
 
             {/* Preview Data Table & Summaries */}
             {previewData.length > 0 && (
