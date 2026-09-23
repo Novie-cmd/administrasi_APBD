@@ -6,7 +6,9 @@ import {
   deleteDoc,
   onSnapshot,
   collection,
-  getDocs
+  getDocs,
+  disableNetwork,
+  enableNetwork
 } from 'firebase/firestore';
 
 export const SHARED_DATA_COLLECTION = 'bfms_shared_state';
@@ -14,9 +16,12 @@ export const SHARED_DATA_DOC_ID = 'app_data_v1';
 export const REALISASI_CHUNKS_COLLECTION = 'bfms_realisasi_chunks';
 export const ANGGARAN_CHUNKS_COLLECTION = 'bfms_anggaran_chunks';
 
+export const FIRESTORE_UPGRADE_URL = 'https://console.firebase.google.com/project/symbolic-lamp-48gvj/firestore/databases/ai-studio-sisteminformasik-8d677004-ee10-4de9-ad02-58f29f9e3339/data?openUpgradeDialog=true';
+export const FIRESTORE_PRICING_URL = 'https://firebase.google.com/pricing#cloud-firestore';
+
 const REALISASI_CHUNK_PREFIX = 'realisasi_chunk_';
 const ANGGARAN_CHUNK_PREFIX = 'anggaran_chunk_';
-const CHUNK_SIZE = 300; // 300 records per document (~60KB, safely under 1MB Firestore limit, reduces writes by 3x)
+const CHUNK_SIZE = 1000; // Increased to 1000 items per doc (~200KB, well under 1MB Firestore limit, reducing write operations by >3x)
 const QUOTA_STORAGE_KEY = 'bfms_firestore_quota_exceeded_date';
 
 function getTodayString(): string {
@@ -37,17 +42,42 @@ export function getIsFirestoreQuotaExceeded(): boolean {
   return isFirestoreQuotaExceeded;
 }
 
-export function markFirestoreQuotaExceeded(): void {
+export async function markFirestoreQuotaExceeded(): Promise<void> {
   isFirestoreQuotaExceeded = true;
   try {
     localStorage.setItem(QUOTA_STORAGE_KEY, getTodayString());
   } catch {}
+  try {
+    if (db) {
+      await disableNetwork(db);
+      console.info('Firestore network suspended: free tier daily quota reached. Switched to offline/local storage mode.');
+    }
+  } catch (err) {
+    // Already disabled or unavailable
+  }
 }
 
-export function resetFirestoreQuotaFlag(): void {
+export async function resetFirestoreQuotaFlag(): Promise<void> {
   isFirestoreQuotaExceeded = false;
   try {
     localStorage.removeItem(QUOTA_STORAGE_KEY);
+  } catch {}
+  try {
+    if (db) {
+      await enableNetwork(db);
+      console.info('Firestore network re-enabled.');
+    }
+  } catch (err) {
+    console.warn('Could not re-enable Firestore network:', err);
+  }
+}
+
+// If quota is already flagged for today, proactively disable Firestore network on startup
+if (getIsFirestoreQuotaExceeded()) {
+  try {
+    if (db) {
+      disableNetwork(db).catch(() => {});
+    }
   } catch {}
 }
 
@@ -107,6 +137,7 @@ export function isOfflineOrUnavailable(err: any): boolean {
  * Loads all realisasi chunks from Firestore using collection query with fallback.
  */
 async function loadRealisasiChunks(chunkCount?: number): Promise<any[]> {
+  if (getIsFirestoreQuotaExceeded()) return [];
   const allRealisasi: any[] = [];
 
   // Strategy 1: Load from dedicated collection
@@ -133,10 +164,13 @@ async function loadRealisasiChunks(chunkCount?: number): Promise<any[]> {
     }
   } catch (e) {
     if (isQuotaError(e)) {
-      markFirestoreQuotaExceeded();
+      await markFirestoreQuotaExceeded();
+      return [];
     }
     console.warn('Strategy 1 chunk load failed, trying Strategy 2:', e);
   }
+
+  if (getIsFirestoreQuotaExceeded()) return [];
 
   // Strategy 2: Fallback to SHARED_DATA_COLLECTION prefixed docs
   const maxChunksToScan = Math.max(chunkCount || 0, 10);
@@ -163,6 +197,7 @@ async function loadRealisasiChunks(chunkCount?: number): Promise<any[]> {
  * Loads all anggaran chunks from Firestore using collection query with fallback.
  */
 async function loadAnggaranChunks(chunkCount?: number): Promise<any[]> {
+  if (getIsFirestoreQuotaExceeded()) return [];
   const allAnggaran: any[] = [];
 
   // Strategy 1: Load from dedicated collection
@@ -189,10 +224,13 @@ async function loadAnggaranChunks(chunkCount?: number): Promise<any[]> {
     }
   } catch (e) {
     if (isQuotaError(e)) {
-      isFirestoreQuotaExceeded = true;
+      await markFirestoreQuotaExceeded();
+      return [];
     }
     console.warn('Strategy 1 anggaran chunk load failed, trying Strategy 2:', e);
   }
+
+  if (getIsFirestoreQuotaExceeded()) return [];
 
   // Strategy 2: Fallback to SHARED_DATA_COLLECTION prefixed docs
   const maxChunksToScan = Math.max(chunkCount || 0, 10);
@@ -222,10 +260,17 @@ export const subscribeToSharedData = (
   onData: (data: FirestoreAppData) => void,
   onError?: (err: Error) => void
 ) => {
+  if (getIsFirestoreQuotaExceeded()) {
+    console.info('Cloud Firestore: Daily free tier write/read quota reached. Running in robust offline/local storage mode.');
+    if (onError) onError(new Error("Quota limit exceeded for free tier."));
+    return () => {};
+  }
+
   const docRef = doc(db, SHARED_DATA_COLLECTION, SHARED_DATA_DOC_ID);
   return onSnapshot(
     docRef,
     async snapshot => {
+      if (getIsFirestoreQuotaExceeded()) return;
       if (snapshot.exists()) {
         const rawData = snapshot.data() as FirestoreAppData;
         let finalRealisasi = rawData.realisasiList || [];
@@ -241,7 +286,10 @@ export const subscribeToSharedData = (
             finalRealisasi = Array.from(map.values());
           }
         } catch (e) {
-          console.error('Error loading realisasi chunks in listener:', e);
+          if (isQuotaError(e)) {
+            await markFirestoreQuotaExceeded();
+          }
+          console.warn('Error loading realisasi chunks in listener:', e);
         }
 
         try {
@@ -253,7 +301,10 @@ export const subscribeToSharedData = (
             finalAnggaran = Array.from(map.values());
           }
         } catch (e) {
-          console.error('Error loading anggaran chunks in listener:', e);
+          if (isQuotaError(e)) {
+            await markFirestoreQuotaExceeded();
+          }
+          console.warn('Error loading anggaran chunks in listener:', e);
         }
 
         onData({
@@ -263,11 +314,11 @@ export const subscribeToSharedData = (
         });
       }
     },
-    error => {
+    async error => {
       if (isQuotaError(error)) {
-        markFirestoreQuotaExceeded();
+        await markFirestoreQuotaExceeded();
       }
-      console.error('Firestore subscription error:', error);
+      console.warn('Firestore subscription status:', error.message || error);
       if (onError) onError(error);
     }
   );
@@ -277,6 +328,7 @@ export const subscribeToSharedData = (
  * Fetches the shared state once from Firestore.
  */
 export const fetchSharedDataOnce = async (): Promise<FirestoreAppData | null> => {
+  if (getIsFirestoreQuotaExceeded()) return null;
   try {
     const docRef = doc(db, SHARED_DATA_COLLECTION, SHARED_DATA_DOC_ID);
     const snap = await getDoc(docRef);
@@ -294,7 +346,7 @@ export const fetchSharedDataOnce = async (): Promise<FirestoreAppData | null> =>
           finalRealisasi = Array.from(map.values());
         }
       } catch (e) {
-        console.error('Error loading realisasi chunks in fetchOnce:', e);
+        console.warn('Error loading realisasi chunks in fetchOnce:', e);
       }
 
       try {
@@ -306,7 +358,7 @@ export const fetchSharedDataOnce = async (): Promise<FirestoreAppData | null> =>
           finalAnggaran = Array.from(map.values());
         }
       } catch (e) {
-        console.error('Error loading anggaran chunks in fetchOnce:', e);
+        console.warn('Error loading anggaran chunks in fetchOnce:', e);
       }
 
       return {
@@ -318,9 +370,9 @@ export const fetchSharedDataOnce = async (): Promise<FirestoreAppData | null> =>
     return null;
   } catch (error) {
     if (isQuotaError(error)) {
-      markFirestoreQuotaExceeded();
+      await markFirestoreQuotaExceeded();
     }
-    console.error('Error fetching Firestore shared data:', error);
+    console.warn('Error fetching Firestore shared data:', error);
     return null;
   }
 };
@@ -410,9 +462,9 @@ export const saveSharedDataToFirestore = async (
     );
   } catch (error) {
     if (isQuotaError(error)) {
-      markFirestoreQuotaExceeded();
+      await markFirestoreQuotaExceeded();
     }
-    console.error('Error saving shared data to Firestore:', error);
+    console.warn('Could not save shared data to Firestore:', error);
     throw error;
   }
 };

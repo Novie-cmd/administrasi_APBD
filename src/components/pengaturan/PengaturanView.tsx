@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { UserRole, User } from '../../types';
+import { FIRESTORE_UPGRADE_URL, FIRESTORE_PRICING_URL } from '../../services/firestoreSync';
 import {
   Settings,
   Users,
@@ -252,16 +253,36 @@ export const PengaturanView: React.FC = () => {
 
             {/* Quota Notice Banner if quota exceeded */}
             {cloudSync.status === 'quota_exceeded' && (
-              <div className="rounded-xl border border-amber-500/40 bg-amber-950/30 p-4 space-y-2 text-amber-200 text-xs">
+              <div className="rounded-xl border border-amber-500/40 bg-amber-950/30 p-4 space-y-3 text-amber-200 text-xs">
                 <div className="flex items-center gap-2 font-bold text-amber-300 text-sm">
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500/20 text-amber-300">ℹ</span>
-                  <span>Batas Kuota Gratis Firestore Harian Tercapai</span>
+                  <span>Batas Kuota Gratis Firestore Harian Tercapai (Free Daily Units Limit)</span>
                 </div>
                 <p className="text-amber-200/90 leading-relaxed">
-                  Batas unit tulis gratis Firestore (*Free Spark tier limit*) telah tercapai untuk hari ini. <strong>Seluruh data Anda tetap aman 100%</strong> tersimpan di browser (Local Storage & Backup Permanen) dan Anda dapat menggunakan menu <strong>Integrasi Google Spreadsheet</strong> untuk sinkronisasi antar perangkat tanpa batas kuota.
+                  Batas unit tulis gratis Firestore (*Spark tier*) telah tercapai untuk hari ini. <strong>Seluruh data Anda tetap aman 100%</strong> tersimpan di browser (Local Storage & Backup Permanen) dan Anda dapat terus bekerja, menginput anggaran, mencatat realisasi, maupun mengekspor laporan. Anda juga dapat menggunakan menu <strong>Integrasi Google Spreadsheet</strong> untuk sinkronisasi antar perangkat tanpa batas kuota.
                 </p>
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  <a
+                    href={FIRESTORE_UPGRADE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-semibold transition"
+                  >
+                    <span>Buka Upgrade Database Firestore</span>
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                  <a
+                    href={FIRESTORE_PRICING_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-slate-300 hover:text-white underline text-[11px]"
+                  >
+                    <span>Informasi Kuota Spark & Enterprise</span>
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
                 <p className="text-[11px] text-amber-300/80">
-                  * Kuota Firebase akan ter-reset otomatis setiap hari (00:00 UTC). Anda juga dapat membuka konsol Firebase jika ingin meningkatkan paket.
+                  * Kuota Firebase akan ter-reset otomatis setiap hari (00:00 UTC).
                 </p>
               </div>
             )}

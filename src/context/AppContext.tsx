@@ -226,11 +226,10 @@ const computeStateFingerprint = (data: any): string => {
     data.kegiatanList?.length || 0,
     data.subKegiatanList?.length || 0,
     data.belanjaList?.length || 0,
-    data.selectedTahun || 2025,
+    data.sumberDanaList?.length || 0,
+    data.rekananList?.length || 0,
     data.users?.length || 0,
-    data.opdList?.length || 0,
-    data.importLogs?.length || 0,
-    data.activityLogs?.length || 0
+    data.opdList?.length || 0
   ].join('::');
 };
 
@@ -453,11 +452,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const localSavedTimestampStr = localStorage.getItem(LOCAL_TIMESTAMP_KEY);
         const localUpdatedTime = localSavedTimestampStr ? Number(localSavedTimestampStr) : (localModifiedAtRef.current || 0);
 
-        // Conflict check: if local changes were made more recently than the remote Firestore snapshot (e.g. recent inputs not yet synced),
-        // DO NOT let the stale snapshot overwrite the user's latest inputs! Instead, push local data to Firestore.
+        // Conflict check: if local changes were made more recently than the remote Firestore snapshot,
+        // retain local inputs without ping-ponging writes back to the server in onSnapshot
         if (localUpdatedTime > remoteUpdatedTime + 1000) {
-          console.info('Local state is newer than remote Firestore snapshot. Retaining local inputs and updating cloud...');
-          saveStateBundleToCloud();
+          console.info('Local state is newer than remote Firestore snapshot. Retaining local inputs.');
           return;
         }
 
@@ -636,7 +634,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    // Fast 600ms debounce to save to Cloud Firestore while batching rapid keystrokes
+    // If quota exceeded, do not attempt cloud sync and keep local storage active
     if (getIsFirestoreQuotaExceeded()) {
       setCloudSync(prev => ({ ...prev, status: 'quota_exceeded' }));
       return;
@@ -684,7 +682,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setCloudSync(prev => ({ ...prev, status: 'error' }));
           }
         });
-    }, 600);
+    }, 3000);
 
     return () => clearTimeout(timeoutId);
   }, [
