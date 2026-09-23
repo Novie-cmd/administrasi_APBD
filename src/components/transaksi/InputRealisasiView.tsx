@@ -845,11 +845,11 @@ export const InputRealisasiView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            {selectedIds.length > 0 && !isReadOnly && (
+            {selectedIds.length > 0 && (
               <button
                 type="button"
                 onClick={() => setShowBulkDeleteModal(true)}
-                className="flex items-center gap-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-md transition shrink-0"
+                className="flex items-center gap-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-md transition shrink-0 animate-fadeIn"
                 title="Hapus semua data SP2D yang dipilih"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -871,8 +871,8 @@ export const InputRealisasiView: React.FC = () => {
         </div>
 
         {/* Bulk Selection Notification & Action Strip */}
-        {selectedIds.length > 0 && !isReadOnly && (
-          <div className="bg-gradient-to-r from-teal-950/90 via-slate-900 to-rose-950/60 border-b border-teal-500/30 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+        {selectedIds.length > 0 && (
+          <div className="bg-gradient-to-r from-teal-950/90 via-slate-900 to-rose-950/60 border-b border-teal-500/30 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs animate-fadeIn">
             <div className="flex items-center gap-3">
               <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-teal-500/20 text-teal-300">
                 <CheckSquare className="h-4 w-4" />
@@ -909,20 +909,18 @@ export const InputRealisasiView: React.FC = () => {
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-950 text-slate-300 font-bold uppercase tracking-wider border-b border-slate-800">
               <tr>
-                {!isReadOnly && (
-                  <th className="px-3 py-3 text-center w-10">
-                    <input
-                      type="checkbox"
-                      checked={isAllSelected}
-                      ref={el => {
-                        if (el) el.indeterminate = isPartiallySelected;
-                      }}
-                      onChange={handleToggleSelectAll}
-                      className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-teal-600 focus:ring-teal-500 cursor-pointer accent-teal-600"
-                      title={isAllSelected ? "Batal pilih semua" : "Pilih semua data"}
-                    />
-                  </th>
-                )}
+                <th className="px-3 py-3 text-center w-10">
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected}
+                    ref={el => {
+                      if (el) el.indeterminate = isPartiallySelected;
+                    }}
+                    onChange={handleToggleSelectAll}
+                    className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-teal-600 focus:ring-teal-500 cursor-pointer accent-teal-600"
+                    title={isAllSelected ? "Batal pilih semua" : "Pilih semua data"}
+                  />
+                </th>
                 <th className="px-3 py-3 text-center w-12">No.</th>
                 <th className="px-4 py-3">No. SP2D</th>
                 <th className="px-4 py-3">Tanggal</th>
@@ -937,7 +935,7 @@ export const InputRealisasiView: React.FC = () => {
             <tbody className="divide-y divide-slate-800 text-slate-300">
               {filteredRealisasi.length === 0 ? (
                 <tr>
-                  <td colSpan={isReadOnly ? 8 : 10} className="px-6 py-12 text-center">
+                  <td colSpan={isReadOnly ? 9 : 10} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center justify-center space-y-3">
                       <div className="h-12 w-12 rounded-2xl bg-slate-800 flex items-center justify-center text-slate-400">
                         <FileSpreadsheet className="h-6 w-6" />
@@ -976,23 +974,21 @@ export const InputRealisasiView: React.FC = () => {
                   return (
                     <tr
                       key={r.id}
-                      onClick={() => !isReadOnly && handleToggleSelectRow(r.id)}
+                      onClick={() => handleToggleSelectRow(r.id)}
                       className={`transition cursor-pointer select-none ${
                         isChecked
                           ? 'bg-teal-950/40 hover:bg-teal-950/60 text-white'
                           : 'hover:bg-slate-800/50'
                       }`}
                     >
-                      {!isReadOnly && (
-                        <td className="px-3 py-3 text-center" onClick={e => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={e => handleToggleSelectRow(r.id, e as any)}
-                            className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-teal-600 focus:ring-teal-500 cursor-pointer accent-teal-600"
-                          />
-                        </td>
-                      )}
+                      <td className="px-3 py-3 text-center" onClick={e => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={e => handleToggleSelectRow(r.id, e as any)}
+                          className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-teal-600 focus:ring-teal-500 cursor-pointer accent-teal-600"
+                        />
+                      </td>
                       <td className="px-3 py-3 text-center font-mono font-bold text-slate-400">
                         {idx + 1}
                       </td>

@@ -73,6 +73,7 @@ export const UploadExcelView: React.FC = () => {
     importLogs,
     realisasiList,
     deleteRealisasi,
+    deleteBatchRealisasi,
     clearRealisasiDatabase
   } = useApp();
 
@@ -83,6 +84,7 @@ export const UploadExcelView: React.FC = () => {
   const [ignoreDuplicateWarnings, setIgnoreDuplicateWarnings] = useState<boolean>(false);
   const [showClearModal, setShowClearModal] = useState<boolean>(false);
   const [dbSearchQuery, setDbSearchQuery] = useState<string>('');
+  const [selectedDbIds, setSelectedDbIds] = useState<string[]>([]);
   const [importResult, setImportResult] = useState<{
     successCount: number;
     duplicateCount: number;
@@ -978,6 +980,22 @@ export const UploadExcelView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            {selectedDbIds.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm(`Hapus ${selectedDbIds.length} data realisasi SP2D yang dipilih secara permanen?`)) {
+                    deleteBatchRealisasi(selectedDbIds);
+                    setSelectedDbIds([]);
+                  }
+                }}
+                className="flex items-center gap-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 px-3 py-1.5 text-xs font-bold text-white shadow-md transition shrink-0"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Hapus Terpilih ({selectedDbIds.length})</span>
+              </button>
+            )}
+
             <div className="relative">
               <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
               <input
@@ -990,6 +1008,37 @@ export const UploadExcelView: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Selected Rows Action Strip */}
+        {selectedDbIds.length > 0 && (
+          <div className="flex items-center justify-between p-3 rounded-xl bg-rose-950/40 border border-rose-800/60 text-xs">
+            <span className="font-bold text-rose-300">
+              {selectedDbIds.length} transaksi SP2D dipilih dari database
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedDbIds([])}
+                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold transition"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm(`Hapus ${selectedDbIds.length} data realisasi SP2D yang dipilih secara permanen?`)) {
+                    deleteBatchRealisasi(selectedDbIds);
+                    setSelectedDbIds([]);
+                  }
+                }}
+                className="flex items-center gap-1 px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold transition"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Hapus {selectedDbIds.length} Data</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {currentYearRealisasi.length === 0 ? (
           <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-8 text-center space-y-2">
@@ -1004,6 +1053,21 @@ export const UploadExcelView: React.FC = () => {
             <table className="w-full text-left text-xs">
               <thead className="sticky top-0 bg-slate-950 text-slate-300 font-bold uppercase border-b border-slate-800">
                 <tr>
+                  <th className="px-3 py-2 text-center w-10">
+                    <input
+                      type="checkbox"
+                      checked={filteredDbRealisasi.length > 0 && selectedDbIds.length === filteredDbRealisasi.length}
+                      onChange={e => {
+                        if (e.target.checked) {
+                          setSelectedDbIds(filteredDbRealisasi.map(r => r.id));
+                        } else {
+                          setSelectedDbIds([]);
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
+                      title="Pilih semua transaksi"
+                    />
+                  </th>
                   <th className="px-3 py-2 text-center w-12">No</th>
                   <th className="px-3 py-2">Tanggal</th>
                   <th className="px-3 py-2">No. SP2D</th>
@@ -1016,50 +1080,75 @@ export const UploadExcelView: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 text-slate-300">
-                {filteredDbRealisasi.map((r, idx) => (
-                  <tr key={r.id} className="hover:bg-slate-800/50">
-                    <td className="px-3 py-2 text-center font-mono font-bold text-slate-400">
-                      {idx + 1}
-                    </td>
-                    <td className="px-3 py-2 font-mono text-slate-300 whitespace-nowrap">
-                      {r.tanggal}
-                    </td>
-                    <td className="px-3 py-2 font-mono font-bold text-emerald-400 whitespace-nowrap">
-                      {r.noSP2D}
-                    </td>
-                    <td className="px-3 py-2 font-mono text-slate-300 whitespace-nowrap">
-                      {r.kodeBelanja}
-                    </td>
-                    <td className="px-3 py-2 text-right font-mono font-bold text-white whitespace-nowrap">
-                      Rp {Number(r.nilai).toLocaleString('id-ID')}
-                    </td>
-                    <td className="px-3 py-2 max-w-xs truncate" title={r.uraian}>
-                      {r.uraian}
-                    </td>
-                    <td className="px-3 py-2 max-w-xs truncate text-slate-400" title={r.rekanan}>
-                      {r.rekanan}
-                    </td>
-                    <td className="px-3 py-2 text-center">
-                      <span className="inline-flex items-center rounded-full bg-emerald-950 px-2 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-800">
-                        {r.statusValidation || 'Disetujui PPK'}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-center">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (confirm(`Hapus data realisasi SP2D "${r.noSP2D}"?`)) {
-                            deleteRealisasi(r.id);
-                          }
-                        }}
-                        className="rounded p-1 text-slate-500 hover:bg-rose-950 hover:text-rose-400 transition"
-                        title="Hapus baris ini"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {filteredDbRealisasi.map((r, idx) => {
+                  const isChecked = selectedDbIds.includes(r.id);
+                  return (
+                    <tr
+                      key={r.id}
+                      onClick={() => {
+                        setSelectedDbIds(prev =>
+                          prev.includes(r.id) ? prev.filter(id => id !== r.id) : [...prev, r.id]
+                        );
+                      }}
+                      className={`cursor-pointer transition select-none ${
+                        isChecked ? 'bg-emerald-950/40 hover:bg-emerald-950/60' : 'hover:bg-slate-800/50'
+                      }`}
+                    >
+                      <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {
+                            setSelectedDbIds(prev =>
+                              prev.includes(r.id) ? prev.filter(id => id !== r.id) : [...prev, r.id]
+                            );
+                          }}
+                          className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
+                        />
+                      </td>
+                      <td className="px-3 py-2 text-center font-mono font-bold text-slate-400">
+                        {idx + 1}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-slate-300 whitespace-nowrap">
+                        {r.tanggal}
+                      </td>
+                      <td className="px-3 py-2 font-mono font-bold text-emerald-400 whitespace-nowrap">
+                        {r.noSP2D}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-slate-300 whitespace-nowrap">
+                        {r.kodeBelanja}
+                      </td>
+                      <td className="px-3 py-2 text-right font-mono font-bold text-white whitespace-nowrap">
+                        Rp {Number(r.nilai).toLocaleString('id-ID')}
+                      </td>
+                      <td className="px-3 py-2 max-w-xs truncate" title={r.uraian}>
+                        {r.uraian}
+                      </td>
+                      <td className="px-3 py-2 max-w-xs truncate text-slate-400" title={r.rekanan}>
+                        {r.rekanan}
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <span className="inline-flex items-center rounded-full bg-emerald-950 px-2 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-800">
+                          {r.statusValidation || 'Disetujui PPK'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm(`Hapus data realisasi SP2D "${r.noSP2D}"?`)) {
+                              deleteRealisasi(r.id);
+                            }
+                          }}
+                          className="rounded p-1 text-slate-500 hover:bg-rose-950 hover:text-rose-400 transition"
+                          title="Hapus baris ini"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
