@@ -117,6 +117,7 @@ interface AppContextType {
   addRealisasi: (realisasi: Omit<Realisasi, 'id'>) => void;
   updateRealisasi: (id: string, updated: Partial<Realisasi>) => void;
   deleteRealisasi: (id: string) => void;
+  deleteBatchRealisasi: (ids: string[]) => void;
   clearRealisasiDatabase: (tahun?: number) => void;
   approveRealisasiPPK: (id: string, approved: boolean, catatan?: string) => void;
   
@@ -1082,6 +1083,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logActivity(`Menghapus Transaksi Realisasi ID ${id}`);
   };
 
+  const deleteBatchRealisasi = (ids: string[]) => {
+    if (!ids || ids.length === 0) return;
+    const idSet = new Set(ids);
+    setRealisasiList(prev => {
+      const nextList = prev.filter(r => !idSet.has(r.id));
+      if (latestStateRef.current) {
+        const nextState = { ...latestStateRef.current, realisasiList: nextList };
+        latestStateRef.current = nextState;
+        persistToLocalStorage(nextState);
+      }
+      return nextList;
+    });
+    logActivity(`Menghapus Massal ${ids.length} Transaksi Realisasi SP2D`);
+  };
+
   const clearRealisasiDatabase = (tahun?: number) => {
     if (tahun !== undefined && tahun !== null) {
       const targetTahun = Number(tahun);
@@ -2005,6 +2021,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addRealisasi,
         updateRealisasi,
         deleteRealisasi,
+        deleteBatchRealisasi,
         clearRealisasiDatabase,
         approveRealisasiPPK,
         batchImportExcel,

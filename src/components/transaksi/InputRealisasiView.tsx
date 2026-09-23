@@ -30,7 +30,8 @@ import {
   XCircle,
   FileCheck,
   Sparkles,
-  AlertCircle
+  AlertCircle,
+  CheckSquare
 } from 'lucide-react';
 
 interface PreviewRealisasiRow {
@@ -66,6 +67,7 @@ export const InputRealisasiView: React.FC = () => {
     addRealisasi,
     updateRealisasi,
     deleteRealisasi,
+    deleteBatchRealisasi,
     clearRealisasiDatabase,
     batchImportExcel,
     currentUser
@@ -75,6 +77,10 @@ export const InputRealisasiView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showClearModal, setShowClearModal] = useState(false);
   const [showSheetModal, setShowSheetModal] = useState(false);
+
+  // Selection & Bulk Actions
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
 
   // Edit and Delete Modal States
   const [editingRealisasi, setEditingRealisasi] = useState<Realisasi | null>(null);
@@ -473,6 +479,54 @@ export const InputRealisasiView: React.FC = () => {
 
   const currentRealisasi = realisasiList.filter(r => Number(r.tahun) === Number(selectedTahun));
 
+  const filteredRealisasi = currentRealisasi.filter(r => {
+    if (!searchTerm.trim()) return true;
+    const q = searchTerm.toLowerCase();
+    return (
+      (r.noSP2D || '').toLowerCase().includes(q) ||
+      (r.noSPM || '').toLowerCase().includes(q) ||
+      (r.kodeBelanja || '').toLowerCase().includes(q) ||
+      (r.kodeSub || '').toLowerCase().includes(q) ||
+      (r.uraian || '').toLowerCase().includes(q) ||
+      (r.rekanan || '').toLowerCase().includes(q) ||
+      (r.tanggal || '').toLowerCase().includes(q)
+    );
+  });
+
+  const allFilteredIds = filteredRealisasi.map(r => r.id);
+  const isAllSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selectedIds.includes(id));
+  const isPartiallySelected = allFilteredIds.some(id => selectedIds.includes(id)) && !isAllSelected;
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds(prev => prev.filter(id => !allFilteredIds.includes(id)));
+    } else {
+      setSelectedIds(prev => Array.from(new Set([...prev, ...allFilteredIds])));
+    }
+  };
+
+  const handleToggleSelectRow = (id: string, e?: React.MouseEvent) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds([]);
+  };
+
+  const handleConfirmBulkDelete = () => {
+    if (selectedIds.length === 0) return;
+    deleteBatchRealisasi(selectedIds);
+    setSelectedIds([]);
+    setShowBulkDeleteModal(false);
+  };
+
+  const totalSelectedNilai = currentRealisasi
+    .filter(r => selectedIds.includes(r.id))
+    .reduce((sum, r) => sum + (Number(r.nilai) || 0), 0);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -699,15 +753,60 @@ export const InputRealisasiView: React.FC = () => {
 
           {/* Upload Bukti */}
           <div className="rounded-xl border border-dashed border-slate-700 bg-slate-950 p-4 text-center">
-            <Upload className="mx-auto h-6 w-6 text-slate-400" />
-            <label className="mt-2 block text-xs font-bold text-teal-400 cursor-pointer">
-              <span>Klik Upload File Bukti Kuitansi / SPJ (PDF/JPG)</span>
-              <input type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={handleFileUploadSim} className="hidden" />
-            </label>
-            {buktiFileName && (
-              <p className="mt-1 text-xs text-emerald-400 font-semibold">
-                Lampiran terpilih: {buktiFileName}
-              </p>
+            {buktiFileName ? (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-xl bg-teal-950/40 border border-teal-500/40 text-left">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="p-2 rounded-lg bg-teal-500/20 text-teal-300 shrink-0">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-white truncate">{buktiFileName}</p>
+                    <p className="text-[11px] text-teal-300">File bukti lampiran SPJ siap disimpan</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <label className="cursor-pointer rounded-lg bg-slate-800 hover:bg-slate-700 px-3 py-1.5 text-[11px] font-semibold text-slate-300 transition">
+                    <span>Ganti File</span>
+                    <input
+                      type="file"
+                      id="file-upload-bukti-input-replace"
+                      accept=".pdf,.png,.jpg,.jpeg"
+                      onChange={handleFileUploadSim}
+                      className="hidden"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBuktiFileName('');
+                      const fileInput = document.getElementById('file-upload-bukti-input') as HTMLInputElement;
+                      if (fileInput) fileInput.value = '';
+                      const replaceInput = document.getElementById('file-upload-bukti-input-replace') as HTMLInputElement;
+                      if (replaceInput) replaceInput.value = '';
+                    }}
+                    className="flex items-center gap-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900 px-3 py-1.5 text-[11px] font-bold text-rose-300 border border-rose-800/60 transition"
+                    title="Hapus file bukti terpilih"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Hapus File Terpilih</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <Upload className="mx-auto h-6 w-6 text-slate-400" />
+                <label className="mt-2 block text-xs font-bold text-teal-400 cursor-pointer hover:text-teal-300 transition">
+                  <span>Klik Upload File Bukti Kuitansi / SPJ (PDF/JPG)</span>
+                  <input
+                    id="file-upload-bukti-input"
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg"
+                    onChange={handleFileUploadSim}
+                    className="hidden"
+                  />
+                </label>
+                <p className="text-[10px] text-slate-500 mt-1">Mendukung format PDF, PNG, atau JPG</p>
+              </div>
             )}
           </div>
 
@@ -731,23 +830,99 @@ export const InputRealisasiView: React.FC = () => {
 
       {/* TABLE REALISASI */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden shadow-xl">
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-          <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-            Daftar Transaksi Realisasi SP2D ({currentRealisasi.length} Data)
-          </h3>
-          <input
-            type="text"
-            placeholder="Cari SP2D, Uraian, Rekanan..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-white"
-          />
+        {/* Table Toolbar */}
+        <div className="p-4 border-b border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+              Daftar Transaksi Realisasi SP2D ({filteredRealisasi.length} Data)
+            </h3>
+            {selectedIds.length > 0 && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/40 text-[11px] font-bold animate-pulse">
+                <CheckSquare className="h-3.5 w-3.5" />
+                <span>{selectedIds.length} Dipilih</span>
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {selectedIds.length > 0 && !isReadOnly && (
+              <button
+                type="button"
+                onClick={() => setShowBulkDeleteModal(true)}
+                className="flex items-center gap-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-md transition shrink-0"
+                title="Hapus semua data SP2D yang dipilih"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Hapus Terpilih ({selectedIds.length})</span>
+              </button>
+            )}
+
+            <div className="relative flex-1 sm:w-64">
+              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Cari SP2D, Uraian, Rekanan..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:border-teal-500 focus:outline-none"
+              />
+            </div>
+          </div>
         </div>
+
+        {/* Bulk Selection Notification & Action Strip */}
+        {selectedIds.length > 0 && !isReadOnly && (
+          <div className="bg-gradient-to-r from-teal-950/90 via-slate-900 to-rose-950/60 border-b border-teal-500/30 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-3">
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-teal-500/20 text-teal-300">
+                <CheckSquare className="h-4 w-4" />
+              </span>
+              <span className="font-bold text-white">
+                {selectedIds.length} transaksi SP2D terpilih
+              </span>
+              <span className="hidden md:inline text-slate-500">|</span>
+              <span className="hidden md:inline text-emerald-400 font-mono font-bold">
+                Total Nilai: Rp {totalSelectedNilai.toLocaleString('id-ID')}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleClearSelection}
+                className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition"
+              >
+                Batal Pilih
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowBulkDeleteModal(true)}
+                className="flex items-center gap-1.5 px-3.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow transition"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Hapus {selectedIds.length} Data Terpilih</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-950 text-slate-300 font-bold uppercase tracking-wider border-b border-slate-800">
               <tr>
+                {!isReadOnly && (
+                  <th className="px-3 py-3 text-center w-10">
+                    <input
+                      type="checkbox"
+                      checked={isAllSelected}
+                      ref={el => {
+                        if (el) el.indeterminate = isPartiallySelected;
+                      }}
+                      onChange={handleToggleSelectAll}
+                      className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-teal-600 focus:ring-teal-500 cursor-pointer accent-teal-600"
+                      title={isAllSelected ? "Batal pilih semua" : "Pilih semua data"}
+                    />
+                  </th>
+                )}
                 <th className="px-3 py-3 text-center w-12">No.</th>
                 <th className="px-4 py-3">No. SP2D</th>
                 <th className="px-4 py-3">Tanggal</th>
@@ -760,9 +935,9 @@ export const InputRealisasiView: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800 text-slate-300">
-              {currentRealisasi.length === 0 ? (
+              {filteredRealisasi.length === 0 ? (
                 <tr>
-                  <td colSpan={isReadOnly ? 8 : 9} className="px-6 py-12 text-center">
+                  <td colSpan={isReadOnly ? 8 : 10} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center justify-center space-y-3">
                       <div className="h-12 w-12 rounded-2xl bg-slate-800 flex items-center justify-center text-slate-400">
                         <FileSpreadsheet className="h-6 w-6" />
@@ -796,22 +971,28 @@ export const InputRealisasiView: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                currentRealisasi
-                  .filter(r => {
-                    if (!searchTerm.trim()) return true;
-                    const q = searchTerm.toLowerCase();
-                    return (
-                      (r.noSP2D || '').toLowerCase().includes(q) ||
-                      (r.noSPM || '').toLowerCase().includes(q) ||
-                      (r.kodeBelanja || '').toLowerCase().includes(q) ||
-                      (r.kodeSub || '').toLowerCase().includes(q) ||
-                      (r.uraian || '').toLowerCase().includes(q) ||
-                      (r.rekanan || '').toLowerCase().includes(q) ||
-                      (r.tanggal || '').toLowerCase().includes(q)
-                    );
-                  })
-                  .map((r, idx) => (
-                    <tr key={r.id} className="hover:bg-slate-800/50">
+                filteredRealisasi.map((r, idx) => {
+                  const isChecked = selectedIds.includes(r.id);
+                  return (
+                    <tr
+                      key={r.id}
+                      onClick={() => !isReadOnly && handleToggleSelectRow(r.id)}
+                      className={`transition cursor-pointer select-none ${
+                        isChecked
+                          ? 'bg-teal-950/40 hover:bg-teal-950/60 text-white'
+                          : 'hover:bg-slate-800/50'
+                      }`}
+                    >
+                      {!isReadOnly && (
+                        <td className="px-3 py-3 text-center" onClick={e => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={e => handleToggleSelectRow(r.id, e as any)}
+                            className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-teal-600 focus:ring-teal-500 cursor-pointer accent-teal-600"
+                          />
+                        </td>
+                      )}
                       <td className="px-3 py-3 text-center font-mono font-bold text-slate-400">
                         {idx + 1}
                       </td>
@@ -837,7 +1018,7 @@ export const InputRealisasiView: React.FC = () => {
                         </span>
                       </td>
                       {!isReadOnly && (
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-1">
                             <button
                               onClick={() => handleOpenEdit(r)}
@@ -857,7 +1038,8 @@ export const InputRealisasiView: React.FC = () => {
                         </td>
                       )}
                     </tr>
-                  ))
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -1019,6 +1201,57 @@ export const InputRealisasiView: React.FC = () => {
         </div>
       )}
 
+      {/* BULK DELETE REALISASI CONFIRMATION MODAL */}
+      {showBulkDeleteModal && selectedIds.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-md rounded-3xl border border-rose-800/60 bg-slate-900 p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-rose-400">
+              <div className="p-2.5 rounded-2xl bg-rose-950 border border-rose-800/80">
+                <AlertCircle className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Hapus Data Realisasi Terpilih</h3>
+                <p className="text-xs text-slate-400">Tindakan ini akan menghapus {selectedIds.length} data secara permanen.</p>
+              </div>
+            </div>
+
+            <div className="rounded-xl bg-slate-950 border border-slate-800 p-3.5 text-xs space-y-2">
+              <div className="flex justify-between text-slate-300">
+                <span>Total Data Terpilih:</span>
+                <span className="font-bold text-teal-300">{selectedIds.length} Transaksi SP2D</span>
+              </div>
+              <div className="flex justify-between text-slate-300">
+                <span>Total Nilai Realisasi:</span>
+                <span className="font-mono font-bold text-emerald-400">
+                  Rp {totalSelectedNilai.toLocaleString('id-ID')}
+                </span>
+              </div>
+              <div className="pt-2 border-t border-slate-800 text-[11px] text-rose-300 leading-relaxed">
+                * Seluruh data yang dipilih akan dihapus secara serentak dari database dan tidak dapat dikembalikan.
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setShowBulkDeleteModal(false)}
+                className="rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-2.5 text-xs font-bold text-slate-300 transition"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmBulkDelete}
+                className="flex items-center gap-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 px-5 py-2.5 text-xs font-bold text-white transition shadow-md"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Hapus {selectedIds.length} Data</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* IMPORT EXCEL MODAL */}
       {showImportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm animate-fadeIn">
@@ -1102,6 +1335,39 @@ export const InputRealisasiView: React.FC = () => {
                 </label>
               </div>
             </div>
+
+            {/* Selected File Badge with Delete/Reset button */}
+            {(importedFileName || previewData.length > 0) && (
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-teal-950/30 border border-teal-500/40 text-xs animate-fadeIn">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="p-1.5 rounded-lg bg-teal-500/20 text-teal-300 shrink-0">
+                    <FileSpreadsheet className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="font-bold text-white truncate block">
+                      {importedFileName || 'File Spreadsheet Terpilih'}
+                    </span>
+                    <span className="text-[11px] text-teal-300">
+                      {previewData.length} baris data terbaca ({previewData.filter(r => r.isValid).length} data valid siap diimpor)
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImportedFileName('');
+                    setPreviewData([]);
+                    setImportErrors([]);
+                    setImportSuccessMsg(null);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/60 font-bold text-xs transition shrink-0 ml-2 shadow-sm"
+                  title="Hapus file Excel yang dipilih"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Hapus File Terpilih</span>
+                </button>
+              </div>
+            )}
 
             {/* Preview Data Table */}
             {previewData.length > 0 && (
