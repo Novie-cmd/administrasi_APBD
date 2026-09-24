@@ -7,7 +7,8 @@ import {
   Clock,
   Edit3,
   Search,
-  MessageSquare
+  MessageSquare,
+  Trash2
 } from 'lucide-react';
 
 export const KoreksiDataView: React.FC = () => {
@@ -16,6 +17,7 @@ export const KoreksiDataView: React.FC = () => {
     realisasiList,
     approveRealisasiPPK,
     updateRealisasi,
+    deleteBatchRealisasi,
     currentUser
   } = useApp();
 
@@ -23,15 +25,58 @@ export const KoreksiDataView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [catatan, setCatatan] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const currentList = realisasiList.filter(r => Number(r.tahun) === Number(selectedTahun));
 
   const isPPK = currentUser.role === 'PPK' || currentUser.role === 'Administrator';
 
+  const filteredItems = currentList.filter(
+    r =>
+      (filterStatus === 'all' || (r.statusValidation || 'Disetujui PPK') === filterStatus) &&
+      (r.noSP2D.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        r.uraian.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const isAllSelected = filteredItems.length > 0 && selectedIds.length === filteredItems.length;
+  const isPartiallySelected = selectedIds.length > 0 && selectedIds.length < filteredItems.length;
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredItems.map(r => r.id));
+    }
+  };
+
+  const handleToggleSelectRow = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
   const handleApprove = (id: string, isApproved: boolean) => {
     approveRealisasiPPK(id, isApproved, catatan);
     setSelectedId(null);
     setCatatan('');
+  };
+
+  const handleBulkApprove = (isApproved: boolean) => {
+    if (selectedIds.length === 0) return;
+    const actionLabel = isApproved ? 'Setujui' : 'Tolak';
+    if (confirm(`${actionLabel} ${selectedIds.length} dokumen SP2D yang dipilih?`)) {
+      selectedIds.forEach(id => approveRealisasiPPK(id, isApproved, 'Validasi Massal'));
+      setSelectedIds([]);
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.length === 0) return;
+    if (confirm(`Hapus ${selectedIds.length} data realisasi yang dipilih secara permanen?`)) {
+      deleteBatchRealisasi(selectedIds);
+      setSelectedIds([]);
+    }
   };
 
   return (
@@ -68,23 +113,107 @@ export const KoreksiDataView: React.FC = () => {
 
       {/* TABLE DATA */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden shadow-xl">
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+        <div className="p-4 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h3 className="text-xs font-bold text-white uppercase tracking-wider">
             Daftar Verifikasi Dokumen SP2D PPK
           </h3>
-          <input
-            type="text"
-            placeholder="Cari SP2D, Uraian, Operator..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-white"
-          />
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Cari SP2D, Uraian, Operator..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="rounded-xl border border-slate-700 bg-slate-950 pl-9 pr-3 py-1.5 text-xs text-white"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Selection Strip */}
+        <div className={`px-4 py-2.5 border-b text-xs flex flex-wrap items-center justify-between gap-3 transition-colors ${
+          selectedIds.length > 0
+            ? 'bg-gradient-to-r from-emerald-950/95 via-slate-900 to-rose-950/80 border-emerald-500/50 text-white shadow-inner animate-fadeIn'
+            : 'bg-slate-950/60 border-slate-800 text-slate-400'
+        }`}>
+          {selectedIds.length > 0 ? (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">
+                  <CheckSquare className="h-3.5 w-3.5" />
+                </span>
+                <span className="font-bold text-emerald-200">
+                  {selectedIds.length} dokumen SP2D dipilih
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedIds([])}
+                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition"
+                >
+                  Batal
+                </button>
+                {isPPK && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleBulkApprove(true)}
+                      className="flex items-center gap-1 px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow transition"
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <span>Setujui ({selectedIds.length})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleBulkApprove(false)}
+                      className="flex items-center gap-1 px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow transition"
+                    >
+                      <XCircle className="h-3.5 w-3.5" />
+                      <span>Tolak ({selectedIds.length})</span>
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={handleBulkDelete}
+                  className="flex items-center gap-1 px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow transition"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Hapus ({selectedIds.length})</span>
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center gap-2 text-[11px] text-emerald-300/80">
+              <CheckSquare className="h-4 w-4 text-emerald-400 shrink-0" />
+              <span>
+                <strong className="text-emerald-300">Fitur Checklist Aktif:</strong> Centang kotak pada kolom <strong>PILIH</strong> untuk memproses atau menghapus banyak dokumen SP2D sekaligus.
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-950 text-slate-300 font-bold uppercase border-b border-slate-800">
               <tr>
+                <th className="px-3 py-3 text-center w-12 bg-slate-900/90 border-r border-slate-800">
+                  <div className="flex flex-col items-center justify-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={isAllSelected}
+                      ref={el => {
+                        if (el) el.indeterminate = isPartiallySelected;
+                      }}
+                      onChange={handleToggleSelectAll}
+                      className="h-4 w-4 rounded border-2 border-emerald-400 bg-slate-950 text-emerald-500 focus:ring-2 focus:ring-emerald-400 cursor-pointer accent-emerald-500 shadow"
+                      title={isAllSelected ? "Batal pilih semua" : "Pilih semua data"}
+                    />
+                    <span className="text-[9px] font-extrabold text-emerald-300 tracking-wider">PILIH</span>
+                  </div>
+                </th>
                 <th className="px-4 py-3">No. SP2D</th>
                 <th className="px-4 py-3">Tanggal</th>
                 <th className="px-4 py-3">Uraian Realisasi</th>
@@ -95,15 +224,28 @@ export const KoreksiDataView: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800 text-slate-300">
-              {currentList
-                .filter(
-                  r =>
-                    (filterStatus === 'all' || (r.statusValidation || 'Disetujui PPK') === filterStatus) &&
-                    (r.noSP2D.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      r.uraian.toLowerCase().includes(searchTerm.toLowerCase()))
-                )
-                .map(r => (
-                  <tr key={r.id} className="hover:bg-slate-800/50">
+              {filteredItems.map(r => {
+                const isChecked = selectedIds.includes(r.id);
+                return (
+                  <tr
+                    key={r.id}
+                    onClick={() => handleToggleSelectRow(r.id)}
+                    className={`transition cursor-pointer select-none ${
+                      isChecked
+                        ? 'bg-emerald-950/40 hover:bg-emerald-950/60 text-white'
+                        : 'hover:bg-slate-800/50'
+                    }`}
+                  >
+                    <td className="px-3 py-3 text-center border-r border-slate-800/80 bg-slate-900/30" onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center justify-center">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={e => handleToggleSelectRow(r.id, e as any)}
+                          className="h-4 w-4 rounded border-2 border-emerald-400 bg-slate-950 text-emerald-500 focus:ring-2 focus:ring-emerald-400 cursor-pointer accent-emerald-500 shadow"
+                        />
+                      </div>
+                    </td>
                     <td className="px-4 py-3 font-mono font-bold text-teal-300">{r.noSP2D}</td>
                     <td className="px-4 py-3 text-slate-300 whitespace-nowrap">{r.tanggal}</td>
                     <td className="px-4 py-3 font-semibold text-white max-w-xs">{r.uraian}</td>
@@ -125,7 +267,7 @@ export const KoreksiDataView: React.FC = () => {
                       </span>
                     </td>
                     {isPPK && (
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-1.5">
                           <button
                             onClick={() => handleApprove(r.id, true)}
@@ -147,7 +289,8 @@ export const KoreksiDataView: React.FC = () => {
                       </td>
                     )}
                   </tr>
-                ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

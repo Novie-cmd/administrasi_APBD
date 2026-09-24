@@ -805,55 +805,71 @@ export const InputAnggaranView: React.FC = () => {
         </div>
 
         {/* Bulk Selection Notification & Action Strip */}
-        {selectedIds.length > 0 && (
-          <div className="bg-gradient-to-r from-emerald-950/90 via-slate-900 to-rose-950/60 border-b border-emerald-500/30 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs animate-fadeIn">
-            <div className="flex items-center gap-3">
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">
-                <CheckSquare className="h-4 w-4" />
-              </span>
-              <span className="font-bold text-white">
-                {selectedIds.length} baris Pagu Anggaran terpilih
-              </span>
-              <span className="hidden md:inline text-slate-500">|</span>
-              <span className="hidden md:inline text-emerald-400 font-mono font-bold">
-                Total Pagu: Rp {totalSelectedPagu.toLocaleString('id-ID')}
+        <div className={`px-4 py-2.5 border-b text-xs flex flex-wrap items-center justify-between gap-3 transition-colors ${
+          selectedIds.length > 0
+            ? 'bg-gradient-to-r from-emerald-950/95 via-slate-900 to-rose-950/80 border-emerald-500/50 text-white shadow-inner animate-fadeIn'
+            : 'bg-slate-950/60 border-slate-800 text-slate-400'
+        }`}>
+          {selectedIds.length > 0 ? (
+            <>
+              <div className="flex items-center gap-3">
+                <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">
+                  <CheckSquare className="h-4 w-4" />
+                </span>
+                <span className="font-bold text-emerald-200">
+                  {selectedIds.length} baris Pagu Anggaran terpilih
+                </span>
+                <span className="hidden md:inline text-slate-500">|</span>
+                <span className="hidden md:inline text-emerald-400 font-mono font-bold">
+                  Total Pagu: Rp {totalSelectedPagu.toLocaleString('id-ID')}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleClearSelection}
+                  className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition"
+                >
+                  Batal Pilih
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowBulkDeleteModal(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow transition"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Hapus {selectedIds.length} Data Terpilih</span>
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center gap-2 text-[11px] text-emerald-300/80">
+              <CheckSquare className="h-4 w-4 text-emerald-400 shrink-0" />
+              <span>
+                <strong className="text-emerald-300">Fitur Checklist Aktif:</strong> Centang kotak pada kolom <strong>PILIH</strong> untuk menandai beberapa baris pagu belanja, lalu klik tombol <em>Hapus Terpilih</em>.
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleClearSelection}
-                className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition"
-              >
-                Batal Pilih
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowBulkDeleteModal(true)}
-                className="flex items-center gap-1.5 px-3.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow transition"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                <span>Hapus {selectedIds.length} Data Terpilih</span>
-              </button>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-950 text-slate-300 font-bold uppercase tracking-wider border-b border-slate-800">
               <tr>
-                <th className="px-3 py-3 text-center w-10">
-                  <input
-                    type="checkbox"
-                    checked={isAllSelected}
-                    ref={el => {
-                      if (el) el.indeterminate = isPartiallySelected;
-                    }}
-                    onChange={handleToggleSelectAll}
-                    className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
-                    title={isAllSelected ? "Batal pilih semua" : "Pilih semua data"}
-                  />
+                <th className="px-3 py-3 text-center w-12 bg-slate-900/90 border-r border-slate-800">
+                  <div className="flex flex-col items-center justify-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={isAllSelected}
+                      ref={el => {
+                        if (el) el.indeterminate = isPartiallySelected;
+                      }}
+                      onChange={handleToggleSelectAll}
+                      className="h-4 w-4 rounded border-2 border-emerald-400 bg-slate-950 text-emerald-500 focus:ring-2 focus:ring-emerald-400 cursor-pointer accent-emerald-500 shadow"
+                      title={isAllSelected ? "Batal pilih semua" : "Pilih semua data Pagu"}
+                    />
+                    <span className="text-[9px] font-extrabold text-emerald-300 tracking-wider">PILIH</span>
+                  </div>
                 </th>
                 <th className="px-3 py-3 text-center w-12">No.</th>
                 <th className="px-4 py-3">Sub Kegiatan</th>
@@ -906,13 +922,15 @@ export const InputAnggaranView: React.FC = () => {
                           : 'hover:bg-slate-800/50'
                       }`}
                     >
-                      <td className="px-3 py-3 text-center" onClick={e => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={e => handleToggleSelectRow(a.id, e as any)}
-                          className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
-                        />
+                      <td className="px-3 py-3 text-center border-r border-slate-800/80 bg-slate-900/30" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-center">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={e => handleToggleSelectRow(a.id, e as any)}
+                            className="h-4 w-4 rounded border-2 border-emerald-400 bg-slate-950 text-emerald-500 focus:ring-2 focus:ring-emerald-400 cursor-pointer accent-emerald-500 shadow"
+                          />
+                        </div>
                       </td>
                       <td className="px-3 py-3 text-center font-mono font-bold text-slate-400">
                         {idx + 1}
