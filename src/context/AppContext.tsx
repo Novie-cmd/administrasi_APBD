@@ -34,7 +34,8 @@ import {
   getIsFirestoreQuotaExceeded,
   resetFirestoreQuotaFlag,
   isQuotaError,
-  isOfflineOrUnavailable
+  isOfflineOrUnavailable,
+  purgeAllFirestoreData
 } from '../services/firestoreSync';
 import {
 
@@ -190,6 +191,7 @@ interface AppContextType {
   logActivity: (aktivitas: string) => void;
   deleteActivityLog: (id: string) => void;
   clearAllActivityLogs: () => void;
+  clearAllDatabase: (includeMaster?: boolean) => Promise<void>;
   resetAllData: () => void;
   restoreFromBackup: () => { success: boolean; realisasiCount: number; anggaranCount: number; message: string };
   importBackupJSON: (jsonData: string) => { success: boolean; message: string };
@@ -251,17 +253,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localModifiedAtRef.current = now;
       latestStateRef.current = data;
       localStorage.setItem(LOCAL_TIMESTAMP_KEY, String(now));
+      localStorage.setItem('bfms_has_ever_initialized', 'true');
       if (data.selectedTahun) {
         localStorage.setItem(SELECTED_TAHUN_KEY, String(data.selectedTahun));
       }
       const serialized = JSON.stringify(data);
       localStorage.setItem(STORAGE_KEY, serialized);
-      if (
-        (data.realisasiList && data.realisasiList.length > 0) ||
-        (data.anggaranList && data.anggaranList.length > 0)
-      ) {
-        localStorage.setItem(BACKUP_STORAGE_KEY, serialized);
-      }
+      // Keep backup synchronously updated so old data is never resurrected
+      localStorage.setItem(BACKUP_STORAGE_KEY, serialized);
     } catch (e) {
       console.error('Failed to write to localStorage:', e);
     }
@@ -272,12 +271,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const primaryStr = localStorage.getItem(STORAGE_KEY);
       const backupStr = localStorage.getItem(BACKUP_STORAGE_KEY);
+      const hasEverInitialized = typeof window !== 'undefined' && localStorage.getItem('bfms_has_ever_initialized') === 'true';
       
       let primary = primaryStr ? JSON.parse(primaryStr) : null;
       let backup = backupStr ? JSON.parse(backupStr) : null;
 
-      // Check legacy storage keys as fallback if primary is empty
-      if (!primary && !backup) {
+      // Check legacy storage keys only on fresh install before any initialization
+      if (!primary && !backup && !hasEverInitialized) {
         for (const legKey of LEGACY_STORAGE_KEYS) {
           const legStr = localStorage.getItem(legKey);
           if (legStr) {
@@ -292,25 +292,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
 
-      if (!primary && !backup) return null;
+      if (!primary && !backup) {
+        if (hasEverInitialized) {
+          // User intentionally emptied storage; do not resurrect initial demo transactions
+          return {
+            users: INITIAL_USERS,
+            tahunList: INITIAL_TAHUN,
+            opdList: [INITIAL_OPD],
+            programs: [],
+            kegiatanList: [],
+            subKegiatanList: [],
+            belanjaList: [],
+            sumberDanaList: INITIAL_SUMBER_DANA,
+            rekananList: INITIAL_REKANAN,
+            anggaranList: [],
+            realisasiList: [],
+            importLogs: [],
+            activityLogs: [],
+            sheetConfig: INITIAL_SHEET_CONFIG
+          };
+        }
+        return null;
+      }
+
       if (!primary && backup) primary = backup;
 
-      // When primary exists, return it with safe fallbacks for arrays
+      // When primary exists, return it respecting explicit empty arrays
       return {
         ...primary,
         users: primary?.users && Array.isArray(primary.users) && primary.users.length > 0 ? primary.users : INITIAL_USERS,
         tahunList: primary?.tahunList && Array.isArray(primary.tahunList) && primary.tahunList.length > 0 ? primary.tahunList : INITIAL_TAHUN,
         opdList: primary?.opdList && Array.isArray(primary.opdList) && primary.opdList.length > 0 ? primary.opdList : (primary?.opd ? [primary.opd] : [INITIAL_OPD]),
-        programs: primary?.programs && Array.isArray(primary.programs) && primary.programs.length > 0 ? primary.programs : INITIAL_PROGRAMS,
-        kegiatanList: primary?.kegiatanList && Array.isArray(primary.kegiatanList) && primary.kegiatanList.length > 0 ? primary.kegiatanList : INITIAL_KEGIATAN,
-        subKegiatanList: primary?.subKegiatanList && Array.isArray(primary.subKegiatanList) && primary.subKegiatanList.length > 0 ? primary.subKegiatanList : INITIAL_SUBKEGIATAN,
-        belanjaList: primary?.belanjaList && Array.isArray(primary.belanjaList) && primary.belanjaList.length > 0 ? primary.belanjaList : INITIAL_BELANJA,
-        sumberDanaList: primary?.sumberDanaList && Array.isArray(primary.sumberDanaList) && primary.sumberDanaList.length > 0 ? primary.sumberDanaList : INITIAL_SUMBER_DANA,
-        rekananList: primary?.rekananList && Array.isArray(primary.rekananList) && primary.rekananList.length > 0 ? primary.rekananList : INITIAL_REKANAN,
-        anggaranList: primary?.anggaranList && Array.isArray(primary.anggaranList) ? primary.anggaranList : INITIAL_ANGGARAN,
-        realisasiList: primary?.realisasiList && Array.isArray(primary.realisasiList) ? primary.realisasiList : INITIAL_REALISASI,
-        importLogs: primary?.importLogs && Array.isArray(primary.importLogs) ? primary.importLogs : INITIAL_IMPORT_LOGS,
-        activityLogs: primary?.activityLogs && Array.isArray(primary.activityLogs) ? primary.activityLogs : INITIAL_ACTIVITY_LOGS,
+        programs: Array.isArray(primary?.programs) ? primary.programs : (hasEverInitialized ? [] : INITIAL_PROGRAMS),
+        kegiatanList: Array.isArray(primary?.kegiatanList) ? primary.kegiatanList : (hasEverInitialized ? [] : INITIAL_KEGIATAN),
+        subKegiatanList: Array.isArray(primary?.subKegiatanList) ? primary.subKegiatanList : (hasEverInitialized ? [] : INITIAL_SUBKEGIATAN),
+        belanjaList: Array.isArray(primary?.belanjaList) ? primary.belanjaList : (hasEverInitialized ? [] : INITIAL_BELANJA),
+        sumberDanaList: Array.isArray(primary?.sumberDanaList) ? primary.sumberDanaList : (hasEverInitialized ? [] : INITIAL_SUMBER_DANA),
+        rekananList: Array.isArray(primary?.rekananList) ? primary.rekananList : (hasEverInitialized ? [] : INITIAL_REKANAN),
+        anggaranList: Array.isArray(primary?.anggaranList) ? primary.anggaranList : (hasEverInitialized ? [] : INITIAL_ANGGARAN),
+        realisasiList: Array.isArray(primary?.realisasiList) ? primary.realisasiList : (hasEverInitialized ? [] : INITIAL_REALISASI),
+        importLogs: Array.isArray(primary?.importLogs) ? primary.importLogs : [],
+        activityLogs: Array.isArray(primary?.activityLogs) ? primary.activityLogs : [],
         sheetConfig: primary?.sheetConfig || INITIAL_SHEET_CONFIG
       };
     } catch (err) {
@@ -472,56 +494,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (remoteData.opdList && Array.isArray(remoteData.opdList) && remoteData.opdList.length > 0) {
           setOpdList(remoteData.opdList);
         }
-        if (remoteData.programs && Array.isArray(remoteData.programs) && remoteData.programs.length > 0) {
+        if (remoteData.programs && Array.isArray(remoteData.programs)) {
           setPrograms(remoteData.programs);
         }
-        if (remoteData.kegiatanList && Array.isArray(remoteData.kegiatanList) && remoteData.kegiatanList.length > 0) {
+        if (remoteData.kegiatanList && Array.isArray(remoteData.kegiatanList)) {
           setKegiatanList(remoteData.kegiatanList);
         }
-        if (remoteData.subKegiatanList && Array.isArray(remoteData.subKegiatanList) && remoteData.subKegiatanList.length > 0) {
+        if (remoteData.subKegiatanList && Array.isArray(remoteData.subKegiatanList)) {
           setSubKegiatanList(remoteData.subKegiatanList);
         }
-        if (remoteData.belanjaList && Array.isArray(remoteData.belanjaList) && remoteData.belanjaList.length > 0) {
+        if (remoteData.belanjaList && Array.isArray(remoteData.belanjaList)) {
           setBelanjaList(remoteData.belanjaList);
         }
-        if (remoteData.sumberDanaList && Array.isArray(remoteData.sumberDanaList) && remoteData.sumberDanaList.length > 0) {
+        if (remoteData.sumberDanaList && Array.isArray(remoteData.sumberDanaList)) {
           setSumberDanaList(remoteData.sumberDanaList);
         }
-        if (remoteData.rekananList && Array.isArray(remoteData.rekananList) && remoteData.rekananList.length > 0) {
+        if (remoteData.rekananList && Array.isArray(remoteData.rekananList)) {
           setRekananList(remoteData.rekananList);
         }
         if (remoteData.anggaranList && Array.isArray(remoteData.anggaranList)) {
-          setAnggaranList(prevLocal => {
-            if (remoteData.anggaranList!.length === 0 && prevLocal.length > 0) {
-              return prevLocal;
-            }
-            const remoteIds = new Set(remoteData.anggaranList!.map(a => a.id));
-            const remoteKeys = new Set(
-              remoteData.anggaranList!.map(a => `${a.kodeBelanja}_${a.kodeSub}_${a.tahun}`)
-            );
-            const pendingLocal = prevLocal.filter(
-              l => !remoteIds.has(l.id) && !remoteKeys.has(`${l.kodeBelanja}_${l.kodeSub}_${l.tahun}`)
-            );
-            return [...remoteData.anggaranList!, ...pendingLocal];
-          });
+          setAnggaranList(remoteData.anggaranList);
         }
         if (remoteData.realisasiList && Array.isArray(remoteData.realisasiList)) {
-          setRealisasiList(prevLocal => {
-            if (remoteData.realisasiList!.length === 0 && prevLocal.length > 0) {
-              return prevLocal;
-            }
-            const remoteIds = new Set(remoteData.realisasiList!.map(r => r.id));
-            const remoteKeys = new Set(
-              remoteData.realisasiList!.map(r =>
-                makeRealisasiCompositeKey(r.noSP2D, r.kodeBelanja, r.kodeSub, r.nilai, r.uraian, r.tahun)
-              )
-            );
-            const pendingLocal = prevLocal.filter(l => {
-              const k = makeRealisasiCompositeKey(l.noSP2D, l.kodeBelanja, l.kodeSub, l.nilai, l.uraian, l.tahun);
-              return !remoteIds.has(l.id) && (!k || !remoteKeys.has(k));
-            });
-            return sanitizeRealisasiList([...remoteData.realisasiList!, ...pendingLocal]);
-          });
+          setRealisasiList(sanitizeRealisasiList(remoteData.realisasiList));
         }
         if (remoteData.importLogs && Array.isArray(remoteData.importLogs) && remoteData.importLogs.length > 0) {
           setImportLogs(remoteData.importLogs);
@@ -891,7 +886,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteAnggaran = (id: string) => {
-    setAnggaranList(prev => prev.filter(a => a.id !== id));
+    setAnggaranList(prev => {
+      const nextList = prev.filter(a => a.id !== id);
+      const nextState = {
+        ...(latestStateRef.current || {}),
+        currentUser,
+        users,
+        selectedTahun,
+        tahunList,
+        opdList,
+        programs,
+        kegiatanList,
+        subKegiatanList,
+        belanjaList,
+        sumberDanaList,
+        rekananList,
+        anggaranList: nextList,
+        realisasiList,
+        importLogs,
+        activityLogs,
+        sheetConfig
+      };
+      latestStateRef.current = nextState;
+      persistToLocalStorage(nextState);
+      saveStateBundleToCloud(nextState);
+      return nextList;
+    });
     logActivity(`Menghapus data Anggaran ID ${id}`);
   };
 
@@ -900,23 +920,69 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const idSet = new Set(ids);
     setAnggaranList(prev => {
       const nextList = prev.filter(a => !idSet.has(a.id));
-      if (latestStateRef.current) {
-        const nextState = { ...latestStateRef.current, anggaranList: nextList };
-        latestStateRef.current = nextState;
-        persistToLocalStorage(nextState);
-      }
+      const nextState = {
+        ...(latestStateRef.current || {}),
+        currentUser,
+        users,
+        selectedTahun,
+        tahunList,
+        opdList,
+        programs,
+        kegiatanList,
+        subKegiatanList,
+        belanjaList,
+        sumberDanaList,
+        rekananList,
+        anggaranList: nextList,
+        realisasiList,
+        importLogs,
+        activityLogs,
+        sheetConfig
+      };
+      latestStateRef.current = nextState;
+      persistToLocalStorage(nextState);
+      saveStateBundleToCloud(nextState);
       return nextList;
     });
     logActivity(`Menghapus Massal ${ids.length} data Pagu Anggaran`);
   };
 
   const clearAnggaranDatabase = (tahun?: number) => {
+    setAnggaranList(prev => {
+      let nextList: Anggaran[] = [];
+      if (tahun !== undefined && tahun !== null) {
+        const targetTahun = Number(tahun);
+        nextList = prev.filter(a => Number(a.tahun) !== targetTahun);
+      } else {
+        nextList = [];
+      }
+      const nextState = {
+        ...(latestStateRef.current || {}),
+        currentUser,
+        users,
+        selectedTahun,
+        tahunList,
+        opdList,
+        programs,
+        kegiatanList,
+        subKegiatanList,
+        belanjaList,
+        sumberDanaList,
+        rekananList,
+        anggaranList: nextList,
+        realisasiList,
+        importLogs,
+        activityLogs,
+        sheetConfig
+      };
+      latestStateRef.current = nextState;
+      persistToLocalStorage(nextState);
+      saveStateBundleToCloud(nextState);
+      return nextList;
+    });
     if (tahun !== undefined && tahun !== null) {
-      const targetTahun = Number(tahun);
-      setAnggaranList(prev => prev.filter(a => Number(a.tahun) !== targetTahun));
-      logActivity(`Kosongkan Database Pagu Anggaran TA ${targetTahun}`);
+      logActivity(`Kosongkan Database Pagu Anggaran TA ${Number(tahun)}`);
     } else {
-      setAnggaranList([]);
       logActivity('Kosongkan Seluruh Database Pagu Anggaran');
     }
   };
@@ -1089,11 +1155,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteRealisasi = (id: string) => {
     setRealisasiList(prev => {
       const nextList = prev.filter(r => r.id !== id);
-      if (latestStateRef.current) {
-        const nextState = { ...latestStateRef.current, realisasiList: nextList };
-        latestStateRef.current = nextState;
-        persistToLocalStorage(nextState);
-      }
+      const nextState = {
+        ...(latestStateRef.current || {}),
+        currentUser,
+        users,
+        selectedTahun,
+        tahunList,
+        opdList,
+        programs,
+        kegiatanList,
+        subKegiatanList,
+        belanjaList,
+        sumberDanaList,
+        rekananList,
+        anggaranList,
+        realisasiList: nextList,
+        importLogs,
+        activityLogs,
+        sheetConfig
+      };
+      latestStateRef.current = nextState;
+      persistToLocalStorage(nextState);
+      saveStateBundleToCloud(nextState);
       return nextList;
     });
     logActivity(`Menghapus Transaksi Realisasi ID ${id}`);
@@ -1104,23 +1187,69 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const idSet = new Set(ids);
     setRealisasiList(prev => {
       const nextList = prev.filter(r => !idSet.has(r.id));
-      if (latestStateRef.current) {
-        const nextState = { ...latestStateRef.current, realisasiList: nextList };
-        latestStateRef.current = nextState;
-        persistToLocalStorage(nextState);
-      }
+      const nextState = {
+        ...(latestStateRef.current || {}),
+        currentUser,
+        users,
+        selectedTahun,
+        tahunList,
+        opdList,
+        programs,
+        kegiatanList,
+        subKegiatanList,
+        belanjaList,
+        sumberDanaList,
+        rekananList,
+        anggaranList,
+        realisasiList: nextList,
+        importLogs,
+        activityLogs,
+        sheetConfig
+      };
+      latestStateRef.current = nextState;
+      persistToLocalStorage(nextState);
+      saveStateBundleToCloud(nextState);
       return nextList;
     });
     logActivity(`Menghapus Massal ${ids.length} Transaksi Realisasi SP2D`);
   };
 
   const clearRealisasiDatabase = (tahun?: number) => {
+    setRealisasiList(prev => {
+      let nextList: Realisasi[] = [];
+      if (tahun !== undefined && tahun !== null) {
+        const targetTahun = Number(tahun);
+        nextList = prev.filter(r => Number(r.tahun) !== targetTahun);
+      } else {
+        nextList = [];
+      }
+      const nextState = {
+        ...(latestStateRef.current || {}),
+        currentUser,
+        users,
+        selectedTahun,
+        tahunList,
+        opdList,
+        programs,
+        kegiatanList,
+        subKegiatanList,
+        belanjaList,
+        sumberDanaList,
+        rekananList,
+        anggaranList,
+        realisasiList: nextList,
+        importLogs,
+        activityLogs,
+        sheetConfig
+      };
+      latestStateRef.current = nextState;
+      persistToLocalStorage(nextState);
+      saveStateBundleToCloud(nextState);
+      return nextList;
+    });
     if (tahun !== undefined && tahun !== null) {
-      const targetTahun = Number(tahun);
-      setRealisasiList(prev => prev.filter(r => Number(r.tahun) !== targetTahun));
-      logActivity(`Kosongkan Database Realisasi SP2D TA ${targetTahun}`);
+      logActivity(`Kosongkan Database Realisasi SP2D TA ${Number(tahun)}`);
     } else {
-      setRealisasiList([]);
       logActivity('Kosongkan Seluruh Database Realisasi SP2D');
     }
   };
@@ -1977,8 +2106,60 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const clearAllDatabase = async (includeMaster: boolean = false) => {
+    const nextRealisasi: Realisasi[] = [];
+    const nextAnggaran: Anggaran[] = [];
+    const nextPrograms = includeMaster ? [] : programs;
+    const nextKegiatan = includeMaster ? [] : kegiatanList;
+    const nextSubKegiatan = includeMaster ? [] : subKegiatanList;
+    const nextBelanja = includeMaster ? [] : belanjaList;
+
+    setRealisasiList(nextRealisasi);
+    setAnggaranList(nextAnggaran);
+    if (includeMaster) {
+      setPrograms([]);
+      setKegiatanList([]);
+      setSubKegiatanList([]);
+      setBelanjaList([]);
+    }
+
+    const nextState = {
+      ...(latestStateRef.current || {}),
+      currentUser,
+      users,
+      selectedTahun,
+      tahunList,
+      opdList,
+      programs: nextPrograms,
+      kegiatanList: nextKegiatan,
+      subKegiatanList: nextSubKegiatan,
+      belanjaList: nextBelanja,
+      sumberDanaList,
+      rekananList,
+      anggaranList: nextAnggaran,
+      realisasiList: nextRealisasi,
+      importLogs: [],
+      activityLogs,
+      sheetConfig
+    };
+
+    latestStateRef.current = nextState;
+    persistToLocalStorage(nextState);
+
+    try {
+      await purgeAllFirestoreData();
+    } catch (e) {
+      console.warn('Purge firestore error:', e);
+    }
+
+    saveStateBundleToCloud(nextState);
+    logActivity(`Mengosongkan Seluruh Database ${includeMaster ? '(Transaksi & Master Data)' : '(Transaksi Realisasi & Anggaran)'}`);
+  };
+
   const resetAllData = () => {
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(BACKUP_STORAGE_KEY);
+    localStorage.removeItem('bfms_has_ever_initialized');
     setCurrentUser(INITIAL_USERS[0]);
     setUsers(INITIAL_USERS);
     setSelectedTahun(2025);
@@ -1994,6 +2175,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setImportLogs(INITIAL_IMPORT_LOGS);
     setActivityLogs(INITIAL_ACTIVITY_LOGS);
     setSheetConfig(INITIAL_SHEET_CONFIG);
+
+    const defaultState = {
+      currentUser: INITIAL_USERS[0],
+      users: INITIAL_USERS,
+      selectedTahun: 2025,
+      tahunList: INITIAL_TAHUN,
+      opdList: [INITIAL_OPD],
+      programs: INITIAL_PROGRAMS,
+      kegiatanList: INITIAL_KEGIATAN,
+      subKegiatanList: INITIAL_SUBKEGIATAN,
+      belanjaList: INITIAL_BELANJA,
+      sumberDanaList: INITIAL_SUMBER_DANA,
+      rekananList: INITIAL_REKANAN,
+      anggaranList: INITIAL_ANGGARAN,
+      realisasiList: INITIAL_REALISASI,
+      importLogs: INITIAL_IMPORT_LOGS,
+      activityLogs: INITIAL_ACTIVITY_LOGS,
+      sheetConfig: INITIAL_SHEET_CONFIG
+    };
+    latestStateRef.current = defaultState;
+    persistToLocalStorage(defaultState);
+    saveStateBundleToCloud(defaultState);
     logActivity(`Reset seluruh data aplikasi ke default awal`);
   };
 
@@ -2084,6 +2287,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         logActivity,
         deleteActivityLog,
         clearAllActivityLogs,
+        clearAllDatabase,
         resetAllData,
         restoreFromBackup,
         importBackupJSON,

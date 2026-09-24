@@ -138,6 +138,8 @@ export function isOfflineOrUnavailable(err: any): boolean {
  */
 async function loadRealisasiChunks(chunkCount?: number): Promise<any[]> {
   if (getIsFirestoreQuotaExceeded()) return [];
+  // If explicitly 0, do not load any chunks - data was deleted/emptied
+  if (chunkCount === 0) return [];
   const allRealisasi: any[] = [];
 
   // Strategy 1: Load from dedicated collection
@@ -158,7 +160,11 @@ async function loadRealisasiChunks(chunkCount?: number): Promise<any[]> {
 
       if (chunkDocs.length > 0) {
         chunkDocs.sort((a, b) => a.index - b.index);
-        chunkDocs.forEach(c => allRealisasi.push(...c.items));
+        // Only load chunks within active chunkCount if defined
+        const validChunks = typeof chunkCount === 'number' && chunkCount > 0
+          ? chunkDocs.filter(c => c.index < chunkCount)
+          : chunkDocs;
+        validChunks.forEach(c => allRealisasi.push(...c.items));
         return allRealisasi;
       }
     }
@@ -173,7 +179,9 @@ async function loadRealisasiChunks(chunkCount?: number): Promise<any[]> {
   if (getIsFirestoreQuotaExceeded()) return [];
 
   // Strategy 2: Fallback to SHARED_DATA_COLLECTION prefixed docs
-  const maxChunksToScan = Math.max(chunkCount || 0, 10);
+  const maxChunksToScan = typeof chunkCount === 'number' ? chunkCount : 0;
+  if (maxChunksToScan <= 0) return [];
+
   const chunkPromises = [];
   for (let i = 0; i < maxChunksToScan; i++) {
     const chunkDocRef = doc(db, SHARED_DATA_COLLECTION, `${REALISASI_CHUNK_PREFIX}${i}`);
@@ -198,6 +206,8 @@ async function loadRealisasiChunks(chunkCount?: number): Promise<any[]> {
  */
 async function loadAnggaranChunks(chunkCount?: number): Promise<any[]> {
   if (getIsFirestoreQuotaExceeded()) return [];
+  // If explicitly 0, do not load any chunks - data was deleted/emptied
+  if (chunkCount === 0) return [];
   const allAnggaran: any[] = [];
 
   // Strategy 1: Load from dedicated collection
@@ -218,7 +228,11 @@ async function loadAnggaranChunks(chunkCount?: number): Promise<any[]> {
 
       if (chunkDocs.length > 0) {
         chunkDocs.sort((a, b) => a.index - b.index);
-        chunkDocs.forEach(c => allAnggaran.push(...c.items));
+        // Only load chunks within active chunkCount if defined
+        const validChunks = typeof chunkCount === 'number' && chunkCount > 0
+          ? chunkDocs.filter(c => c.index < chunkCount)
+          : chunkDocs;
+        validChunks.forEach(c => allAnggaran.push(...c.items));
         return allAnggaran;
       }
     }
@@ -233,7 +247,9 @@ async function loadAnggaranChunks(chunkCount?: number): Promise<any[]> {
   if (getIsFirestoreQuotaExceeded()) return [];
 
   // Strategy 2: Fallback to SHARED_DATA_COLLECTION prefixed docs
-  const maxChunksToScan = Math.max(chunkCount || 0, 10);
+  const maxChunksToScan = typeof chunkCount === 'number' ? chunkCount : 0;
+  if (maxChunksToScan <= 0) return [];
+
   const chunkPromises = [];
   for (let i = 0; i < maxChunksToScan; i++) {
     const chunkDocRef = doc(db, SHARED_DATA_COLLECTION, `${ANGGARAN_CHUNK_PREFIX}${i}`);
@@ -278,12 +294,16 @@ export const subscribeToSharedData = (
 
         // Check chunks and merge intelligently
         try {
-          const chunkedItems = await loadRealisasiChunks(rawData.realisasiChunkCount);
-          if (chunkedItems.length > 0) {
-            const map = new Map<string, any>();
-            finalRealisasi.forEach(item => { if (item?.id) map.set(item.id, item); });
-            chunkedItems.forEach(item => { if (item?.id) map.set(item.id, item); });
-            finalRealisasi = Array.from(map.values());
+          if (rawData.realisasiCount === 0 || (rawData.realisasiChunkCount === 0 && (!rawData.realisasiList || rawData.realisasiList.length === 0))) {
+            finalRealisasi = [];
+          } else {
+            const chunkedItems = await loadRealisasiChunks(rawData.realisasiChunkCount);
+            if (chunkedItems.length > 0) {
+              const map = new Map<string, any>();
+              finalRealisasi.forEach(item => { if (item?.id) map.set(item.id, item); });
+              chunkedItems.forEach(item => { if (item?.id) map.set(item.id, item); });
+              finalRealisasi = Array.from(map.values());
+            }
           }
         } catch (e) {
           if (isQuotaError(e)) {
@@ -293,12 +313,16 @@ export const subscribeToSharedData = (
         }
 
         try {
-          const chunkedAnggaran = await loadAnggaranChunks(rawData.anggaranChunkCount);
-          if (chunkedAnggaran.length > 0) {
-            const map = new Map<string, any>();
-            finalAnggaran.forEach(item => { if (item?.id) map.set(item.id, item); });
-            chunkedAnggaran.forEach(item => { if (item?.id) map.set(item.id, item); });
-            finalAnggaran = Array.from(map.values());
+          if (rawData.anggaranCount === 0 || (rawData.anggaranChunkCount === 0 && (!rawData.anggaranList || rawData.anggaranList.length === 0))) {
+            finalAnggaran = [];
+          } else {
+            const chunkedAnggaran = await loadAnggaranChunks(rawData.anggaranChunkCount);
+            if (chunkedAnggaran.length > 0) {
+              const map = new Map<string, any>();
+              finalAnggaran.forEach(item => { if (item?.id) map.set(item.id, item); });
+              chunkedAnggaran.forEach(item => { if (item?.id) map.set(item.id, item); });
+              finalAnggaran = Array.from(map.values());
+            }
           }
         } catch (e) {
           if (isQuotaError(e)) {
@@ -338,24 +362,32 @@ export const fetchSharedDataOnce = async (): Promise<FirestoreAppData | null> =>
       let finalAnggaran = rawData.anggaranList || [];
 
       try {
-        const chunkedItems = await loadRealisasiChunks(rawData.realisasiChunkCount);
-        if (chunkedItems.length > 0) {
-          const map = new Map<string, any>();
-          finalRealisasi.forEach(item => { if (item?.id) map.set(item.id, item); });
-          chunkedItems.forEach(item => { if (item?.id) map.set(item.id, item); });
-          finalRealisasi = Array.from(map.values());
+        if (rawData.realisasiCount === 0 || (rawData.realisasiChunkCount === 0 && (!rawData.realisasiList || rawData.realisasiList.length === 0))) {
+          finalRealisasi = [];
+        } else {
+          const chunkedItems = await loadRealisasiChunks(rawData.realisasiChunkCount);
+          if (chunkedItems.length > 0) {
+            const map = new Map<string, any>();
+            finalRealisasi.forEach(item => { if (item?.id) map.set(item.id, item); });
+            chunkedItems.forEach(item => { if (item?.id) map.set(item.id, item); });
+            finalRealisasi = Array.from(map.values());
+          }
         }
       } catch (e) {
         console.warn('Error loading realisasi chunks in fetchOnce:', e);
       }
 
       try {
-        const chunkedAnggaran = await loadAnggaranChunks(rawData.anggaranChunkCount);
-        if (chunkedAnggaran.length > 0) {
-          const map = new Map<string, any>();
-          finalAnggaran.forEach(item => { if (item?.id) map.set(item.id, item); });
-          chunkedAnggaran.forEach(item => { if (item?.id) map.set(item.id, item); });
-          finalAnggaran = Array.from(map.values());
+        if (rawData.anggaranCount === 0 || (rawData.anggaranChunkCount === 0 && (!rawData.anggaranList || rawData.anggaranList.length === 0))) {
+          finalAnggaran = [];
+        } else {
+          const chunkedAnggaran = await loadAnggaranChunks(rawData.anggaranChunkCount);
+          if (chunkedAnggaran.length > 0) {
+            const map = new Map<string, any>();
+            finalAnggaran.forEach(item => { if (item?.id) map.set(item.id, item); });
+            chunkedAnggaran.forEach(item => { if (item?.id) map.set(item.id, item); });
+            finalAnggaran = Array.from(map.values());
+          }
         }
       } catch (e) {
         console.warn('Error loading anggaran chunks in fetchOnce:', e);
@@ -397,57 +429,125 @@ export const saveSharedDataToFirestore = async (
     const dataToSave: any = { ...data };
 
     // 1. Handle realisasiList chunking
-    if (data.realisasiList && Array.isArray(data.realisasiList) && data.realisasiList.length > 0) {
+    if (data.realisasiList !== undefined && Array.isArray(data.realisasiList)) {
       const realisasiItems = data.realisasiList;
       const numChunks = Math.ceil(realisasiItems.length / CHUNK_SIZE);
       dataToSave.realisasiCount = realisasiItems.length;
       dataToSave.realisasiChunkCount = numChunks;
 
-      const chunkPromises = [];
-      for (let i = 0; i < numChunks; i++) {
-        const chunkSlice = realisasiItems.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-        
-        // Save to dedicated collection (single clean destination)
-        const colDocRef = doc(db, REALISASI_CHUNKS_COLLECTION, `chunk_${i}`);
-        chunkPromises.push(
-          setDoc(colDocRef, {
-            chunkIndex: i,
-            totalChunks: numChunks,
-            items: chunkSlice,
-            updatedAt: nowIso
-          })
-        );
+      if (realisasiItems.length > 0) {
+        const chunkPromises = [];
+        for (let i = 0; i < numChunks; i++) {
+          const chunkSlice = realisasiItems.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+          const colDocRef = doc(db, REALISASI_CHUNKS_COLLECTION, `chunk_${i}`);
+          chunkPromises.push(
+            setDoc(colDocRef, {
+              chunkIndex: i,
+              totalChunks: numChunks,
+              items: chunkSlice,
+              updatedAt: nowIso
+            })
+          );
+        }
+        await Promise.all(chunkPromises);
+        dataToSave.realisasiList = realisasiItems.slice(0, 150);
+
+        // Clean up any extra orphaned chunks from previous writes
+        try {
+          const chunksColRef = collection(db, REALISASI_CHUNKS_COLLECTION);
+          const snap = await getDocs(chunksColRef);
+          if (!snap.empty) {
+            const extraDeletes: Promise<any>[] = [];
+            snap.forEach(d => {
+              const dData = d.data();
+              const idx = typeof dData.chunkIndex === 'number' ? dData.chunkIndex : -1;
+              if (idx >= numChunks) {
+                extraDeletes.push(deleteDoc(d.ref));
+              }
+            });
+            if (extraDeletes.length > 0) await Promise.all(extraDeletes);
+          }
+        } catch (e) {
+          console.warn('Could not clean obsolete realisasi chunks:', e);
+        }
+      } else {
+        // Data is empty: wipe all realisasi chunks
+        dataToSave.realisasiList = [];
+        dataToSave.realisasiCount = 0;
+        dataToSave.realisasiChunkCount = 0;
+        try {
+          const chunksColRef = collection(db, REALISASI_CHUNKS_COLLECTION);
+          const snap = await getDocs(chunksColRef);
+          if (!snap.empty) {
+            const deletePromises: Promise<any>[] = [];
+            snap.forEach(d => deletePromises.push(deleteDoc(d.ref)));
+            await Promise.all(deletePromises);
+          }
+        } catch (err) {
+          console.warn('Could not clean realisasi chunks collection:', err);
+        }
       }
-
-      await Promise.all(chunkPromises);
-
-      // Keep safe preview array on main doc (< 500KB)
-      dataToSave.realisasiList = realisasiItems.slice(0, 150);
     }
 
     // 2. Handle anggaranList chunking
-    if (data.anggaranList && Array.isArray(data.anggaranList) && data.anggaranList.length > 0) {
+    if (data.anggaranList !== undefined && Array.isArray(data.anggaranList)) {
       const anggaranItems = data.anggaranList;
       const numChunks = Math.ceil(anggaranItems.length / CHUNK_SIZE);
       dataToSave.anggaranCount = anggaranItems.length;
       dataToSave.anggaranChunkCount = numChunks;
 
-      const chunkPromises = [];
-      for (let i = 0; i < numChunks; i++) {
-        const chunkSlice = anggaranItems.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-        const colDocRef = doc(db, ANGGARAN_CHUNKS_COLLECTION, `chunk_${i}`);
-        chunkPromises.push(
-          setDoc(colDocRef, {
-            chunkIndex: i,
-            totalChunks: numChunks,
-            items: chunkSlice,
-            updatedAt: nowIso
-          })
-        );
-      }
+      if (anggaranItems.length > 0) {
+        const chunkPromises = [];
+        for (let i = 0; i < numChunks; i++) {
+          const chunkSlice = anggaranItems.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+          const colDocRef = doc(db, ANGGARAN_CHUNKS_COLLECTION, `chunk_${i}`);
+          chunkPromises.push(
+            setDoc(colDocRef, {
+              chunkIndex: i,
+              totalChunks: numChunks,
+              items: chunkSlice,
+              updatedAt: nowIso
+            })
+          );
+        }
+        await Promise.all(chunkPromises);
+        dataToSave.anggaranList = anggaranItems.slice(0, 150);
 
-      await Promise.all(chunkPromises);
-      dataToSave.anggaranList = anggaranItems.slice(0, 150);
+        // Clean up any extra orphaned chunks from previous writes
+        try {
+          const chunksColRef = collection(db, ANGGARAN_CHUNKS_COLLECTION);
+          const snap = await getDocs(chunksColRef);
+          if (!snap.empty) {
+            const extraDeletes: Promise<any>[] = [];
+            snap.forEach(d => {
+              const dData = d.data();
+              const idx = typeof dData.chunkIndex === 'number' ? dData.chunkIndex : -1;
+              if (idx >= numChunks) {
+                extraDeletes.push(deleteDoc(d.ref));
+              }
+            });
+            if (extraDeletes.length > 0) await Promise.all(extraDeletes);
+          }
+        } catch (e) {
+          console.warn('Could not clean obsolete anggaran chunks:', e);
+        }
+      } else {
+        // Data is empty: wipe all anggaran chunks
+        dataToSave.anggaranList = [];
+        dataToSave.anggaranCount = 0;
+        dataToSave.anggaranChunkCount = 0;
+        try {
+          const chunksColRef = collection(db, ANGGARAN_CHUNKS_COLLECTION);
+          const snap = await getDocs(chunksColRef);
+          if (!snap.empty) {
+            const deletePromises: Promise<any>[] = [];
+            snap.forEach(d => deletePromises.push(deleteDoc(d.ref)));
+            await Promise.all(deletePromises);
+          }
+        } catch (err) {
+          console.warn('Could not clean anggaran chunks collection:', err);
+        }
+      }
     }
 
     // 3. Save main document with metadata & non-chunked entities
@@ -466,6 +566,43 @@ export const saveSharedDataToFirestore = async (
     }
     console.warn('Could not save shared data to Firestore:', error);
     throw error;
+  }
+};
+
+/**
+ * Directly purges all shared data from Firestore (main doc and all chunks).
+ */
+export const purgeAllFirestoreData = async (): Promise<void> => {
+  try {
+    const docRef = doc(db, SHARED_DATA_COLLECTION, SHARED_DATA_DOC_ID);
+    await setDoc(docRef, {
+      realisasiList: [],
+      anggaranList: [],
+      realisasiCount: 0,
+      anggaranCount: 0,
+      realisasiChunkCount: 0,
+      anggaranChunkCount: 0,
+      updatedAt: new Date().toISOString(),
+      updatedBy: 'System Purge'
+    }, { merge: true });
+
+    // Clean realisasi chunks
+    try {
+      const snap = await getDocs(collection(db, REALISASI_CHUNKS_COLLECTION));
+      const delPromises: Promise<any>[] = [];
+      snap.forEach(d => delPromises.push(deleteDoc(d.ref)));
+      if (delPromises.length > 0) await Promise.all(delPromises);
+    } catch {}
+
+    // Clean anggaran chunks
+    try {
+      const snap = await getDocs(collection(db, ANGGARAN_CHUNKS_COLLECTION));
+      const delPromises: Promise<any>[] = [];
+      snap.forEach(d => delPromises.push(deleteDoc(d.ref)));
+      if (delPromises.length > 0) await Promise.all(delPromises);
+    } catch {}
+  } catch (err) {
+    console.warn('purgeAllFirestoreData error:', err);
   }
 };
 

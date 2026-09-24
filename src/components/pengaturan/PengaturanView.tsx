@@ -51,6 +51,7 @@ export const PengaturanView: React.FC = () => {
     activityLogs,
     deleteActivityLog,
     clearAllActivityLogs,
+    clearAllDatabase,
     resetAllData,
     restoreFromBackup,
     importBackupJSON,
@@ -981,21 +982,46 @@ export const PengaturanView: React.FC = () => {
               </div>
 
               {!isReadonly && (
-                <button
-                  onClick={() => {
-                    if (window.confirm('PERINGATAN: Apakah Anda yakin ingin mereset seluruh data kembali ke setelan pabrik awal? Tindakan ini tidak dapat dibatalkan jika Anda belum mengunduh file cadangan.')) {
-                      resetAllData();
-                      setBackupMessage({
-                        type: 'success',
-                        text: 'Seluruh data telah direset ke setelan awal.'
-                      });
-                    }
-                  }}
-                  className="flex items-center gap-2 rounded-xl border border-rose-800/80 bg-rose-950/40 px-4 py-2.5 text-xs font-bold text-rose-400 hover:bg-rose-900/60 hover:text-rose-200 transition"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  <span>Reset Seluruh Data</span>
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={async () => {
+                      if (window.confirm('PERINGATAN: Apakah Anda yakin ingin mengosongkan SELURUH data transaksi (Realisasi & Pagu Anggaran)? Data akan dihapus bersih dari perangkat ini dan juga Firestore Cloud.')) {
+                        try {
+                          await clearAllDatabase(false);
+                          setBackupMessage({
+                            type: 'success',
+                            text: 'Berhasil mengosongkan seluruh database transaksi (Realisasi & Pagu) secara permanen di lokal dan Cloud.'
+                          });
+                        } catch (err: any) {
+                          setBackupMessage({
+                            type: 'error',
+                            text: `Gagal mengosongkan database: ${err.message}`
+                          });
+                        }
+                      }
+                    }}
+                    className="flex items-center gap-2 rounded-xl border border-amber-800/80 bg-amber-950/40 px-4 py-2.5 text-xs font-bold text-amber-300 hover:bg-amber-900/60 hover:text-amber-100 transition shadow"
+                  >
+                    <Trash2 className="h-4 w-4 text-amber-400" />
+                    <span>Kosongkan Transaksi (Realisasi & Pagu)</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (window.confirm('PERINGATAN: Apakah Anda yakin ingin mereset seluruh data kembali ke setelan pabrik awal? Tindakan ini tidak dapat dibatalkan jika Anda belum mengunduh file cadangan.')) {
+                        resetAllData();
+                        setBackupMessage({
+                          type: 'success',
+                          text: 'Seluruh data telah direset ke setelan awal pabrik.'
+                        });
+                      }
+                    }}
+                    className="flex items-center gap-2 rounded-xl border border-rose-800/80 bg-rose-950/40 px-4 py-2.5 text-xs font-bold text-rose-400 hover:bg-rose-900/60 hover:text-rose-200 transition shadow"
+                  >
+                    <Trash2 className="h-4 w-4 text-rose-400" />
+                    <span>Reset ke Setelan Pabrik</span>
+                  </button>
+                </div>
               )}
             </div>
           </div>
