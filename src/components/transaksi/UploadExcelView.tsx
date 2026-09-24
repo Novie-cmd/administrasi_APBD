@@ -979,7 +979,20 @@ export const UploadExcelView: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {currentYearRealisasi.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowClearModal(true)}
+                className="flex items-center gap-1.5 rounded-xl border border-rose-600/80 bg-rose-950/70 hover:bg-rose-900 hover:border-rose-500 px-3.5 py-2 text-xs font-bold text-rose-200 hover:text-white transition shadow-sm shrink-0"
+                id="btn-clear-db-upload-excel"
+                title="Kosongkan Seluruh Data Transaksi Realisasi SP2D"
+              >
+                <Trash2 className="h-3.5 w-3.5 text-rose-400" />
+                <span>Kosongkan Transaksi</span>
+              </button>
+            )}
+
             {selectedDbIds.length > 0 && (
               <button
                 type="button"
@@ -989,7 +1002,7 @@ export const UploadExcelView: React.FC = () => {
                     setSelectedDbIds([]);
                   }
                 }}
-                className="flex items-center gap-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 px-3 py-1.5 text-xs font-bold text-white shadow-md transition shrink-0"
+                className="flex items-center gap-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 px-3 py-2 text-xs font-bold text-white shadow-md transition shrink-0"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 <span>Hapus Terpilih ({selectedDbIds.length})</span>
@@ -1003,7 +1016,7 @@ export const UploadExcelView: React.FC = () => {
                 placeholder="Cari SP2D, Belanja, Uraian, Rekanan..."
                 value={dbSearchQuery}
                 onChange={e => setDbSearchQuery(e.target.value)}
-                className="rounded-xl border border-slate-700 bg-slate-950 pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:border-emerald-500 focus:outline-none w-64"
+                className="rounded-xl border border-slate-700 bg-slate-950 pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:border-emerald-500 focus:outline-none w-64"
               />
             </div>
           </div>

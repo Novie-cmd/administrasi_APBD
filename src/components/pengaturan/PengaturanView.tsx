@@ -70,7 +70,7 @@ export const PengaturanView: React.FC = () => {
     currentUser
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'users' | 'cloud' | 'spreadsheet' | 'backup' | 'logs'>('spreadsheet');
+  const [activeTab, setActiveTab] = useState<'users' | 'cloud' | 'spreadsheet' | 'backup' | 'logs'>('cloud');
   const [backupMessage, setBackupMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [sheetMessage, setSheetMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [copiedScript, setCopiedScript] = useState(false);
@@ -347,6 +347,45 @@ export const PengaturanView: React.FC = () => {
                 <span>{cloudSync.status === 'syncing' ? 'Menyinkronkan...' : 'Paksa Sinkronkan Cloud Sekarang'}</span>
               </button>
             </div>
+
+            {/* Zona Pengosongan Transaksi */}
+            {!isReadonly && (
+              <div className="rounded-xl border border-rose-900/60 bg-rose-950/30 p-4 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-xs font-bold text-rose-300 flex items-center gap-2">
+                      <Trash2 className="h-4 w-4 text-rose-400" />
+                      <span>Manajemen Pembersihan Database (Lokal & Cloud)</span>
+                    </h4>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Menghapus seluruh transaksi Realisasi SP2D dan Pagu Anggaran secara permanen dari perangkat ini dan Firestore Cloud.
+                    </p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (window.confirm('PERINGATAN: Apakah Anda yakin ingin mengosongkan SELURUH data transaksi (Realisasi & Pagu Anggaran)? Data akan dihapus bersih dari perangkat ini dan juga Firestore Cloud.')) {
+                        try {
+                          await clearAllDatabase(false);
+                          setBackupMessage({
+                            type: 'success',
+                            text: 'Berhasil mengosongkan seluruh database transaksi (Realisasi & Pagu) secara permanen di lokal dan Cloud.'
+                          });
+                        } catch (err: any) {
+                          setBackupMessage({
+                            type: 'error',
+                            text: `Gagal mengosongkan database: ${err.message}`
+                          });
+                        }
+                      }
+                    }}
+                    className="flex items-center justify-center gap-2 rounded-xl border border-rose-600/80 bg-rose-950/80 hover:bg-rose-900 px-4 py-2.5 text-xs font-bold text-rose-200 hover:text-white transition shadow shrink-0"
+                  >
+                    <Trash2 className="h-4 w-4 text-rose-400" />
+                    <span>Kosongkan Transaksi (Realisasi & Pagu)</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

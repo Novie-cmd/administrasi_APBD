@@ -198,7 +198,7 @@ export const InputRealisasiView: React.FC = () => {
     }
   }, [selectedTahun, programs, kegiatanList, subKegiatanList]);
 
-  const isReadOnly = currentUser.role === 'Auditor' || currentUser.role === 'Kepala Badan';
+  const isReadOnly = currentUser.role === 'Auditor';
 
   // Open Edit Modal
   const handleOpenEdit = (r: Realisasi) => {
@@ -555,12 +555,12 @@ export const InputRealisasiView: React.FC = () => {
 
             <button
               onClick={() => setShowClearModal(true)}
-              className="flex items-center gap-2 rounded-xl border border-rose-900/60 bg-rose-950/40 px-3.5 py-2.5 text-xs font-bold text-rose-400 hover:bg-rose-900/60 hover:border-rose-700 transition"
+              className="flex items-center gap-2 rounded-xl border border-rose-600/80 bg-rose-950/70 px-3.5 py-2.5 text-xs font-bold text-rose-200 hover:bg-rose-900 hover:border-rose-500 hover:text-white transition shadow-sm"
               id="btn-clear-db-realisasi"
-              title="Kosongkan Database Realisasi SP2D"
+              title="Kosongkan Seluruh Data Transaksi Realisasi SP2D"
             >
-              <Trash2 className="h-4 w-4" />
-              <span>Hapus Database</span>
+              <Trash2 className="h-4 w-4 text-rose-400" />
+              <span>Kosongkan Transaksi</span>
             </button>
 
             <button
