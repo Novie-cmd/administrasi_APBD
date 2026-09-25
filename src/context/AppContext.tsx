@@ -191,11 +191,12 @@ interface AppContextType {
   logActivity: (aktivitas: string) => void;
   deleteActivityLog: (id: string) => void;
   clearAllActivityLogs: () => void;
-  clearAllDatabase: (includeMaster?: boolean) => Promise<void>;
+  clearAllDatabase: (includeMaster?: boolean, syncSpreadsheet?: boolean) => Promise<void>;
+  clearGoogleSheetData: (customUrl?: string) => Promise<{ success: boolean; message: string }>;
   resetAllData: () => void;
   restoreFromBackup: () => { success: boolean; realisasiCount: number; anggaranCount: number; message: string };
   importBackupJSON: (jsonData: string) => { success: boolean; message: string };
-  pushToGoogleSheet: (customUrl?: string) => Promise<{ success: boolean; message: string }>;
+  pushToGoogleSheet: (customUrl?: string, options?: { syncMode?: 'full' | 'clear' }) => Promise<{ success: boolean; message: string }>;
   pullFromGoogleSheet: (customUrl?: string, syncMode?: 'replace' | 'merge') => Promise<{ success: boolean; realisasiCount: number; anggaranCount: number; message: string }>;
 }
 
@@ -388,12 +389,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [rekananList, setRekananList] = useState<Rekanan[]>(
     storedData?.rekananList || INITIAL_REKANAN
   );
-  const [anggaranList, setAnggaranList] = useState<Anggaran[]>(
-    storedData?.anggaranList || INITIAL_ANGGARAN
-  );
-  const [realisasiList, setRealisasiList] = useState<Realisasi[]>(
-    storedData?.realisasiList ? sanitizeRealisasiList(storedData.realisasiList) : INITIAL_REALISASI
-  );
+  const [anggaranList, setAnggaranList] = useState<Anggaran[]>(() => {
+    if (storedData?.anggaranList && Array.isArray(storedData.anggaranList)) {
+      return storedData.anggaranList;
+    }
+    const hasInit = typeof window !== 'undefined' && localStorage.getItem('bfms_has_ever_initialized') === 'true';
+    return hasInit ? [] : INITIAL_ANGGARAN;
+  });
+  const [realisasiList, setRealisasiList] = useState<Realisasi[]>(() => {
+    if (storedData?.realisasiList && Array.isArray(storedData.realisasiList)) {
+      return sanitizeRealisasiList(storedData.realisasiList);
+    }
+    const hasInit = typeof window !== 'undefined' && localStorage.getItem('bfms_has_ever_initialized') === 'true';
+    return hasInit ? [] : INITIAL_REALISASI;
+  });
   const [importLogs, setImportLogs] = useState<ImportLog[]>(
     storedData?.importLogs || INITIAL_IMPORT_LOGS
   );
@@ -428,6 +437,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const isApplyingRemoteChange = useRef(false);
   const isInitialMount = useRef(true);
   const lastSavedDataSignature = useRef<string>('');
+
+  // Continually sync latestStateRef to prevent stale closures during deletions and push/pull
+  useEffect(() => {
+    latestStateRef.current = {
+      currentUser,
+      users,
+      selectedTahun,
+      tahunList,
+      opd,
+      opdList,
+      programs,
+      kegiatanList,
+      subKegiatanList,
+      belanjaList,
+      sumberDanaList,
+      rekananList,
+      anggaranList,
+      realisasiList,
+      importLogs,
+      activityLogs,
+      sheetConfig
+    };
+  }, [
+    currentUser,
+    users,
+    selectedTahun,
+    tahunList,
+    opd,
+    opdList,
+    programs,
+    kegiatanList,
+    subKegiatanList,
+    belanjaList,
+    sumberDanaList,
+    rekananList,
+    anggaranList,
+    realisasiList,
+    importLogs,
+    activityLogs,
+    sheetConfig
+  ]);
 
   // Save latest state bundle to cloud helper
   const saveStateBundleToCloud = (overrideData?: any) => {
@@ -881,13 +931,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       tanggalInput
     };
 
-    setAnggaranList(prev => [fullAnggaran, ...prev]);
+    const curRealisasi = latestStateRef.current?.realisasiList !== undefined ? latestStateRef.current.realisasiList : realisasiList;
+    setAnggaranList(prev => {
+      const nextList = [fullAnggaran, ...prev];
+      const nextState = {
+        ...(latestStateRef.current || {}),
+        currentUser,
+        users,
+        selectedTahun,
+        tahunList,
+        opdList,
+        programs,
+        kegiatanList,
+        subKegiatanList,
+        belanjaList,
+        sumberDanaList,
+        rekananList,
+        anggaranList: nextList,
+        realisasiList: curRealisasi,
+        importLogs,
+        activityLogs,
+        sheetConfig
+      };
+      latestStateRef.current = nextState;
+      persistToLocalStorage(nextState);
+      saveStateBundleToCloud(nextState);
+      return nextList;
+    });
     logActivity(`Menambah Pagu Anggaran ${fullAnggaran.kodeBelanja}: Rp ${fullAnggaran.paguAkhir.toLocaleString('id-ID')}`);
   };
 
   const updateAnggaran = (id: string, updated: Partial<Anggaran>) => {
-    setAnggaranList(prev =>
-      prev.map(item => {
+    const curRealisasi = latestStateRef.current?.realisasiList !== undefined ? latestStateRef.current.realisasiList : realisasiList;
+    setAnggaranList(prev => {
+      const nextList = prev.map(item => {
         if (item.id === id) {
           const pagu = updated.pagu !== undefined ? updated.pagu : item.pagu;
           const revisi = updated.revisi !== undefined ? updated.revisi : item.revisi;
@@ -902,12 +979,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           };
         }
         return item;
-      })
-    );
+      });
+      const nextState = {
+        ...(latestStateRef.current || {}),
+        currentUser,
+        users,
+        selectedTahun,
+        tahunList,
+        opdList,
+        programs,
+        kegiatanList,
+        subKegiatanList,
+        belanjaList,
+        sumberDanaList,
+        rekananList,
+        anggaranList: nextList,
+        realisasiList: curRealisasi,
+        importLogs,
+        activityLogs,
+        sheetConfig
+      };
+      latestStateRef.current = nextState;
+      persistToLocalStorage(nextState);
+      saveStateBundleToCloud(nextState);
+      return nextList;
+    });
     logActivity(`Mengubah Anggaran ID ${id}`);
   };
 
   const deleteAnggaran = (id: string) => {
+    const curRealisasi = latestStateRef.current?.realisasiList !== undefined ? latestStateRef.current.realisasiList : realisasiList;
     setAnggaranList(prev => {
       const nextList = prev.filter(a => a.id !== id);
       const nextState = {
@@ -924,7 +1025,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         sumberDanaList,
         rekananList,
         anggaranList: nextList,
-        realisasiList,
+        realisasiList: curRealisasi,
         importLogs,
         activityLogs,
         sheetConfig
@@ -940,6 +1041,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteBatchAnggaran = (ids: string[]) => {
     if (!ids || ids.length === 0) return;
     const idSet = new Set(ids);
+    const curRealisasi = latestStateRef.current?.realisasiList !== undefined ? latestStateRef.current.realisasiList : realisasiList;
     setAnggaranList(prev => {
       const nextList = prev.filter(a => !idSet.has(a.id));
       const nextState = {
@@ -956,7 +1058,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         sumberDanaList,
         rekananList,
         anggaranList: nextList,
-        realisasiList,
+        realisasiList: curRealisasi,
         importLogs,
         activityLogs,
         sheetConfig
@@ -970,6 +1072,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const clearAnggaranDatabase = (tahun?: number) => {
+    const curRealisasi = latestStateRef.current?.realisasiList !== undefined ? latestStateRef.current.realisasiList : realisasiList;
     setAnggaranList(prev => {
       let nextList: Anggaran[] = [];
       if (tahun !== undefined && tahun !== null) {
@@ -992,7 +1095,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         sumberDanaList,
         rekananList,
         anggaranList: nextList,
-        realisasiList,
+        realisasiList: curRealisasi,
         importLogs,
         activityLogs,
         sheetConfig
@@ -1175,6 +1278,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteRealisasi = (id: string) => {
+    const curAnggaran = latestStateRef.current?.anggaranList !== undefined ? latestStateRef.current.anggaranList : anggaranList;
     setRealisasiList(prev => {
       const nextList = prev.filter(r => r.id !== id);
       const nextState = {
@@ -1190,7 +1294,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         belanjaList,
         sumberDanaList,
         rekananList,
-        anggaranList,
+        anggaranList: curAnggaran,
         realisasiList: nextList,
         importLogs,
         activityLogs,
@@ -1207,6 +1311,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteBatchRealisasi = (ids: string[]) => {
     if (!ids || ids.length === 0) return;
     const idSet = new Set(ids);
+    const curAnggaran = latestStateRef.current?.anggaranList !== undefined ? latestStateRef.current.anggaranList : anggaranList;
     setRealisasiList(prev => {
       const nextList = prev.filter(r => !idSet.has(r.id));
       const nextState = {
@@ -1222,7 +1327,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         belanjaList,
         sumberDanaList,
         rekananList,
-        anggaranList,
+        anggaranList: curAnggaran,
         realisasiList: nextList,
         importLogs,
         activityLogs,
@@ -1237,6 +1342,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const clearRealisasiDatabase = (tahun?: number) => {
+    const curAnggaran = latestStateRef.current?.anggaranList !== undefined ? latestStateRef.current.anggaranList : anggaranList;
     setRealisasiList(prev => {
       let nextList: Realisasi[] = [];
       if (tahun !== undefined && tahun !== null) {
@@ -1258,7 +1364,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         belanjaList,
         sumberDanaList,
         rekananList,
-        anggaranList,
+        anggaranList: curAnggaran,
         realisasiList: nextList,
         importLogs,
         activityLogs,
@@ -1833,25 +1939,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Google Spreadsheet Sync - Push & Pull implementation
-  const pushToGoogleSheet = async (customUrl?: string): Promise<{ success: boolean; message: string }> => {
+  const pushToGoogleSheet = async (
+    customUrl?: string,
+    options?: { syncMode?: 'full' | 'clear' }
+  ): Promise<{ success: boolean; message: string }> => {
     const targetUrl = (customUrl || sheetConfig.webAppUrl || '').trim();
     if (!targetUrl) {
       return { success: false, message: 'URL Web App Google Apps Script belum diisi. Silakan masukkan URL di pengaturan.' };
     }
 
+    const isClear = options?.syncMode === 'clear';
     setSyncStatus('syncing');
-    logActivity(`Mengirim seluruh data transaksi & pagu ke Google Spreadsheet`);
+    logActivity(isClear ? `Mengosongkan seluruh data transaksi di Google Spreadsheet` : `Mengirim data transaksi & pagu ke Google Spreadsheet`);
 
     try {
       const targetSpreadsheetId = sheetConfig.spreadsheetId || '1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY';
       
       // Use latest state from ref to avoid closure staleness on newly deleted data
-      const currentRealisasi = latestStateRef.current?.realisasiList !== undefined 
+      const currentRealisasi = isClear ? [] : (latestStateRef.current?.realisasiList !== undefined 
         ? latestStateRef.current.realisasiList 
-        : realisasiList;
-      const currentAnggaran = latestStateRef.current?.anggaranList !== undefined 
+        : realisasiList);
+      const currentAnggaran = isClear ? [] : (latestStateRef.current?.anggaranList !== undefined 
         ? latestStateRef.current.anggaranList 
-        : anggaranList;
+        : anggaranList);
 
       // Ensure all fields including pagu, revisi, paguAkhir, and compatibility properties are properly formatted
       const normalizedAnggaranList = (currentAnggaran || []).map(a => {
@@ -1869,7 +1979,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           pagu: paguMurni,
           revisi: revisi,
           paguAkhir: paguAkhir,
-          // Compatibility for Google Apps Script Code.gs
           nilaiMurni: paguMurni,
           nilaiPerubahan: revisi,
           nilai: paguAkhir,
@@ -1901,26 +2010,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }));
 
       const payload = {
-        action: 'saveAll',
+        action: isClear ? 'clearAll' : 'saveAll',
         spreadsheetId: targetSpreadsheetId,
         timestamp: new Date().toISOString(),
         realisasiList: normalizedRealisasiList,
-        anggaranList: normalizedAnggaranList,
-        programs,
-        kegiatanList,
-        subKegiatanList,
-        belanjaList,
-        tahunList,
-        opdList
+        anggaranList: normalizedAnggaranList
       };
 
-      // Send to Apps Script WebApp
-      await fetch(targetUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload),
-        mode: 'no-cors' // Google Apps Script Web App redirects work with no-cors or JSONP
-      });
+      // Try regular fetch with JSON response first; fallback to no-cors if browser sandbox restricts CORS reading
+      let responseMsg = '';
+      try {
+        const res = await fetch(targetUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const resJson = await res.json();
+          if (resJson.message) responseMsg = resJson.message;
+        } else {
+          throw new Error(`HTTP ${res.status}`);
+        }
+      } catch {
+        // Fallback for strict iframe sandbox
+        await fetch(targetUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload),
+          mode: 'no-cors'
+        });
+      }
 
       const timeStr = new Date().toLocaleTimeString('id-ID');
       const updatedSheetConfig = {
@@ -1930,10 +2049,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
       setSheetConfig(updatedSheetConfig);
       setSyncStatus('success');
-      logActivity(`Berhasil mencadangkan ${normalizedRealisasiList.length} realisasi & ${normalizedAnggaranList.length} pagu ke Google Spreadsheet`);
+
+      const finalMsg = isClear
+        ? `Berhasil mengosongkan seluruh data transaksi di Google Spreadsheet pada pukul ${timeStr}.`
+        : responseMsg || `Berhasil mengirim ${normalizedRealisasiList.length} data realisasi & ${normalizedAnggaranList.length} pagu anggaran ke Google Spreadsheet pada pukul ${timeStr}.`;
+
+      logActivity(finalMsg);
       return {
         success: true,
-        message: `Berhasil mengirim ${normalizedRealisasiList.length} data realisasi & ${normalizedAnggaranList.length} pagu anggaran ke Google Spreadsheet pada pukul ${timeStr}.`
+        message: finalMsg
       };
     } catch (err: any) {
       console.error('Push to Google Sheet error:', err);
@@ -1947,6 +2071,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } finally {
       setTimeout(() => setSyncStatus('idle'), 3000);
     }
+  };
+
+  const clearGoogleSheetData = async (customUrl?: string): Promise<{ success: boolean; message: string }> => {
+    return await pushToGoogleSheet(customUrl, { syncMode: 'clear' });
   };
 
   const pullFromGoogleSheet = async (
@@ -2242,13 +2370,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const clearAllDatabase = async (includeMaster: boolean = false) => {
+  const clearAllDatabase = async (includeMaster: boolean = false, syncSpreadsheet: boolean = false) => {
     const nextRealisasi: Realisasi[] = [];
     const nextAnggaran: Anggaran[] = [];
-    const nextPrograms = includeMaster ? [] : programs;
-    const nextKegiatan = includeMaster ? [] : kegiatanList;
-    const nextSubKegiatan = includeMaster ? [] : subKegiatanList;
-    const nextBelanja = includeMaster ? [] : belanjaList;
+    const nextPrograms = includeMaster ? [] : (latestStateRef.current?.programs || programs);
+    const nextKegiatan = includeMaster ? [] : (latestStateRef.current?.kegiatanList || kegiatanList);
+    const nextSubKegiatan = includeMaster ? [] : (latestStateRef.current?.subKegiatanList || subKegiatanList);
+    const nextBelanja = includeMaster ? [] : (latestStateRef.current?.belanjaList || belanjaList);
 
     setRealisasiList(nextRealisasi);
     setAnggaranList(nextAnggaran);
@@ -2289,6 +2417,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     saveStateBundleToCloud(nextState);
+
+    // If requested, also clear connected Google Spreadsheet
+    if (syncSpreadsheet && sheetConfig.webAppUrl) {
+      try {
+        await pushToGoogleSheet(undefined, { syncMode: 'clear' });
+      } catch (sheetErr) {
+        console.warn('Could not clear Google Spreadsheet during database wipe:', sheetErr);
+      }
+    }
+
     logActivity(`Mengosongkan Seluruh Database ${includeMaster ? '(Transaksi & Master Data)' : '(Transaksi Realisasi & Anggaran)'}`);
   };
 
@@ -2424,6 +2562,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteActivityLog,
         clearAllActivityLogs,
         clearAllDatabase,
+        clearGoogleSheetData,
         resetAllData,
         restoreFromBackup,
         importBackupJSON,

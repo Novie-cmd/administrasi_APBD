@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   RefreshCw,
   ExternalLink,
+  Trash2,
   X
 } from 'lucide-react';
 
@@ -27,13 +28,15 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
     anggaranList,
     syncStatus,
     pushToGoogleSheet,
-    pullFromGoogleSheet
+    pullFromGoogleSheet,
+    clearGoogleSheetData
   } = useApp();
 
   const [sheetMessage, setSheetMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [copiedScript, setCopiedScript] = useState(false);
   const [isPushing, setIsPushing] = useState(false);
   const [isPulling, setIsPulling] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
   const [showScriptDetails, setShowScriptDetails] = useState(false);
   const [syncMode, setSyncMode] = useState<'replace' | 'merge'>('replace');
 
@@ -193,6 +196,45 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
           </div>
         </div>
 
+        {/* Zona Pengosongan Spreadsheet */}
+        <div className="rounded-xl border border-rose-900/60 bg-rose-950/20 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-1.5 text-rose-300 font-bold text-xs">
+              <Trash2 className="h-4 w-4 text-rose-400 shrink-0" />
+              <span>Kosongkan Seluruh Data di Google Spreadsheet</span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Menghapus seluruh baris data di sheet <code className="text-emerald-400">Realisasi_SP2D</code> &amp; <code className="text-sky-400">Pagu_Anggaran</code> sehingga spreadsheet bersih (hanya menyisakan header).
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              if (!sheetConfig.webAppUrl) {
+                setSheetMessage({
+                  type: 'error',
+                  text: 'URL Web App Google Apps Script belum diisi.'
+                });
+                return;
+              }
+              if (window.confirm('PERINGATAN: Apakah Anda yakin ingin mengosongkan SELURUH baris data di Google Spreadsheet? Tabel Realisasi dan Pagu Anggaran di spreadsheet akan dikosongkan bersih.')) {
+                setIsClearing(true);
+                const res = await clearGoogleSheetData();
+                setIsClearing(false);
+                setSheetMessage({
+                  type: res.success ? 'success' : 'error',
+                  text: res.message
+                });
+              }
+            }}
+            disabled={isClearing || isPushing || isPulling || syncStatus === 'syncing'}
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-rose-800 bg-rose-950/80 hover:bg-rose-900 px-3.5 py-2 text-xs font-bold text-rose-200 hover:text-white transition shadow shrink-0"
+          >
+            <Trash2 className={`h-3.5 w-3.5 ${isClearing ? 'animate-spin' : ''}`} />
+            <span>{isClearing ? 'Mengosongkan Sheet...' : 'Kosongkan Spreadsheet'}</span>
+          </button>
+        </div>
+
         {/* Input Web App URL & Spreadsheet ID */}
         <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-3">
           <div className="flex items-center justify-between">
@@ -348,6 +390,30 @@ function doPost(e) {
     var ss = getTargetSpreadsheet(sheetId);
     var savedR = 0, savedA = 0;
     
+    // 1. Dukungan Aksi Kosongkan Database Bersih (clearAll / clearDatabase)
+    if (payload.action === 'clearAll' || payload.action === 'clearDatabase') {
+      var sheetRClear = getOrCreateSheet(ss, 'Realisasi_SP2D');
+      var headersRClear = ['ID', 'Tahun', 'Tanggal', 'No_SP2D', 'No_SPM', 'Kode_Sub_Kegiatan', 'Kode_Rekening_Belanja', 'Uraian_Belanja', 'Nilai_Realisasi_Rp', 'Rekanan_Penerima', 'Status_Validasi', 'Operator'];
+      sheetRClear.clear();
+      sheetRClear.appendRow(headersRClear);
+      formatHeader(sheetRClear, '#047857');
+      
+      var sheetAClear = getOrCreateSheet(ss, 'Pagu_Anggaran');
+      var headersAClear = ['ID', 'Tahun', 'Kode_Sub_Kegiatan', 'Kode_Rekening_Belanja', 'Pagu_Murni_Rp', 'Pagu_Perubahan_Rp', 'Nilai_Pagu_Efektif_Rp', 'Sumber_Dana'];
+      sheetAClear.clear();
+      sheetAClear.appendRow(headersAClear);
+      formatHeader(sheetAClear, '#0284c7');
+      
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        message: 'Seluruh data transaksi di Google Spreadsheet berhasil dikosongkan bersih.',
+        savedRealisasi: 0,
+        savedAnggaran: 0,
+        timestamp: new Date().toISOString()
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // 2. Simpan Data Realisasi SP2D
     if (payload.realisasiList && Array.isArray(payload.realisasiList)) {
       var sheetR = getOrCreateSheet(ss, 'Realisasi_SP2D');
       var headersR = ['ID', 'Tahun', 'Tanggal', 'No_SP2D', 'No_SPM', 'Kode_Sub_Kegiatan', 'Kode_Rekening_Belanja', 'Uraian_Belanja', 'Nilai_Realisasi_Rp', 'Rekanan_Penerima', 'Status_Validasi', 'Operator'];
@@ -358,12 +424,17 @@ function doPost(e) {
         var rows = payload.realisasiList.map(function(r) {
           return [r.id||'', r.tahun||'', r.tanggal||'', r.noSP2D||'', r.noSPM||'', r.kodeSub||'', r.kodeBelanja||'', r.uraian||'', Number(r.nilai)||0, r.rekanan||'', r.statusValidation||'Disetujui PPK', r.operator||''];
         });
+        var curMaxR = sheetR.getMaxRows();
+        if (curMaxR < rows.length + 5) {
+          sheetR.insertRowsAfter(curMaxR, rows.length + 5 - curMaxR);
+        }
         sheetR.getRange(2, 1, rows.length, headersR.length).setValues(rows);
         sheetR.getRange(2, 9, rows.length, 1).setNumberFormat('#,##0');
         savedR = rows.length;
       }
     }
     
+    // 3. Simpan Data Pagu Anggaran
     if (payload.anggaranList && Array.isArray(payload.anggaranList)) {
       var sheetA = getOrCreateSheet(ss, 'Pagu_Anggaran');
       var headersA = ['ID', 'Tahun', 'Kode_Sub_Kegiatan', 'Kode_Rekening_Belanja', 'Pagu_Murni_Rp', 'Pagu_Perubahan_Rp', 'Nilai_Pagu_Efektif_Rp', 'Sumber_Dana'];
@@ -386,6 +457,10 @@ function doPost(e) {
             a.sumberDana || 'PAD'
           ];
         });
+        var curMaxA = sheetA.getMaxRows();
+        if (curMaxA < rowsA.length + 5) {
+          sheetA.insertRowsAfter(curMaxA, rowsA.length + 5 - curMaxA);
+        }
         sheetA.getRange(2, 1, rowsA.length, headersA.length).setValues(rowsA);
         sheetA.getRange(2, 5, rowsA.length, 3).setNumberFormat('#,##0');
         savedA = rowsA.length;
@@ -396,7 +471,8 @@ function doPost(e) {
       success: true,
       message: 'Berhasil menyimpan ' + savedR + ' realisasi & ' + savedA + ' anggaran.',
       savedRealisasi: savedR,
-      savedAnggaran: savedA
+      savedAnggaran: savedA,
+      timestamp: new Date().toISOString()
     })).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({ success: false, error: err.toString() }))

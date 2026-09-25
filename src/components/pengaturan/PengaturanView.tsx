@@ -46,11 +46,13 @@ export const PengaturanView: React.FC = () => {
     syncWithSpreadsheet,
     pushToGoogleSheet,
     pullFromGoogleSheet,
+    clearGoogleSheetData,
     cloudSync,
     forceSyncCloud,
     activityLogs,
     deleteActivityLog,
     clearAllActivityLogs,
+    clearRealisasiDatabase,
     clearAllDatabase,
     resetAllData,
     restoreFromBackup,
@@ -77,6 +79,7 @@ export const PengaturanView: React.FC = () => {
   const [isPushingSheet, setIsPushingSheet] = useState(false);
   const [isPullingSheet, setIsPullingSheet] = useState(false);
   const [pullSyncMode, setPullSyncMode] = useState<'replace' | 'merge'>('replace');
+  const [isClearingSheet, setIsClearingSheet] = useState(false);
 
   // Search filter
   const [searchTerm, setSearchTerm] = useState('');
@@ -349,27 +352,56 @@ export const PengaturanView: React.FC = () => {
               </button>
             </div>
 
-            {/* Zona Pengosongan Transaksi */}
-            {!isReadonly && (
-              <div className="rounded-xl border border-rose-900/60 bg-rose-950/30 p-4 space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <h4 className="text-xs font-bold text-rose-300 flex items-center gap-2">
-                      <Trash2 className="h-4 w-4 text-rose-400" />
-                      <span>Manajemen Pembersihan Database (Lokal & Cloud)</span>
-                    </h4>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                      Menghapus seluruh transaksi Realisasi SP2D dan Pagu Anggaran secara permanen dari perangkat ini dan Firestore Cloud.
-                    </p>
-                  </div>
+            {/* Zona Pengosongan Transaksi & Database */}
+            <div className="rounded-xl border border-rose-900/60 bg-rose-950/30 p-4 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h4 className="text-xs font-bold text-rose-300 flex items-center gap-2">
+                    <Trash2 className="h-4 w-4 text-rose-400" />
+                    <span>Manajemen Pembersihan Database (Lokal & Cloud)</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Hapus transaksi Realisasi SP2D saja atau kosongkan seluruh database transaksi (Realisasi &amp; Pagu Anggaran) dari perangkat ini, Firestore Cloud, dan Google Spreadsheet.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (isReadonly) {
+                        alert('Peran Auditor hanya memiliki izin lihat (Read-Only). Masuk sebagai Administrator untuk mengosongkan data.');
+                        return;
+                      }
+                      if (window.confirm('Apakah Anda yakin ingin mengosongkan SELURUH data Transaksi Realisasi SP2D (Semua Tahun)?')) {
+                        clearRealisasiDatabase();
+                        setBackupMessage({
+                          type: 'success',
+                          text: 'Berhasil mengosongkan seluruh data transaksi Realisasi SP2D.'
+                        });
+                      }
+                    }}
+                    className="flex items-center justify-center gap-2 rounded-xl border border-rose-600/80 bg-rose-950/80 hover:bg-rose-900 px-4 py-2.5 text-xs font-bold text-rose-200 hover:text-white transition shadow shrink-0"
+                    id="btn-pengaturan-clear-transaksi"
+                    title="Kosongkan Transaksi Realisasi SP2D"
+                  >
+                    <Trash2 className="h-4 w-4 text-rose-400" />
+                    <span>Kosongkan Transaksi</span>
+                  </button>
+
                   <button
                     onClick={async () => {
-                      if (window.confirm('PERINGATAN: Apakah Anda yakin ingin mengosongkan SELURUH data transaksi (Realisasi & Pagu Anggaran)? Data akan dihapus bersih dari perangkat ini dan juga Firestore Cloud.')) {
+                      if (isReadonly) {
+                        alert('Peran Auditor hanya memiliki izin lihat (Read-Only). Masuk sebagai Administrator untuk mengosongkan database.');
+                        return;
+                      }
+                      if (window.confirm('PERINGATAN: Apakah Anda yakin ingin mengosongkan SELURUH database transaksi (Realisasi & Pagu Anggaran)? Data akan dihapus bersih dari perangkat ini dan juga Firestore Cloud.')) {
                         try {
-                          await clearAllDatabase(false);
+                          const alsoClearSheet = sheetConfig.webAppUrl
+                            ? window.confirm('Apakah Anda juga ingin sekaligus MENGOSONGKAN data di Google Spreadsheet yang terhubung?')
+                            : false;
+                          await clearAllDatabase(false, alsoClearSheet);
                           setBackupMessage({
                             type: 'success',
-                            text: 'Berhasil mengosongkan seluruh database transaksi (Realisasi & Pagu) secara permanen di lokal dan Cloud.'
+                            text: `Berhasil mengosongkan seluruh database transaksi (Realisasi & Pagu) secara permanen di lokal, Cloud${alsoClearSheet ? ', dan Google Spreadsheet' : ''}.`
                           });
                         } catch (err: any) {
                           setBackupMessage({
@@ -379,14 +411,16 @@ export const PengaturanView: React.FC = () => {
                         }
                       }
                     }}
-                    className="flex items-center justify-center gap-2 rounded-xl border border-rose-600/80 bg-rose-950/80 hover:bg-rose-900 px-4 py-2.5 text-xs font-bold text-rose-200 hover:text-white transition shadow shrink-0"
+                    className="flex items-center justify-center gap-2 rounded-xl border border-red-700/90 bg-red-950/90 hover:bg-red-900 px-4 py-2.5 text-xs font-bold text-red-200 hover:text-white transition shadow shrink-0"
+                    id="btn-pengaturan-clear-database"
+                    title="Kosongkan Seluruh Database Transaksi (Realisasi & Pagu)"
                   >
-                    <Trash2 className="h-4 w-4 text-rose-400" />
-                    <span>Kosongkan Transaksi (Realisasi & Pagu)</span>
+                    <Database className="h-4 w-4 text-rose-400" />
+                    <span>Kosongkan Database</span>
                   </button>
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}
@@ -714,6 +748,42 @@ export const PengaturanView: React.FC = () => {
                 <span>{isPullingSheet ? 'Sedang Menarik Data dari Google Sheet...' : 'Tarik & Sinkronkan Data'}</span>
               </button>
             </div>
+          </div>
+
+          {/* Opsi Kosongkan Google Spreadsheet */}
+          <div className="rounded-2xl border border-rose-900/60 bg-rose-950/20 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2 text-rose-300 font-bold text-xs">
+                <Trash2 className="h-4 w-4 text-rose-400 shrink-0" />
+                <span>Kosongkan Seluruh Data di Google Spreadsheet</span>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Menghapus semua baris data di sheet <code className="text-emerald-400 font-mono">Realisasi_SP2D</code> &amp; <code className="text-sky-400 font-mono">Pagu_Anggaran</code> sehingga spreadsheet bersih (hanya menyisakan header).
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!sheetConfig.webAppUrl) {
+                  setSheetMessage({ type: 'error', text: 'URL Web App belum diisi.' });
+                  return;
+                }
+                if (window.confirm('PERINGATAN: Apakah Anda yakin ingin mengosongkan SELURUH baris data di Google Spreadsheet? Tabel Realisasi dan Pagu Anggaran di spreadsheet akan dikosongkan bersih.')) {
+                  setIsClearingSheet(true);
+                  const res = await clearGoogleSheetData();
+                  setIsClearingSheet(false);
+                  setSheetMessage({
+                    type: res.success ? 'success' : 'error',
+                    text: res.message
+                  });
+                }
+              }}
+              disabled={isClearingSheet || isPushingSheet || isPullingSheet || syncStatus === 'syncing'}
+              className="flex items-center justify-center gap-2 rounded-xl border border-rose-800 bg-rose-950/80 hover:bg-rose-900 px-4 py-2.5 text-xs font-bold text-rose-200 hover:text-white transition shadow shrink-0"
+            >
+              <Trash2 className={`h-4 w-4 ${isClearingSheet ? 'animate-spin' : ''}`} />
+              <span>{isClearingSheet ? 'Sedang Mengosongkan...' : 'Kosongkan Spreadsheet'}</span>
+            </button>
           </div>
 
           {/* Konfigurasi URL */}
@@ -1090,48 +1160,83 @@ export const PengaturanView: React.FC = () => {
                 </button>
               </div>
 
-              {!isReadonly && (
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={async () => {
-                      if (window.confirm('PERINGATAN: Apakah Anda yakin ingin mengosongkan SELURUH data transaksi (Realisasi & Pagu Anggaran)? Data akan dihapus bersih dari perangkat ini dan juga Firestore Cloud.')) {
-                        try {
-                          await clearAllDatabase(false);
-                          setBackupMessage({
-                            type: 'success',
-                            text: 'Berhasil mengosongkan seluruh database transaksi (Realisasi & Pagu) secara permanen di lokal dan Cloud.'
-                          });
-                        } catch (err: any) {
-                          setBackupMessage({
-                            type: 'error',
-                            text: `Gagal mengosongkan database: ${err.message}`
-                          });
-                        }
-                      }
-                    }}
-                    className="flex items-center gap-2 rounded-xl border border-amber-800/80 bg-amber-950/40 px-4 py-2.5 text-xs font-bold text-amber-300 hover:bg-amber-900/60 hover:text-amber-100 transition shadow"
-                  >
-                    <Trash2 className="h-4 w-4 text-amber-400" />
-                    <span>Kosongkan Transaksi (Realisasi & Pagu)</span>
-                  </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => {
+                    if (isReadonly) {
+                      alert('Peran Auditor hanya memiliki izin lihat (Read-Only). Masuk sebagai Administrator untuk mengosongkan transaksi.');
+                      return;
+                    }
+                    if (window.confirm('Apakah Anda yakin ingin mengosongkan seluruh transaksi Realisasi SP2D?')) {
+                      clearRealisasiDatabase();
+                      setBackupMessage({
+                        type: 'success',
+                        text: 'Berhasil mengosongkan seluruh data transaksi Realisasi SP2D.'
+                      });
+                    }
+                  }}
+                  className="flex items-center gap-2 rounded-xl border border-amber-800/80 bg-amber-950/40 px-4 py-2.5 text-xs font-bold text-amber-300 hover:bg-amber-900/60 hover:text-amber-100 transition shadow"
+                  id="btn-backup-clear-transaksi"
+                  title="Kosongkan Transaksi Realisasi SP2D"
+                >
+                  <Trash2 className="h-4 w-4 text-amber-400" />
+                  <span>Kosongkan Transaksi</span>
+                </button>
 
-                  <button
-                    onClick={() => {
-                      if (window.confirm('PERINGATAN: Apakah Anda yakin ingin mereset seluruh data kembali ke setelan pabrik awal? Tindakan ini tidak dapat dibatalkan jika Anda belum mengunduh file cadangan.')) {
-                        resetAllData();
+                <button
+                  onClick={async () => {
+                    if (isReadonly) {
+                      alert('Peran Auditor hanya memiliki izin lihat (Read-Only). Masuk sebagai Administrator untuk mengosongkan database.');
+                      return;
+                    }
+                    if (window.confirm('PERINGATAN: Apakah Anda yakin ingin mengosongkan SELURUH data transaksi (Realisasi & Pagu Anggaran)? Data akan dihapus bersih dari perangkat ini dan juga Firestore Cloud.')) {
+                      try {
+                        const alsoClearSheet = sheetConfig.webAppUrl
+                          ? window.confirm('Apakah Anda juga ingin sekaligus MENGOSONGKAN data di Google Spreadsheet yang terhubung?')
+                          : false;
+                        await clearAllDatabase(false, alsoClearSheet);
                         setBackupMessage({
                           type: 'success',
-                          text: 'Seluruh data telah direset ke setelan awal pabrik.'
+                          text: `Berhasil mengosongkan seluruh database transaksi (Realisasi & Pagu) secara permanen di lokal, Cloud${alsoClearSheet ? ', dan Google Spreadsheet' : ''}.`
+                        });
+                      } catch (err: any) {
+                        setBackupMessage({
+                          type: 'error',
+                          text: `Gagal mengosongkan database: ${err.message}`
                         });
                       }
-                    }}
-                    className="flex items-center gap-2 rounded-xl border border-rose-800/80 bg-rose-950/40 px-4 py-2.5 text-xs font-bold text-rose-400 hover:bg-rose-900/60 hover:text-rose-200 transition shadow"
-                  >
-                    <Trash2 className="h-4 w-4 text-rose-400" />
-                    <span>Reset ke Setelan Pabrik</span>
-                  </button>
-                </div>
-              )}
+                    }
+                  }}
+                  className="flex items-center gap-2 rounded-xl border border-rose-800/80 bg-rose-950/40 px-4 py-2.5 text-xs font-bold text-rose-300 hover:bg-rose-900/60 hover:text-rose-100 transition shadow"
+                  id="btn-backup-clear-database"
+                  title="Kosongkan Seluruh Database Transaksi"
+                >
+                  <Database className="h-4 w-4 text-rose-400" />
+                  <span>Kosongkan Database</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (isReadonly) {
+                      alert('Peran Auditor hanya memiliki izin lihat (Read-Only). Masuk sebagai Administrator untuk mereset setelan.');
+                      return;
+                    }
+                    if (window.confirm('PERINGATAN: Apakah Anda yakin ingin mereset seluruh data kembali ke setelan pabrik awal? Tindakan ini tidak dapat dibatalkan jika Anda belum mengunduh file cadangan.')) {
+                      resetAllData();
+                      setBackupMessage({
+                        type: 'success',
+                        text: 'Seluruh data telah direset ke setelan awal pabrik.'
+                      });
+                    }
+                  }}
+                  className="flex items-center gap-2 rounded-xl border border-red-800/80 bg-red-950/40 px-4 py-2.5 text-xs font-bold text-rose-400 hover:bg-red-900/60 hover:text-rose-200 transition shadow"
+                  id="btn-backup-reset-factory"
+                  title="Reset Semua Data ke Setelan Awal Pabrik"
+                >
+                  <RefreshCw className="h-4 w-4 text-rose-400" />
+                  <span>Reset ke Setelan Pabrik</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1476,7 +1581,37 @@ function doPost(e) {
     var savedRealisasi = 0;
     var savedAnggaran = 0;
     
-    // 1. Simpan Data Realisasi SP2D
+    // 1. Dukungan Aksi Kosongkan Database Bersih (clearAll / clearDatabase)
+    if (payload.action === 'clearAll' || payload.action === 'clearDatabase') {
+      var sheetRClear = getOrCreateSheet(ss, 'Realisasi_SP2D');
+      var headersRClear = [
+        'ID', 'Tahun', 'Tanggal', 'No_SP2D', 'No_SPM', 
+        'Kode_Sub_Kegiatan', 'Kode_Rekening_Belanja', 'Uraian_Belanja', 
+        'Nilai_Realisasi_Rp', 'Rekanan_Penerima', 'Status_Validasi', 'Operator'
+      ];
+      sheetRClear.clear();
+      sheetRClear.appendRow(headersRClear);
+      formatHeader(sheetRClear, '#047857');
+      
+      var sheetAClear = getOrCreateSheet(ss, 'Pagu_Anggaran');
+      var headersAClear = [
+        'ID', 'Tahun', 'Kode_Sub_Kegiatan', 'Kode_Rekening_Belanja', 
+        'Pagu_Murni_Rp', 'Pagu_Perubahan_Rp', 'Nilai_Pagu_Efektif_Rp', 'Sumber_Dana'
+      ];
+      sheetAClear.clear();
+      sheetAClear.appendRow(headersAClear);
+      formatHeader(sheetAClear, '#0284c7');
+      
+      return createJsonResponse({
+        success: true,
+        message: 'Seluruh data transaksi di Google Spreadsheet berhasil dikosongkan bersih.',
+        savedRealisasi: 0,
+        savedAnggaran: 0,
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // 2. Simpan Data Realisasi SP2D
     if (payload.realisasiList && Array.isArray(payload.realisasiList)) {
       var sheetRealisasi = getOrCreateSheet(ss, 'Realisasi_SP2D');
       var headers = [
@@ -1506,13 +1641,17 @@ function doPost(e) {
             r.operator || ''
           ];
         });
+        var curMaxR = sheetRealisasi.getMaxRows();
+        if (curMaxR < rows.length + 5) {
+          sheetRealisasi.insertRowsAfter(curMaxR, rows.length + 5 - curMaxR);
+        }
         sheetRealisasi.getRange(2, 1, rows.length, headers.length).setValues(rows);
         sheetRealisasi.getRange(2, 9, rows.length, 1).setNumberFormat('#,##0');
         savedRealisasi = rows.length;
       }
     }
     
-    // 2. Simpan Data Pagu Anggaran
+    // 3. Simpan Data Pagu Anggaran
     if (payload.anggaranList && Array.isArray(payload.anggaranList)) {
       var sheetAnggaran = getOrCreateSheet(ss, 'Pagu_Anggaran');
       var headersAnggaran = [
@@ -1540,6 +1679,10 @@ function doPost(e) {
             a.sumberDana || 'PAD'
           ];
         });
+        var curMaxA = sheetAnggaran.getMaxRows();
+        if (curMaxA < rowsAnggaran.length + 5) {
+          sheetAnggaran.insertRowsAfter(curMaxA, rowsAnggaran.length + 5 - curMaxA);
+        }
         sheetAnggaran.getRange(2, 1, rowsAnggaran.length, headersAnggaran.length).setValues(rowsAnggaran);
         sheetAnggaran.getRange(2, 5, rowsAnggaran.length, 3).setNumberFormat('#,##0');
         savedAnggaran = rowsAnggaran.length;

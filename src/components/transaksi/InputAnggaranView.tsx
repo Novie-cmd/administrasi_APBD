@@ -21,6 +21,7 @@ import {
   FileCheck,
   Sparkles,
   AlertCircle,
+  Database,
   X,
   CheckSquare
 } from 'lucide-react';
@@ -56,6 +57,9 @@ export const InputAnggaranView: React.FC = () => {
     deleteAnggaran,
     deleteBatchAnggaran,
     clearAnggaranDatabase,
+    clearRealisasiDatabase,
+    clearAllDatabase,
+    sheetConfig,
     importAnggaranBatch,
     currentUser
   } = useApp();
@@ -63,6 +67,8 @@ export const InputAnggaranView: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showClearModal, setShowClearModal] = useState(false);
+  const [showClearDbModal, setShowClearDbModal] = useState(false);
+  const [alsoClearSheet, setAlsoClearSheet] = useState(false);
 
   // Selection & Bulk Actions
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -548,43 +554,67 @@ export const InputAnggaranView: React.FC = () => {
           </p>
         </div>
 
-        {!isReadOnly && (
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => setShowClearModal(true)}
-              className="flex items-center gap-2 rounded-xl border border-rose-600/80 bg-rose-950/70 px-3.5 py-2.5 text-xs font-bold text-rose-200 hover:bg-rose-900 hover:border-rose-500 hover:text-white transition shadow-sm"
-              id="btn-clear-db-anggaran"
-              title="Kosongkan Seluruh Data Pagu Anggaran"
-            >
-              <Trash2 className="h-4 w-4 text-rose-400" />
-              <span>Kosongkan Anggaran</span>
-            </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => {
+              if (isReadOnly) {
+                alert('Peran Auditor hanya memiliki izin lihat (Read-Only). Masuk sebagai Administrator/Operator untuk mengosongkan anggaran.');
+                return;
+              }
+              setShowClearModal(true);
+            }}
+            className="flex items-center gap-2 rounded-xl border border-rose-600/80 bg-rose-950/70 px-3.5 py-2.5 text-xs font-bold text-rose-200 hover:bg-rose-900 hover:border-rose-500 hover:text-white transition shadow-sm"
+            id="btn-clear-db-anggaran"
+            title="Kosongkan Seluruh Data Pagu Anggaran"
+          >
+            <Trash2 className="h-4 w-4 text-rose-400" />
+            <span>Kosongkan Anggaran</span>
+          </button>
 
-            <button
-              onClick={() => {
-                setShowImportModal(true);
-                setImportSuccessMsg(null);
-                setImportErrors([]);
-                setPreviewData([]);
-                setImportedFileName('');
-              }}
-              className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-xs font-bold text-emerald-400 hover:border-emerald-500 hover:bg-slate-800 transition"
-              id="btn-import-excel-anggaran"
-            >
-              <FileSpreadsheet className="h-4 w-4" />
-              <span>Import File Excel</span>
-            </button>
+          <button
+            onClick={() => {
+              if (isReadOnly) {
+                alert('Peran Auditor hanya memiliki izin lihat (Read-Only). Masuk sebagai Administrator/Operator untuk mengosongkan database.');
+                return;
+              }
+              setShowClearDbModal(true);
+            }}
+            className="flex items-center gap-2 rounded-xl border border-red-700/80 bg-red-950/80 px-3.5 py-2.5 text-xs font-bold text-red-200 hover:bg-red-900 hover:border-red-500 hover:text-white transition shadow-sm"
+            id="btn-clear-all-database-anggaran"
+            title="Kosongkan Seluruh Database Transaksi (Realisasi & Pagu)"
+          >
+            <Database className="h-4 w-4 text-rose-400" />
+            <span>Kosongkan Database</span>
+          </button>
 
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 shadow-lg shadow-emerald-950/50"
-              id="btn-toggle-add-anggaran"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Tambah Pagu Anggaran</span>
-            </button>
-          </div>
-        )}
+          {!isReadOnly && (
+            <>
+              <button
+                onClick={() => {
+                  setShowImportModal(true);
+                  setImportSuccessMsg(null);
+                  setImportErrors([]);
+                  setPreviewData([]);
+                  setImportedFileName('');
+                }}
+                className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-xs font-bold text-emerald-400 hover:border-emerald-500 hover:bg-slate-800 transition"
+                id="btn-import-excel-anggaran"
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                <span>Import File Excel</span>
+              </button>
+
+              <button
+                onClick={() => setShowForm(!showForm)}
+                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 shadow-lg shadow-emerald-950/50"
+                id="btn-toggle-add-anggaran"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Tambah Pagu Anggaran</span>
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -1486,6 +1516,87 @@ export const InputAnggaranView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowClearModal(false)}
+                className="rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-2 text-xs font-bold text-slate-300 transition"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CLEAR DATABASE (REALISASI & PAGU) CONFIRMATION MODAL */}
+      {showClearDbModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-md rounded-3xl border border-rose-800/60 bg-slate-900 p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-rose-400">
+              <div className="p-3 rounded-2xl bg-rose-950 border border-rose-800/80">
+                <Database className="h-7 w-7 text-rose-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Kosongkan Seluruh Database Transaksi</h3>
+                <p className="text-xs text-slate-400">Pembersihan Total Realisasi SP2D & Pagu Anggaran</p>
+              </div>
+            </div>
+
+            <div className="rounded-xl bg-rose-950/30 border border-rose-900/50 p-3 text-xs text-rose-200 leading-relaxed space-y-1">
+              <p className="font-bold text-rose-300">Peringatan Penting!</p>
+              <p>
+                Tindakan ini akan mengosongkan seluruh database transaksi (Realisasi SP2D dan Pagu Anggaran) dari sistem. Data lokal dan Cloud akan dibersihkan.
+              </p>
+              {sheetConfig.webAppUrl && (
+                <label className="flex items-center gap-2 rounded-lg bg-slate-950/80 border border-slate-800 p-2 text-xs text-slate-300 cursor-pointer hover:border-slate-700 mt-2">
+                  <input
+                    type="checkbox"
+                    checked={alsoClearSheet}
+                    onChange={e => setAlsoClearSheet(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-rose-500 focus:ring-rose-500"
+                  />
+                  <span>Sekaligus kosongkan data di Google Spreadsheet yang terhubung</span>
+                </label>
+              )}
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  clearRealisasiDatabase(selectedTahun);
+                  clearAnggaranDatabase(selectedTahun);
+                  if (alsoClearSheet && sheetConfig.webAppUrl) {
+                    try {
+                      await clearAllDatabase(false, true);
+                    } catch (e) {
+                      console.error(e);
+                    }
+                  }
+                  setShowClearDbModal(false);
+                  alert(`Berhasil mengosongkan transaksi Realisasi & Pagu Anggaran TA ${selectedTahun}.`);
+                }}
+                className="w-full rounded-xl bg-rose-600 hover:bg-rose-500 p-3 text-xs font-bold text-white transition flex items-center justify-between shadow-md"
+              >
+                <span>Kosongkan Database TA {selectedTahun} Saja (Realisasi & Pagu)</span>
+                <Trash2 className="h-4 w-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  await clearAllDatabase(false, alsoClearSheet);
+                  setShowClearDbModal(false);
+                  alert('Berhasil mengosongkan SELURUH database transaksi (Realisasi & Pagu) semua Tahun Anggaran.');
+                }}
+                className="w-full rounded-xl bg-red-800 hover:bg-red-700 border border-red-700 p-3 text-xs font-bold text-white transition flex items-center justify-between shadow-md"
+              >
+                <span>Kosongkan TOTAL Database Transaksi (Semua Tahun)</span>
+                <Database className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setShowClearDbModal(false)}
                 className="rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-2 text-xs font-bold text-slate-300 transition"
               >
                 Batal

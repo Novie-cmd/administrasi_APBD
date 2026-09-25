@@ -72,9 +72,14 @@ export const UploadExcelView: React.FC = () => {
     batchImportExcel,
     importLogs,
     realisasiList,
+    anggaranList,
     deleteRealisasi,
     deleteBatchRealisasi,
-    clearRealisasiDatabase
+    clearRealisasiDatabase,
+    clearAnggaranDatabase,
+    clearAllDatabase,
+    sheetConfig,
+    currentUser
   } = useApp();
 
   const [previewData, setPreviewData] = useState<PreviewRow[]>([]);
@@ -82,7 +87,8 @@ export const UploadExcelView: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [overwriteMode, setOverwriteMode] = useState<boolean>(false);
   const [ignoreDuplicateWarnings, setIgnoreDuplicateWarnings] = useState<boolean>(false);
-  const [showClearModal, setShowClearModal] = useState<boolean>(false);
+  const [clearModalType, setClearModalType] = useState<'transaksi' | 'database' | null>(null);
+  const [alsoClearSheet, setAlsoClearSheet] = useState<boolean>(false);
   const [dbSearchQuery, setDbSearchQuery] = useState<string>('');
   const [selectedDbIds, setSelectedDbIds] = useState<string[]>([]);
   const [importResult, setImportResult] = useState<{
@@ -599,15 +605,39 @@ export const UploadExcelView: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={downloadSampleTemplate}
-          className="flex items-center gap-2 rounded-xl border border-emerald-600/60 bg-emerald-950/40 px-4 py-2 text-xs font-bold text-emerald-300 hover:border-emerald-500 hover:bg-emerald-900/60 shadow transition"
-          id="btn-download-template"
-          title="Unduh Master Template Spreadsheet Database (Multi-Sheet: Realisasi, Pagu DPA, SIPD NTB & Panduan)"
-        >
-          <Download className="h-4 w-4" />
-          <span>Unduh Database Spreadsheet (.xlsx)</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={downloadSampleTemplate}
+            className="flex items-center gap-2 rounded-xl border border-emerald-600/60 bg-emerald-950/40 px-3.5 py-2 text-xs font-bold text-emerald-300 hover:border-emerald-500 hover:bg-emerald-900/60 shadow transition"
+            id="btn-download-template"
+            title="Unduh Master Template Spreadsheet Database (Multi-Sheet: Realisasi, Pagu DPA, SIPD NTB & Panduan)"
+          >
+            <Download className="h-4 w-4" />
+            <span>Unduh Database Spreadsheet (.xlsx)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setClearModalType('transaksi')}
+            className="flex items-center gap-1.5 rounded-xl border border-rose-600/80 bg-rose-950/70 hover:bg-rose-900 hover:border-rose-500 px-3.5 py-2 text-xs font-bold text-rose-200 hover:text-white transition shadow-sm"
+            id="btn-header-clear-transaksi"
+            title="Kosongkan Seluruh Data Transaksi Realisasi SP2D"
+          >
+            <Trash2 className="h-4 w-4 text-rose-400" />
+            <span>Kosongkan Transaksi</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setClearModalType('database')}
+            className="flex items-center gap-1.5 rounded-xl border border-red-700/80 bg-red-950/80 hover:bg-red-900 hover:border-red-500 px-3.5 py-2 text-xs font-bold text-red-200 hover:text-white transition shadow-sm"
+            id="btn-header-clear-database"
+            title="Kosongkan Seluruh Database Transaksi (Realisasi & Pagu)"
+          >
+            <Database className="h-4 w-4 text-rose-400" />
+            <span>Kosongkan Database</span>
+          </button>
+        </div>
       </div>
 
       {/* DATABASE STATUS & CONFIG BANNER */}
@@ -652,10 +682,23 @@ export const UploadExcelView: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setShowClearModal(true)}
-            className="flex items-center gap-1.5 rounded-xl border border-rose-800/80 bg-rose-950/60 px-3.5 py-2 text-xs font-bold text-rose-300 hover:bg-rose-900/80 hover:text-white transition shadow-sm"
+            onClick={() => setClearModalType('transaksi')}
+            className="flex items-center gap-1.5 rounded-xl border border-rose-600/80 bg-rose-950/70 px-3.5 py-2 text-xs font-bold text-rose-200 hover:bg-rose-900 hover:text-white transition shadow-sm"
+            id="btn-banner-clear-transaksi"
+            title="Kosongkan Data Transaksi Realisasi SP2D"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-4 w-4 text-rose-400" />
+            <span>Kosongkan Transaksi</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setClearModalType('database')}
+            className="flex items-center gap-1.5 rounded-xl border border-rose-800/80 bg-rose-950/60 px-3.5 py-2 text-xs font-bold text-rose-300 hover:bg-rose-900/80 hover:text-white transition shadow-sm"
+            id="btn-banner-clear-database"
+            title="Kosongkan Seluruh Database Transaksi"
+          >
+            <Database className="h-4 w-4 text-rose-400" />
             <span>Kosongkan Database</span>
           </button>
         </div>
@@ -980,18 +1023,27 @@ export const UploadExcelView: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {currentYearRealisasi.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowClearModal(true)}
-                className="flex items-center gap-1.5 rounded-xl border border-rose-600/80 bg-rose-950/70 hover:bg-rose-900 hover:border-rose-500 px-3.5 py-2 text-xs font-bold text-rose-200 hover:text-white transition shadow-sm shrink-0"
-                id="btn-clear-db-upload-excel"
-                title="Kosongkan Seluruh Data Transaksi Realisasi SP2D"
-              >
-                <Trash2 className="h-3.5 w-3.5 text-rose-400" />
-                <span>Kosongkan Transaksi</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setClearModalType('transaksi')}
+              className="flex items-center gap-1.5 rounded-xl border border-rose-600/80 bg-rose-950/70 hover:bg-rose-900 hover:border-rose-500 px-3.5 py-2 text-xs font-bold text-rose-200 hover:text-white transition shadow-sm shrink-0"
+              id="btn-clear-db-upload-excel"
+              title="Kosongkan Seluruh Data Transaksi Realisasi SP2D"
+            >
+              <Trash2 className="h-3.5 w-3.5 text-rose-400" />
+              <span>Kosongkan Transaksi</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setClearModalType('database')}
+              className="flex items-center gap-1.5 rounded-xl border border-rose-800/80 bg-rose-950/60 hover:bg-rose-900 hover:border-rose-500 px-3.5 py-2 text-xs font-bold text-rose-300 hover:text-white transition shadow-sm shrink-0"
+              id="btn-clear-database-table"
+              title="Kosongkan Seluruh Database Transaksi"
+            >
+              <Database className="h-3.5 w-3.5 text-rose-400" />
+              <span>Kosongkan Database</span>
+            </button>
 
             {selectedDbIds.length > 0 && (
               <button
@@ -1203,64 +1255,131 @@ export const UploadExcelView: React.FC = () => {
         </div>
       </div>
 
-      {/* CLEAR DATABASE CONFIRMATION MODAL */}
-      {showClearModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
+      {/* CLEAR MODAL (TRANSAKSI / DATABASE) */}
+      {clearModalType !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm animate-fadeIn">
           <div className="w-full max-w-md space-y-4 rounded-2xl border border-rose-900/80 bg-slate-900 p-6 shadow-2xl">
             <div className="flex items-center gap-3 border-b border-slate-800 pb-3">
               <div className="rounded-xl bg-rose-950 p-2.5 text-rose-400 border border-rose-800">
-                <AlertTriangle className="h-6 w-6" />
+                {clearModalType === 'database' ? (
+                  <Database className="h-6 w-6 text-rose-400" />
+                ) : (
+                  <Trash2 className="h-6 w-6 text-rose-400" />
+                )}
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">Konfirmasi Kosongkan Database</h3>
-                <p className="text-xs text-rose-300">Penghapusan Transaksi Realisasi SP2D</p>
+                <h3 className="text-base font-bold text-white">
+                  {clearModalType === 'database' ? 'Konfirmasi Kosongkan Database' : 'Konfirmasi Kosongkan Transaksi'}
+                </h3>
+                <p className="text-xs text-rose-300">
+                  {clearModalType === 'database'
+                    ? 'Penghapusan Seluruh Database Realisasi & Pagu Anggaran'
+                    : 'Penghapusan Transaksi Realisasi SP2D'}
+                </p>
               </div>
             </div>
 
             <div className="space-y-2 text-xs text-slate-300">
               <p className="font-bold text-rose-300">Peringatan Penting!</p>
               <p>
-                Tindakan ini akan menghapus data transaksi Realisasi SP2D dari database lokal.
-                Setelah dikosongkan, Anda dapat mengunggah file Excel baru mulai dari Baris 1 secara bersih.
+                {clearModalType === 'database'
+                  ? 'Tindakan ini akan mengosongkan seluruh data transaksi (Realisasi SP2D dan Pagu Anggaran) dari sistem. File baru Excel dapat diunggah secara bersih mulai dari Baris 1.'
+                  : 'Tindakan ini akan menghapus data transaksi Realisasi SP2D dari database. Setelah dikosongkan, Anda dapat mengunggah file Excel baru mulai dari Baris 1.'}
               </p>
+
+              {sheetConfig.webAppUrl && (
+                <label className="flex items-center gap-2 rounded-xl bg-slate-950 border border-slate-800 p-2.5 text-xs text-slate-300 cursor-pointer hover:border-slate-700 mt-2">
+                  <input
+                    type="checkbox"
+                    checked={alsoClearSheet}
+                    onChange={e => setAlsoClearSheet(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-rose-500 focus:ring-rose-500"
+                  />
+                  <span>Sekaligus kosongkan data di Google Spreadsheet yang terhubung</span>
+                </label>
+              )}
             </div>
 
             <div className="space-y-2 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  clearRealisasiDatabase(selectedTahun);
-                  setPreviewData([]);
-                  setFileQueue([]);
-                  setShowClearModal(false);
-                  alert(`Berhasil mengosongkan seluruh data realisasi untuk Tahun Anggaran ${selectedTahun}.`);
-                }}
-                className="w-full rounded-xl bg-rose-600 hover:bg-rose-500 p-3 text-xs font-bold text-white transition flex items-center justify-between shadow-md"
-              >
-                <span>Hapus Data TA {selectedTahun} Saja ({currentYearRealisasi.length} Transaksi)</span>
-                <Trash2 className="h-4 w-4" />
-              </button>
+              {clearModalType === 'transaksi' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearRealisasiDatabase(selectedTahun);
+                      setPreviewData([]);
+                      setFileQueue([]);
+                      setClearModalType(null);
+                      alert(`Berhasil mengosongkan seluruh data transaksi realisasi untuk Tahun Anggaran ${selectedTahun}.`);
+                    }}
+                    className="w-full rounded-xl bg-rose-600 hover:bg-rose-500 p-3 text-xs font-bold text-white transition flex items-center justify-between shadow-md"
+                  >
+                    <span>Hapus Transaksi TA {selectedTahun} Saja ({currentYearRealisasi.length} Data)</span>
+                    <Trash2 className="h-4 w-4" />
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  clearRealisasiDatabase();
-                  setPreviewData([]);
-                  setFileQueue([]);
-                  setShowClearModal(false);
-                  alert('Berhasil mengosongkan seluruh database realisasi untuk semua Tahun Anggaran.');
-                }}
-                className="w-full rounded-xl bg-slate-800 hover:bg-rose-950 hover:text-rose-300 border border-slate-700 hover:border-rose-800 p-3 text-xs font-bold text-slate-300 transition flex items-center justify-between"
-              >
-                <span>Hapus Seluruh Data Realisasi (Semua Tahun)</span>
-                <Trash2 className="h-4 w-4" />
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearRealisasiDatabase();
+                      setPreviewData([]);
+                      setFileQueue([]);
+                      setClearModalType(null);
+                      alert('Berhasil mengosongkan seluruh database transaksi realisasi untuk semua Tahun Anggaran.');
+                    }}
+                    className="w-full rounded-xl bg-slate-800 hover:bg-rose-950 hover:text-rose-300 border border-slate-700 hover:border-rose-800 p-3 text-xs font-bold text-slate-300 transition flex items-center justify-between"
+                  >
+                    <span>Hapus Transaksi Semua Tahun ({realisasiList.length} Data)</span>
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      clearRealisasiDatabase(selectedTahun);
+                      clearAnggaranDatabase(selectedTahun);
+                      if (alsoClearSheet && sheetConfig.webAppUrl) {
+                        try {
+                          await clearAllDatabase(false, true);
+                        } catch (e) {
+                          console.error(e);
+                        }
+                      }
+                      setPreviewData([]);
+                      setFileQueue([]);
+                      setClearModalType(null);
+                      alert(`Berhasil mengosongkan transaksi Realisasi & Pagu Anggaran TA ${selectedTahun}.`);
+                    }}
+                    className="w-full rounded-xl bg-rose-600 hover:bg-rose-500 p-3 text-xs font-bold text-white transition flex items-center justify-between shadow-md"
+                  >
+                    <span>Kosongkan Database TA {selectedTahun} Saja (Realisasi & Pagu)</span>
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await clearAllDatabase(false, alsoClearSheet);
+                      setPreviewData([]);
+                      setFileQueue([]);
+                      setClearModalType(null);
+                      alert('Berhasil mengosongkan SELURUH database transaksi (Realisasi & Pagu) semua Tahun Anggaran.');
+                    }}
+                    className="w-full rounded-xl bg-red-800 hover:bg-red-700 border border-red-700 p-3 text-xs font-bold text-white transition flex items-center justify-between shadow-md"
+                  >
+                    <span>Kosongkan TOTAL Database Transaksi (Semua Tahun)</span>
+                    <Database className="h-4 w-4" />
+                  </button>
+                </>
+              )}
             </div>
 
             <div className="flex justify-end pt-2 border-t border-slate-800">
               <button
                 type="button"
-                onClick={() => setShowClearModal(false)}
+                onClick={() => setClearModalType(null)}
                 className="rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-2 text-xs font-bold text-slate-300 transition"
               >
                 Batal
