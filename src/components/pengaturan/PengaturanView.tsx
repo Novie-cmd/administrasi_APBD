@@ -692,26 +692,59 @@ export const PengaturanView: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-300">Google Apps Script Web App URL (Penting):</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-300">Google Apps Script Web App URL (Aktif):</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSheetConfig({
+                      ...sheetConfig,
+                      webAppUrl: 'https://script.google.com/macros/s/AKfycbxt-sWb1tWsnBmUXaflIgBArl_KIqPnEBUJBxbr-XRhbeTmvRfbuce5QWaz1fsQ4Nw9LQ/exec',
+                      spreadsheetId: '1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY',
+                      status: 'Connected'
+                    });
+                    setSheetMessage({
+                      type: 'success',
+                      text: 'URL WebApp dan Spreadsheet ID resmi berhasil ditetapkan!'
+                    });
+                  }}
+                  className="text-[11px] text-amber-400 hover:text-amber-300 underline font-semibold"
+                >
+                  Gunakan URL &amp; ID Resmi
+                </button>
+              </div>
               <input
                 type="text"
-                placeholder="https://script.google.com/macros/s/.../exec"
+                placeholder="https://script.google.com/macros/s/AKfycbxt-sWb1tWsnBmUXaflIgBArl_KIqPnEBUJBxbr-XRhbeTmvRfbuce5QWaz1fsQ4Nw9LQ/exec"
                 value={sheetConfig.webAppUrl}
                 onChange={e => setSheetConfig({ ...sheetConfig, webAppUrl: e.target.value })}
                 className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-emerald-300 font-mono focus:border-emerald-500 focus:outline-none"
               />
-              <p className="text-[11px] text-slate-400 mt-1">Dapatkan URL ini setelah menerapkan (Deploy) kode Google Apps Script di bawah sebagai Web App.</p>
+              <p className="text-[11px] text-slate-400 mt-1">URL Endpoint Google Apps Script yang menjalankan transfer data antara aplikasi dan Google Sheets.</p>
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-300">Spreadsheet ID (Opsional):</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-300">Spreadsheet ID:</label>
+                {sheetConfig.spreadsheetId && (
+                  <a
+                    href={`https://docs.google.com/spreadsheets/d/${sheetConfig.spreadsheetId}/edit`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 hover:underline font-medium"
+                  >
+                    <span>Buka Google Spreadsheet ↗</span>
+                  </a>
+                )}
+              </div>
               <input
                 type="text"
-                placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+                placeholder="1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY"
                 value={sheetConfig.spreadsheetId}
                 onChange={e => setSheetConfig({ ...sheetConfig, spreadsheetId: e.target.value })}
-                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-slate-300 font-mono"
+                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-slate-300 font-mono focus:border-emerald-500 focus:outline-none"
               />
+              <p className="text-[11px] text-slate-400 mt-1">ID dokumen Google Spreadsheet tujuan sinkronisasi (1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY).</p>
             </div>
 
             <div className="flex items-center justify-between pt-2">
@@ -1349,10 +1382,23 @@ function getGoogleAppsScriptCode(): string {
  * ============================================================================
  */
 
+var DEFAULT_SPREADSHEET_ID = '1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY';
+
+function getTargetSpreadsheet(explicitId) {
+  var id = explicitId || DEFAULT_SPREADSHEET_ID;
+  if (id) {
+    try {
+      return SpreadsheetApp.openById(id);
+    } catch(err) {}
+  }
+  return SpreadsheetApp.getActiveSpreadsheet();
+}
+
 function doGet(e) {
   try {
     var action = (e && e.parameter && e.parameter.action) ? e.parameter.action : 'getAll';
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetId = (e && e.parameter && e.parameter.spreadsheetId) ? e.parameter.spreadsheetId : DEFAULT_SPREADSHEET_ID;
+    var ss = getTargetSpreadsheet(sheetId);
     
     if (action === 'ping') {
       return createJsonResponse({ status: 'ok', message: 'Google Apps Script WebApp Aktif & Terhubung', time: new Date().toISOString() });
@@ -1388,7 +1434,8 @@ function doPost(e) {
       payload = JSON.parse(e.postData.contents);
     }
     
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetId = payload.spreadsheetId || DEFAULT_SPREADSHEET_ID;
+    var ss = getTargetSpreadsheet(sheetId);
     var savedRealisasi = 0;
     var savedAnggaran = 0;
     

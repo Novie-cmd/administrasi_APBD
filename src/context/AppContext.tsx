@@ -400,9 +400,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(
     storedData?.activityLogs || INITIAL_ACTIVITY_LOGS
   );
-  const [sheetConfig, setSheetConfig] = useState<GoogleSheetConfig>(
-    storedData?.sheetConfig || INITIAL_SHEET_CONFIG
-  );
+  const [sheetConfig, setSheetConfig] = useState<GoogleSheetConfig>(() => {
+    const defaultUrl = 'https://script.google.com/macros/s/AKfycbxt-sWb1tWsnBmUXaflIgBArl_KIqPnEBUJBxbr-XRhbeTmvRfbuce5QWaz1fsQ4Nw9LQ/exec';
+    const defaultSheetId = '1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY';
+    const cfg = storedData?.sheetConfig;
+    if (cfg) {
+      const isOldDummyUrl = !cfg.webAppUrl || cfg.webAppUrl.includes('AKfycbx_BAKESBANGPOLDAGRI_NTB_WEBAPP') || cfg.webAppUrl.includes('...');
+      const isOldDummyId = !cfg.spreadsheetId || cfg.spreadsheetId.includes('1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms');
+      return {
+        ...cfg,
+        webAppUrl: isOldDummyUrl ? defaultUrl : (cfg.webAppUrl || defaultUrl),
+        spreadsheetId: isOldDummyId ? defaultSheetId : (cfg.spreadsheetId || defaultSheetId),
+        status: cfg.status || 'Connected'
+      };
+    }
+    return INITIAL_SHEET_CONFIG;
+  });
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
 
   // Cloud Real-Time Firebase Sync State
@@ -525,7 +538,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setActivityLogs(remoteData.activityLogs);
         }
         if (remoteData.sheetConfig) {
-          setSheetConfig(remoteData.sheetConfig);
+          const cfg = remoteData.sheetConfig;
+          const defaultUrl = 'https://script.google.com/macros/s/AKfycbxt-sWb1tWsnBmUXaflIgBArl_KIqPnEBUJBxbr-XRhbeTmvRfbuce5QWaz1fsQ4Nw9LQ/exec';
+          const defaultSheetId = '1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY';
+          const isOldDummyUrl = !cfg.webAppUrl || cfg.webAppUrl.includes('AKfycbx_BAKESBANGPOLDAGRI_NTB_WEBAPP') || cfg.webAppUrl.includes('...');
+          const isOldDummyId = !cfg.spreadsheetId || cfg.spreadsheetId.includes('1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms');
+          setSheetConfig({
+            ...cfg,
+            webAppUrl: isOldDummyUrl ? defaultUrl : cfg.webAppUrl,
+            spreadsheetId: isOldDummyId ? defaultSheetId : cfg.spreadsheetId
+          });
         }
 
         setCloudSync({
@@ -1821,8 +1843,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logActivity(`Mengirim seluruh data transaksi & pagu ke Google Spreadsheet`);
 
     try {
+      const targetSpreadsheetId = sheetConfig.spreadsheetId || '1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY';
       const payload = {
         action: 'saveAll',
+        spreadsheetId: targetSpreadsheetId,
         timestamp: new Date().toISOString(),
         realisasiList,
         anggaranList,
@@ -1888,7 +1912,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logActivity(`Menarik data dari Google Spreadsheet`);
 
     try {
-      const fetchUrl = targetUrl.includes('?') ? `${targetUrl}&action=getAll` : `${targetUrl}?action=getAll`;
+      const targetSpreadsheetId = sheetConfig.spreadsheetId || '1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY';
+      const sep = targetUrl.includes('?') ? '&' : '?';
+      const fetchUrl = `${targetUrl}${sep}action=getAll&spreadsheetId=${encodeURIComponent(targetSpreadsheetId)}`;
       const res = await fetch(fetchUrl);
       if (!res.ok) {
         throw new Error(`HTTP Error ${res.status}: ${res.statusText}`);

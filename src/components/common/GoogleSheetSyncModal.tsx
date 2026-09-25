@@ -158,24 +158,64 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
           </div>
         </div>
 
-        {/* Input Web App URL */}
-        <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-2">
-          <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
-            <span>Google Apps Script Web App URL:</span>
-            <span className="text-[11px] text-slate-400 font-normal">
-              Terakhir Sync: {sheetConfig.lastSyncedAt || 'Belum pernah'}
-            </span>
-          </label>
+        {/* Input Web App URL & Spreadsheet ID */}
+        <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-slate-300">Google Apps Script Web App URL (Aktif):</label>
+            <button
+              type="button"
+              onClick={() => {
+                setSheetConfig({
+                  ...sheetConfig,
+                  webAppUrl: 'https://script.google.com/macros/s/AKfycbxt-sWb1tWsnBmUXaflIgBArl_KIqPnEBUJBxbr-XRhbeTmvRfbuce5QWaz1fsQ4Nw9LQ/exec',
+                  spreadsheetId: '1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY',
+                  status: 'Connected'
+                });
+                setSheetMessage({
+                  type: 'success',
+                  text: 'URL WebApp dan Spreadsheet ID resmi berhasil ditetapkan!'
+                });
+              }}
+              className="text-[11px] text-amber-400 hover:text-amber-300 underline font-semibold"
+            >
+              Gunakan URL &amp; ID Resmi
+            </button>
+          </div>
           <input
             type="text"
-            placeholder="https://script.google.com/macros/s/.../exec"
+            placeholder="https://script.google.com/macros/s/AKfycbxt-sWb1tWsnBmUXaflIgBArl_KIqPnEBUJBxbr-XRhbeTmvRfbuce5QWaz1fsQ4Nw9LQ/exec"
             value={sheetConfig.webAppUrl}
             onChange={e => setSheetConfig({ ...sheetConfig, webAppUrl: e.target.value })}
             className="w-full rounded-xl border border-slate-700 bg-slate-900 p-2.5 text-xs text-emerald-300 font-mono focus:border-emerald-500 focus:outline-none"
           />
-          <p className="text-[11px] text-slate-400">
-            Dapatkan URL ini dari menu <strong>Deploy &gt; New deployment &gt; Web app (Anyone)</strong> di Google Spreadsheet Anda.
-          </p>
+
+          <div className="pt-1">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-300">Spreadsheet ID:</label>
+              {sheetConfig.spreadsheetId && (
+                <a
+                  href={`https://docs.google.com/spreadsheets/d/${sheetConfig.spreadsheetId}/edit`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 hover:underline font-medium"
+                >
+                  <span>Buka Spreadsheet ↗</span>
+                </a>
+              )}
+            </div>
+            <input
+              type="text"
+              placeholder="1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY"
+              value={sheetConfig.spreadsheetId}
+              onChange={e => setSheetConfig({ ...sheetConfig, spreadsheetId: e.target.value })}
+              className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-2.5 text-xs text-slate-300 font-mono focus:border-emerald-500 focus:outline-none"
+            />
+          </div>
+
+          <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+            <span>Terakhir Sync: <strong className="text-white">{sheetConfig.lastSyncedAt || 'Belum pernah'}</strong></span>
+            <span>Status: <span className="text-emerald-400 font-bold">{sheetConfig.status || 'Connected'}</span></span>
+          </div>
         </div>
 
         {/* Script Code Collapsible */}
@@ -229,9 +269,22 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
 
 // Return script code
 function getGoogleAppsScriptCode(): string {
-  return `function doGet(e) {
+  return `var DEFAULT_SPREADSHEET_ID = '1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY';
+
+function getTargetSpreadsheet(explicitId) {
+  var id = explicitId || DEFAULT_SPREADSHEET_ID;
+  if (id) {
+    try {
+      return SpreadsheetApp.openById(id);
+    } catch(err) {}
+  }
+  return SpreadsheetApp.getActiveSpreadsheet();
+}
+
+function doGet(e) {
   try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetId = (e && e.parameter && e.parameter.spreadsheetId) ? e.parameter.spreadsheetId : DEFAULT_SPREADSHEET_ID;
+    var ss = getTargetSpreadsheet(sheetId);
     var realisasiSheet = getOrCreateSheet(ss, 'Realisasi_SP2D');
     var anggaranSheet = getOrCreateSheet(ss, 'Pagu_Anggaran');
     
@@ -256,7 +309,8 @@ function getGoogleAppsScriptCode(): string {
 function doPost(e) {
   try {
     var payload = JSON.parse(e.postData.contents || '{}');
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetId = payload.spreadsheetId || DEFAULT_SPREADSHEET_ID;
+    var ss = getTargetSpreadsheet(sheetId);
     var savedR = 0, savedA = 0;
     
     if (payload.realisasiList && Array.isArray(payload.realisasiList)) {

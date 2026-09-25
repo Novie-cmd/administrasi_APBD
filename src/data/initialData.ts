@@ -1330,9 +1330,9 @@ export const INITIAL_ACTIVITY_LOGS: ActivityLog[] = [
 ];
 
 export const INITIAL_SHEET_CONFIG: GoogleSheetConfig = {
-  spreadsheetId: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms',
-  webAppUrl: 'https://script.google.com/macros/s/AKfycbx_BAKESBANGPOLDAGRI_NTB_WEBAPP/exec',
+  spreadsheetId: '1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY',
+  webAppUrl: 'https://script.google.com/macros/s/AKfycbxt-sWb1tWsnBmUXaflIgBArl_KIqPnEBUJBxbr-XRhbeTmvRfbuce5QWaz1fsQ4Nw9LQ/exec',
   autoSync: true,
-  lastSyncedAt: '2026-07-27 20:00:00',
+  lastSyncedAt: '',
   status: 'Connected'
 };
