@@ -76,6 +76,7 @@ export const PengaturanView: React.FC = () => {
   const [copiedScript, setCopiedScript] = useState(false);
   const [isPushingSheet, setIsPushingSheet] = useState(false);
   const [isPullingSheet, setIsPullingSheet] = useState(false);
+  const [pullSyncMode, setPullSyncMode] = useState<'replace' | 'merge'>('replace');
 
   // Search filter
   const [searchTerm, setSearchTerm] = useState('');
@@ -646,16 +647,52 @@ export const PengaturanView: React.FC = () => {
               </button>
             </div>
 
-            <div className="rounded-2xl border border-sky-700/50 bg-gradient-to-br from-sky-950/40 via-slate-900 to-slate-900 p-5 space-y-3 shadow-xl">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-sky-500/20 text-sky-400">
-                  <ArrowDownCircle className="h-6 w-6" />
+            <div className="rounded-2xl border border-sky-700/50 bg-gradient-to-br from-sky-950/40 via-slate-900 to-slate-900 p-5 space-y-3.5 shadow-xl flex flex-col justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-sky-500/20 text-sky-400">
+                    <ArrowDownCircle className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white">2. Tarik Data dari Spreadsheet ke Aplikasi</h4>
+                    <p className="text-xs text-slate-400">Sinkronkan data di aplikasi dengan isi Google Spreadsheet terkini.</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-sm font-bold text-white">2. Tarik Data dari Spreadsheet ke Aplikasi</h4>
-                  <p className="text-xs text-slate-400">Memulihkan data transaksi saat tampilan aplikasi kosong atau setelah ganti perangkat.</p>
+
+                {/* Mode Selector */}
+                <div className="pt-1">
+                  <div className="grid grid-cols-2 gap-2 bg-slate-950/70 p-1.5 rounded-xl border border-slate-800 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setPullSyncMode('replace')}
+                      className={`py-1.5 px-2 rounded-lg font-bold text-center transition ${
+                        pullSyncMode === 'replace'
+                          ? 'bg-sky-600 text-white shadow'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Timpa Penuh (Sesuai Sheet)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPullSyncMode('merge')}
+                      className={`py-1.5 px-2 rounded-lg font-bold text-center transition ${
+                        pullSyncMode === 'merge'
+                          ? 'bg-sky-600 text-white shadow'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Gabungkan Saja
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1.5">
+                    {pullSyncMode === 'replace'
+                      ? '✓ Data yang dihapus di aplikasi atau di spreadsheet tidak akan muncul kembali.'
+                      : 'Data dari spreadsheet ditambahkan tanpa menghapus data lokal yang ada.'}
+                  </p>
                 </div>
               </div>
+
               <button
                 onClick={async () => {
                   if (!sheetConfig.webAppUrl) {
@@ -663,7 +700,7 @@ export const PengaturanView: React.FC = () => {
                     return;
                   }
                   setIsPullingSheet(true);
-                  const res = await pullFromGoogleSheet();
+                  const res = await pullFromGoogleSheet(undefined, pullSyncMode);
                   setIsPullingSheet(false);
                   setSheetMessage({
                     type: res.success ? 'success' : 'error',
@@ -674,7 +711,7 @@ export const PengaturanView: React.FC = () => {
                 className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 hover:bg-sky-500 py-2.5 px-4 text-xs font-bold text-white shadow-lg transition"
               >
                 <Download className={`h-4 w-4 ${isPullingSheet ? 'animate-spin' : ''}`} />
-                <span>{isPullingSheet ? 'Sedang Menarik Data dari Google Sheet...' : 'Tarik Data dari Spreadsheet'}</span>
+                <span>{isPullingSheet ? 'Sedang Menarik Data dari Google Sheet...' : 'Tarik & Sinkronkan Data'}</span>
               </button>
             </div>
           </div>
@@ -1489,14 +1526,17 @@ function doPost(e) {
       
       if (payload.anggaranList.length > 0) {
         var rowsAnggaran = payload.anggaranList.map(function(a) {
+          var paguMurni = Number(a.pagu || a.nilaiMurni || a.nilai || 0);
+          var revisi = Number(a.revisi || a.nilaiPerubahan || 0);
+          var paguAkhir = Number(a.paguAkhir || a.nilai || (paguMurni + revisi));
           return [
             a.id || '',
             a.tahun || '',
             a.kodeSub || '',
             a.kodeBelanja || '',
-            Number(a.nilaiMurni) || 0,
-            Number(a.nilaiPerubahan) || 0,
-            Number(a.nilai) || 0,
+            paguMurni,
+            revisi,
+            paguAkhir,
             a.sumberDana || 'PAD'
           ];
         });
@@ -1571,14 +1611,20 @@ function getSheetRowsAsJson(sheet) {
         operator: String(obj['Operator'] || 'Sistem')
       });
     } else if (sheet.getName() === 'Pagu_Anggaran') {
+      var paguMurni = Number(obj['Pagu_Murni_Rp']) || 0;
+      var revisi = Number(obj['Pagu_Perubahan_Rp']) || 0;
+      var paguAkhir = Number(obj['Nilai_Pagu_Efektif_Rp']) || Number(obj['Pagu_Murni_Rp']) || (paguMurni + revisi);
       results.push({
         id: String(obj['ID'] || 'A_' + (i + 1)),
         tahun: Number(obj['Tahun']) || new Date().getFullYear(),
         kodeSub: String(obj['Kode_Sub_Kegiatan'] || ''),
         kodeBelanja: String(obj['Kode_Rekening_Belanja'] || ''),
-        nilaiMurni: Number(obj['Pagu_Murni_Rp']) || 0,
-        nilaiPerubahan: Number(obj['Pagu_Perubahan_Rp']) || 0,
-        nilai: Number(obj['Nilai_Pagu_Efektif_Rp']) || Number(obj['Pagu_Perubahan_Rp']) || Number(obj['Pagu_Murni_Rp']) || 0,
+        pagu: paguMurni,
+        revisi: revisi,
+        paguAkhir: paguAkhir,
+        nilaiMurni: paguMurni,
+        nilaiPerubahan: revisi,
+        nilai: paguAkhir,
         sumberDana: String(obj['Sumber_Dana'] || 'PAD')
       });
     }

@@ -35,6 +35,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
   const [isPushing, setIsPushing] = useState(false);
   const [isPulling, setIsPulling] = useState(false);
   const [showScriptDetails, setShowScriptDetails] = useState(false);
+  const [syncMode, setSyncMode] = useState<'replace' | 'merge'>('replace');
 
   if (!isOpen) return null;
 
@@ -123,14 +124,48 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
 
           {/* Pull Card */}
           <div className="rounded-xl border border-sky-700/60 bg-sky-950/30 p-4 space-y-3 flex flex-col justify-between">
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <div className="flex items-center gap-2 text-sky-300 font-bold text-xs">
                 <Download className="h-4 w-4" />
                 <span>Tarik Data ke Aplikasi</span>
               </div>
               <p className="text-[11px] text-slate-300">
-                Tarik kembali seluruh data dari Google Spreadsheet saat data di aplikasi kosong atau setelah ganti laptop/HP.
+                Sinkronkan data di aplikasi dengan isi Google Spreadsheet terkini.
               </p>
+              
+              {/* Sync Mode Selector */}
+              <div className="pt-1">
+                <label className="text-[10px] font-bold text-sky-200 block mb-1">Mode Tarik Data:</label>
+                <div className="grid grid-cols-2 gap-1.5 bg-slate-900/90 p-1 rounded-lg border border-slate-700 text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => setSyncMode('replace')}
+                    className={`py-1 px-1.5 rounded font-bold text-center transition ${
+                      syncMode === 'replace'
+                        ? 'bg-sky-600 text-white shadow'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Timpa Penuh (Sesuai Sheet)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSyncMode('merge')}
+                    className={`py-1 px-1.5 rounded font-bold text-center transition ${
+                      syncMode === 'merge'
+                        ? 'bg-sky-600 text-white shadow'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Gabungkan Saja
+                  </button>
+                </div>
+                <p className="text-[9.5px] text-slate-400 mt-1">
+                  {syncMode === 'replace' 
+                    ? '✓ Data yang dihapus di aplikasi/sheet tidak akan muncul kembali.' 
+                    : 'Menggabungkan data sheet tanpa menghapus data lokal.'}
+                </p>
+              </div>
             </div>
             <button
               onClick={async () => {
@@ -142,7 +177,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
                   return;
                 }
                 setIsPulling(true);
-                const res = await pullFromGoogleSheet();
+                const res = await pullFromGoogleSheet(undefined, syncMode);
                 setIsPulling(false);
                 setSheetMessage({
                   type: res.success ? 'success' : 'error',
@@ -153,7 +188,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
               className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 hover:bg-sky-500 py-2.5 px-3 text-xs font-bold text-white shadow-lg transition"
             >
               <Download className={`h-4 w-4 ${isPulling ? 'animate-spin' : ''}`} />
-              <span>{isPulling ? 'Sedang Menarik Data...' : 'Tarik Data dari Spreadsheet'}</span>
+              <span>{isPulling ? 'Sedang Menarik Data...' : 'Tarik & Sinkronkan Data'}</span>
             </button>
           </div>
         </div>
@@ -337,7 +372,19 @@ function doPost(e) {
       formatHeader(sheetA, '#0284c7');
       if (payload.anggaranList.length > 0) {
         var rowsA = payload.anggaranList.map(function(a) {
-          return [a.id||'', a.tahun||'', a.kodeSub||'', a.kodeBelanja||'', Number(a.pagu||0), Number(a.revisi||0), Number(a.paguAkhir||0), a.sumberDana||'PAD'];
+          var paguMurni = Number(a.pagu || a.nilaiMurni || a.nilai || 0);
+          var revisi = Number(a.revisi || a.nilaiPerubahan || 0);
+          var paguAkhir = Number(a.paguAkhir || a.nilai || (paguMurni + revisi));
+          return [
+            a.id || '',
+            a.tahun || '',
+            a.kodeSub || '',
+            a.kodeBelanja || '',
+            paguMurni,
+            revisi,
+            paguAkhir,
+            a.sumberDana || 'PAD'
+          ];
         });
         sheetA.getRange(2, 1, rowsA.length, headersA.length).setValues(rowsA);
         sheetA.getRange(2, 5, rowsA.length, 3).setNumberFormat('#,##0');
@@ -392,14 +439,20 @@ function getSheetRowsAsJson(sheet) {
         operator: String(obj['Operator'] || 'Sistem')
       };
     } else {
+      var paguMurni = Number(obj['Pagu_Murni_Rp']) || 0;
+      var revisi = Number(obj['Pagu_Perubahan_Rp']) || 0;
+      var paguAkhir = Number(obj['Nilai_Pagu_Efektif_Rp']) || Number(obj['Pagu_Murni_Rp']) || (paguMurni + revisi);
       return {
         id: String(obj['ID'] || ''),
         tahun: Number(obj['Tahun']) || new Date().getFullYear(),
         kodeSub: String(obj['Kode_Sub_Kegiatan'] || ''),
         kodeBelanja: String(obj['Kode_Rekening_Belanja'] || ''),
-        pagu: Number(obj['Pagu_Murni_Rp']) || 0,
-        revisi: Number(obj['Pagu_Perubahan_Rp']) || 0,
-        paguAkhir: Number(obj['Nilai_Pagu_Efektif_Rp']) || Number(obj['Pagu_Murni_Rp']) || 0,
+        pagu: paguMurni,
+        revisi: revisi,
+        paguAkhir: paguAkhir,
+        nilaiMurni: paguMurni,
+        nilaiPerubahan: revisi,
+        nilai: paguAkhir,
         sumberDana: String(obj['Sumber_Dana'] || 'PAD')
       };
     }

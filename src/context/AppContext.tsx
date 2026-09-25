@@ -196,7 +196,7 @@ interface AppContextType {
   restoreFromBackup: () => { success: boolean; realisasiCount: number; anggaranCount: number; message: string };
   importBackupJSON: (jsonData: string) => { success: boolean; message: string };
   pushToGoogleSheet: (customUrl?: string) => Promise<{ success: boolean; message: string }>;
-  pullFromGoogleSheet: (customUrl?: string) => Promise<{ success: boolean; realisasiCount: number; anggaranCount: number; message: string }>;
+  pullFromGoogleSheet: (customUrl?: string, syncMode?: 'replace' | 'merge') => Promise<{ success: boolean; realisasiCount: number; anggaranCount: number; message: string }>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -1844,12 +1844,68 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     try {
       const targetSpreadsheetId = sheetConfig.spreadsheetId || '1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY';
+      
+      // Use latest state from ref to avoid closure staleness on newly deleted data
+      const currentRealisasi = latestStateRef.current?.realisasiList !== undefined 
+        ? latestStateRef.current.realisasiList 
+        : realisasiList;
+      const currentAnggaran = latestStateRef.current?.anggaranList !== undefined 
+        ? latestStateRef.current.anggaranList 
+        : anggaranList;
+
+      // Ensure all fields including pagu, revisi, paguAkhir, and compatibility properties are properly formatted
+      const normalizedAnggaranList = (currentAnggaran || []).map(a => {
+        const paguMurni = Number(a.pagu) || Number((a as any).nilaiMurni) || Number((a as any).nilai) || 0;
+        const revisi = Number(a.revisi) || Number((a as any).nilaiPerubahan) || 0;
+        const paguAkhir = Number(a.paguAkhir) || (paguMurni + revisi) || paguMurni;
+        return {
+          id: a.id || '',
+          tahun: Number(a.tahun) || selectedTahun,
+          kodeProgram: a.kodeProgram || '',
+          kodeKegiatan: a.kodeKegiatan || '',
+          kodeSub: a.kodeSub || '',
+          kodeBelanja: a.kodeBelanja || '',
+          namaBelanja: a.namaBelanja || '',
+          pagu: paguMurni,
+          revisi: revisi,
+          paguAkhir: paguAkhir,
+          // Compatibility for Google Apps Script Code.gs
+          nilaiMurni: paguMurni,
+          nilaiPerubahan: revisi,
+          nilai: paguAkhir,
+          nilaiSPD: Number(a.nilaiSPD) || paguAkhir,
+          sumberDana: a.sumberDana || 'PAD',
+          tanggalInput: a.tanggalInput || new Date().toISOString().split('T')[0],
+          operator: a.operator || 'Sistem'
+        };
+      });
+
+      const normalizedRealisasiList = (currentRealisasi || []).map(r => ({
+        id: r.id || '',
+        tahun: Number(r.tahun) || selectedTahun,
+        tanggal: r.tanggal || '',
+        bulan: Number(r.bulan) || (r.tanggal ? new Date(r.tanggal).getMonth() + 1 : 1),
+        noSP2D: r.noSP2D || '',
+        noSPM: r.noSPM || '',
+        kodeProgram: r.kodeProgram || '',
+        kodeKegiatan: r.kodeKegiatan || '',
+        kodeSub: r.kodeSub || '',
+        kodeBelanja: r.kodeBelanja || '',
+        uraian: r.uraian || '',
+        nilai: Number(r.nilai) || 0,
+        rekanan: r.rekanan || '',
+        statusValidation: r.statusValidation || 'Disetujui PPK',
+        operator: r.operator || 'Sistem',
+        catatanValidation: r.catatanValidation || '',
+        buktiUrl: r.buktiUrl || ''
+      }));
+
       const payload = {
         action: 'saveAll',
         spreadsheetId: targetSpreadsheetId,
         timestamp: new Date().toISOString(),
-        realisasiList,
-        anggaranList,
+        realisasiList: normalizedRealisasiList,
+        anggaranList: normalizedAnggaranList,
         programs,
         kegiatanList,
         subKegiatanList,
@@ -1867,16 +1923,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
 
       const timeStr = new Date().toLocaleTimeString('id-ID');
-      setSheetConfig(prev => ({
-        ...prev,
+      const updatedSheetConfig = {
+        ...sheetConfig,
         lastSyncedAt: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        status: 'Connected'
-      }));
+        status: 'Connected' as const
+      };
+      setSheetConfig(updatedSheetConfig);
       setSyncStatus('success');
-      logActivity(`Berhasil mencadangkan ${realisasiList.length} realisasi & ${anggaranList.length} pagu ke Google Spreadsheet`);
+      logActivity(`Berhasil mencadangkan ${normalizedRealisasiList.length} realisasi & ${normalizedAnggaranList.length} pagu ke Google Spreadsheet`);
       return {
         success: true,
-        message: `Berhasil mengirim ${realisasiList.length} data realisasi & ${anggaranList.length} pagu anggaran ke Google Spreadsheet pada pukul ${timeStr}.`
+        message: `Berhasil mengirim ${normalizedRealisasiList.length} data realisasi & ${normalizedAnggaranList.length} pagu anggaran ke Google Spreadsheet pada pukul ${timeStr}.`
       };
     } catch (err: any) {
       console.error('Push to Google Sheet error:', err);
@@ -1892,7 +1949,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const pullFromGoogleSheet = async (customUrl?: string): Promise<{
+  const pullFromGoogleSheet = async (
+    customUrl?: string,
+    syncMode: 'replace' | 'merge' = 'replace'
+  ): Promise<{
     success: boolean;
     realisasiCount: number;
     anggaranCount: number;
@@ -1909,7 +1969,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setSyncStatus('syncing');
-    logActivity(`Menarik data dari Google Spreadsheet`);
+    logActivity(`Menarik data dari Google Spreadsheet (Mode: ${syncMode === 'replace' ? 'Timpa/Sinkron Penuh' : 'Gabungkan'})`);
 
     try {
       const targetSpreadsheetId = sheetConfig.spreadsheetId || '1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY';
@@ -1924,99 +1984,149 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       let rCount = 0;
       let aCount = 0;
 
+      // 1. Process Realisasi
+      let finalRealisasiList: Realisasi[] = [];
       if (data.realisasiList && Array.isArray(data.realisasiList)) {
-        setRealisasiList(prev => {
+        const parsedRealisasi: Realisasi[] = data.realisasiList.map((r: any) => {
+          const tgl = r.tanggal || new Date().toISOString().split('T')[0];
+          const parsedDate = new Date(tgl);
+          const bln = !isNaN(parsedDate.getMonth()) ? parsedDate.getMonth() + 1 : 1;
+          const sub = subKegiatanList.find(s => s.kodeSub === r.kodeSub);
+          const kdProg = r.kodeProgram || sub?.kodeProgram || (r.kodeSub ? r.kodeSub.split('.').slice(0, 3).join('.') : '5.01.01');
+          const kdKeg = r.kodeKegiatan || sub?.kodeKegiatan || (r.kodeSub ? r.kodeSub.split('.').slice(0, 5).join('.') : '5.01.01.2.01');
+
+          return {
+            id: r.id || `REAL-${r.tahun || selectedTahun}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            tahun: Number(r.tahun) || selectedTahun,
+            tanggal: tgl,
+            bulan: Number(r.bulan) || bln,
+            kodeProgram: kdProg,
+            kodeKegiatan: kdKeg,
+            kodeSub: r.kodeSub || '5.01.01.2.01.01',
+            kodeBelanja: r.kodeBelanja || '',
+            uraian: r.uraian || '',
+            nilai: Number(r.nilai) || 0,
+            noSP2D: r.noSP2D || '',
+            noSPM: r.noSPM || '',
+            rekanan: r.rekanan || '',
+            operator: r.operator || 'Spreadsheet Import',
+            statusValidation: r.statusValidation || 'Disetujui PPK',
+            catatanValidation: r.catatanValidation || '',
+            buktiUrl: r.buktiUrl || ''
+          };
+        });
+
+        if (syncMode === 'replace') {
+          // Replace mode: Spreadsheet is source of truth. If empty in sheet, list is empty in app.
+          finalRealisasiList = parsedRealisasi;
+        } else {
+          // Merge mode: Add or update records, preserving other local entries
           const map = new Map<string, Realisasi>();
-          prev.forEach(r => {
+          const currentList = latestStateRef.current?.realisasiList || realisasiList;
+          currentList.forEach(r => {
             const key = makeRealisasiCompositeKey(r.noSP2D, r.kodeBelanja, r.kodeSub, r.nilai, r.uraian, r.tahun) || r.id;
             map.set(key, r);
           });
-          data.realisasiList.forEach((r: any) => {
-            const tgl = r.tanggal || new Date().toISOString().split('T')[0];
-            const parsedDate = new Date(tgl);
-            const bln = !isNaN(parsedDate.getMonth()) ? parsedDate.getMonth() + 1 : 1;
-            const sub = subKegiatanList.find(s => s.kodeSub === r.kodeSub);
-            const kdProg = r.kodeProgram || sub?.kodeProgram || (r.kodeSub ? r.kodeSub.split('.').slice(0, 3).join('.') : '5.01.01');
-            const kdKeg = r.kodeKegiatan || sub?.kodeKegiatan || (r.kodeSub ? r.kodeSub.split('.').slice(0, 5).join('.') : '5.01.01.2.01');
-
-            const item: Realisasi = {
-              id: r.id || `REAL-${r.tahun || selectedTahun}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-              tahun: Number(r.tahun) || selectedTahun,
-              tanggal: tgl,
-              bulan: Number(r.bulan) || bln,
-              kodeProgram: kdProg,
-              kodeKegiatan: kdKeg,
-              kodeSub: r.kodeSub || '5.01.01.2.01.01',
-              kodeBelanja: r.kodeBelanja || '',
-              uraian: r.uraian || '',
-              nilai: Number(r.nilai) || 0,
-              noSP2D: r.noSP2D || '',
-              noSPM: r.noSPM || '',
-              rekanan: r.rekanan || '',
-              operator: r.operator || 'Spreadsheet Import',
-              statusValidation: r.statusValidation || 'Disetujui PPK',
-              catatanValidation: r.catatanValidation || '',
-              buktiUrl: r.buktiUrl || ''
-            };
+          parsedRealisasi.forEach(item => {
             const key = makeRealisasiCompositeKey(item.noSP2D, item.kodeBelanja, item.kodeSub, item.nilai, item.uraian, item.tahun) || item.id;
             map.set(key, item);
           });
-          const merged = Array.from(map.values());
-          rCount = merged.length;
-          return merged;
-        });
+          finalRealisasiList = Array.from(map.values());
+        }
+        rCount = finalRealisasiList.length;
+        setRealisasiList(finalRealisasiList);
+      } else {
+        finalRealisasiList = latestStateRef.current?.realisasiList || realisasiList;
       }
 
+      // 2. Process Anggaran
+      let finalAnggaranList: Anggaran[] = [];
       if (data.anggaranList && Array.isArray(data.anggaranList)) {
-        setAnggaranList(prev => {
-          const map = new Map<string, Anggaran>();
-          prev.forEach(a => map.set(`${a.kodeBelanja}_${a.kodeSub}_${a.tahun}`, a));
-          data.anggaranList.forEach((a: any) => {
-            const sub = subKegiatanList.find(s => s.kodeSub === a.kodeSub);
-            const bel = belanjaList.find(b => b.kodeBelanja === a.kodeBelanja);
-            const kdProg = a.kodeProgram || sub?.kodeProgram || (a.kodeSub ? a.kodeSub.split('.').slice(0, 3).join('.') : '5.01.01');
-            const kdKeg = a.kodeKegiatan || sub?.kodeKegiatan || (a.kodeSub ? a.kodeSub.split('.').slice(0, 5).join('.') : '5.01.01.2.01');
-            const pagu = Number(a.pagu) || Number(a.nilaiMurni) || Number(a.nilai) || 0;
-            const revisi = Number(a.revisi) || (a.nilaiPerubahan ? Number(a.nilaiPerubahan) - pagu : 0);
-            const paguAkhir = Number(a.paguAkhir) || (pagu + revisi) || Number(a.nilai) || 0;
+        const parsedAnggaran: Anggaran[] = data.anggaranList.map((a: any) => {
+          const sub = subKegiatanList.find(s => s.kodeSub === a.kodeSub);
+          const bel = belanjaList.find(b => b.kodeBelanja === a.kodeBelanja);
+          const kdProg = a.kodeProgram || sub?.kodeProgram || (a.kodeSub ? a.kodeSub.split('.').slice(0, 3).join('.') : '5.01.01');
+          const kdKeg = a.kodeKegiatan || sub?.kodeKegiatan || (a.kodeSub ? a.kodeSub.split('.').slice(0, 5).join('.') : '5.01.01.2.01');
+          const pagu = Number(a.pagu) || Number(a.nilaiMurni) || Number(a.nilai) || 0;
+          const revisi = Number(a.revisi) || (a.nilaiPerubahan !== undefined ? Number(a.nilaiPerubahan) : 0);
+          const paguAkhir = Number(a.paguAkhir) || (pagu + revisi) || Number(a.nilai) || 0;
 
-            const item: Anggaran = {
-              id: a.id || `ANG-${a.tahun || selectedTahun}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-              tahun: Number(a.tahun) || selectedTahun,
-              kodeProgram: kdProg,
-              kodeKegiatan: kdKeg,
-              kodeSub: a.kodeSub || '5.01.01.2.01.01',
-              kodeBelanja: a.kodeBelanja || '',
-              namaBelanja: a.namaBelanja || bel?.namaBelanja || `Belanja Rekening ${a.kodeBelanja || ''}`,
-              pagu: pagu,
-              revisi: revisi,
-              nilaiSPD: Number(a.nilaiSPD) || paguAkhir,
-              paguAkhir: paguAkhir,
-              tanggalInput: a.tanggalInput || new Date().toISOString().split('T')[0],
-              operator: a.operator || 'Spreadsheet Import',
-              sumberDana: a.sumberDana || 'DAU'
-            };
+          return {
+            id: a.id || `ANG-${a.tahun || selectedTahun}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            tahun: Number(a.tahun) || selectedTahun,
+            kodeProgram: kdProg,
+            kodeKegiatan: kdKeg,
+            kodeSub: a.kodeSub || '5.01.01.2.01.01',
+            kodeBelanja: a.kodeBelanja || '',
+            namaBelanja: a.namaBelanja || bel?.namaBelanja || `Belanja Rekening ${a.kodeBelanja || ''}`,
+            pagu: pagu,
+            revisi: revisi,
+            nilaiSPD: Number(a.nilaiSPD) || paguAkhir,
+            paguAkhir: paguAkhir,
+            tanggalInput: a.tanggalInput || new Date().toISOString().split('T')[0],
+            operator: a.operator || 'Spreadsheet Import',
+            sumberDana: a.sumberDana || 'DAU'
+          };
+        });
+
+        if (syncMode === 'replace') {
+          // Replace mode: Spreadsheet is source of truth.
+          finalAnggaranList = parsedAnggaran;
+        } else {
+          // Merge mode: Add or update records
+          const map = new Map<string, Anggaran>();
+          const currentList = latestStateRef.current?.anggaranList || anggaranList;
+          currentList.forEach(a => map.set(`${a.kodeBelanja}_${a.kodeSub}_${a.tahun}`, a));
+          parsedAnggaran.forEach(item => {
             map.set(`${item.kodeBelanja}_${item.kodeSub}_${item.tahun}`, item);
           });
-          const merged = Array.from(map.values());
-          aCount = merged.length;
-          return merged;
-        });
+          finalAnggaranList = Array.from(map.values());
+        }
+        aCount = finalAnggaranList.length;
+        setAnggaranList(finalAnggaranList);
+      } else {
+        finalAnggaranList = latestStateRef.current?.anggaranList || anggaranList;
       }
 
-      setSheetConfig(prev => ({
-        ...prev,
+      const updatedSheetConfig = {
+        ...sheetConfig,
         lastSyncedAt: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        status: 'Connected'
-      }));
+        status: 'Connected' as const
+      };
+      setSheetConfig(updatedSheetConfig);
+
+      // Persist to local storage and sync with Firestore cloud state
+      const nextState = {
+        ...(latestStateRef.current || {}),
+        currentUser,
+        users,
+        selectedTahun,
+        tahunList,
+        opdList,
+        programs,
+        kegiatanList,
+        subKegiatanList,
+        belanjaList,
+        sumberDanaList,
+        rekananList,
+        anggaranList: finalAnggaranList,
+        realisasiList: finalRealisasiList,
+        importLogs,
+        activityLogs,
+        sheetConfig: updatedSheetConfig
+      };
+      latestStateRef.current = nextState;
+      persistToLocalStorage(nextState);
+      saveStateBundleToCloud(nextState);
+
       setSyncStatus('success');
-      logActivity(`Berhasil menarik data dari Google Spreadsheet: ${rCount} realisasi & ${aCount} pagu anggaran`);
+      logActivity(`Berhasil menarik data dari Google Spreadsheet: ${rCount} realisasi & ${aCount} pagu anggaran (${syncMode === 'replace' ? 'Timpa Total' : 'Gabungkan'})`);
 
       return {
         success: true,
         realisasiCount: rCount,
         anggaranCount: aCount,
-        message: `Berhasil menarik data dari Google Spreadsheet! Total data di aplikasi sekarang: ${rCount} transaksi realisasi dan ${aCount} rekening pagu anggaran.`
+        message: `Berhasil menyinkronkan data dari Google Spreadsheet! Data di aplikasi sekarang: ${rCount} transaksi realisasi dan ${aCount} rekening pagu anggaran.`
       };
     } catch (err: any) {
       console.error('Pull from Google Sheet error:', err);
