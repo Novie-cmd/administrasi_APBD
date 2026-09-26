@@ -5,8 +5,12 @@ import './index.css';
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').then(
-      (reg) => console.log('PWA ServiceWorker ready:', reg.scope),
+    const swUrl = `${import.meta.env.BASE_URL}sw.js`;
+    navigator.serviceWorker.register(swUrl).then(
+      (reg) => {
+        reg.update();
+        console.log('PWA ServiceWorker ready:', reg.scope);
+      },
       (err) => console.log('PWA ServiceWorker error:', err)
     );
   });
