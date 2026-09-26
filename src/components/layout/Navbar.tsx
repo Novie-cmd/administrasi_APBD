@@ -4,6 +4,7 @@ import { NTBLogo } from '../common/NTBLogo';
 import { UserRole } from '../../types';
 import { PWAInstallModal } from '../common/PWAInstallModal';
 import { GoogleSheetSyncModal } from '../common/GoogleSheetSyncModal';
+import { usePWAInstall } from '../../hooks/usePWAInstall';
 import {
   Bell,
   Calendar,
@@ -55,6 +56,23 @@ export const Navbar: React.FC<{
   const [showSheetModal, setShowSheetModal] = useState(false);
   const [clearModalType, setClearModalType] = useState<'transaksi' | 'database' | null>(null);
   const [alsoClearSheet, setAlsoClearSheet] = useState(false);
+
+  const { isInstallable, isInstalled, install } = usePWAInstall();
+
+  const handlePwaButtonClick = async () => {
+    if (isInstallable) {
+      try {
+        const accepted = await install();
+        if (!accepted) {
+          setShowPwaModal(true);
+        }
+      } catch {
+        setShowPwaModal(true);
+      }
+    } else {
+      setShowPwaModal(true);
+    }
+  };
 
   const roles: UserRole[] = [
     'Administrator',
@@ -108,17 +126,27 @@ export const Navbar: React.FC<{
       <div className="flex items-center gap-2 sm:gap-3">
         {/* PWA Install Button with Rusa NTB branding */}
         <button
-          onClick={() => setShowPwaModal(true)}
-          className="flex items-center gap-1.5 rounded-xl border border-amber-500/50 bg-gradient-to-r from-red-950/80 via-slate-900 to-amber-950/80 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-amber-300 hover:text-white hover:border-amber-400 hover:shadow-lg hover:shadow-red-900/30 transition-all group"
-          title="Instal / Tambah Aplikasi ke Layar Utama HP / Laptop"
+          onClick={handlePwaButtonClick}
+          className={`flex items-center gap-1.5 rounded-xl border px-2.5 sm:px-3 py-1.5 text-xs font-bold transition-all group shadow-sm ${
+            isInstalled
+              ? 'border-emerald-500/50 bg-emerald-950/60 text-emerald-300 hover:bg-emerald-900/60'
+              : isInstallable
+              ? 'border-amber-400 bg-gradient-to-r from-emerald-900 via-teal-900 to-amber-900 text-amber-300 hover:text-white hover:brightness-110 ring-2 ring-amber-400/40 animate-pulse'
+              : 'border-amber-500/50 bg-gradient-to-r from-red-950/80 via-slate-900 to-amber-950/80 text-amber-300 hover:text-white hover:border-amber-400 hover:shadow-lg'
+          }`}
+          title={isInstalled ? "Aplikasi Sudah Terpasang di Perangkat Anda" : "Instal / Tambah Aplikasi ke Layar Utama HP / Laptop"}
           id="btn-open-pwa-install"
         >
-          <div className="relative flex h-5 w-5 items-center justify-center rounded-md bg-red-600 text-white font-black overflow-hidden shadow">
-            <img src="/app-logo.jpg" alt="Rusa Logo" className="h-full w-full object-cover" />
+          <div className="relative flex h-5 w-5 items-center justify-center rounded-md bg-slate-950 text-white font-black overflow-hidden shadow border border-amber-400/40">
+            <NTBLogo size={18} />
           </div>
-          <span className="hidden sm:inline">Instal App</span>
-          <span className="inline sm:hidden">App</span>
-          <Download className="h-3.5 w-3.5 text-amber-400 group-hover:translate-y-0.5 transition-transform" />
+          <span className="hidden sm:inline">{isInstalled ? 'App Terpasang' : 'Instal App'}</span>
+          <span className="inline sm:hidden">{isInstalled ? 'Terpasang' : 'Instal'}</span>
+          {isInstalled ? (
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+          ) : (
+            <Download className="h-3.5 w-3.5 text-amber-400 group-hover:translate-y-0.5 transition-transform" />
+          )}
         </button>
 
         {/* Fiscal Year Dropdown (Multi Tahun Anggaran) */}

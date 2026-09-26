@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { PWAInstallModal } from '../common/PWAInstallModal';
+import { NTBLogo } from '../common/NTBLogo';
+import { usePWAInstall } from '../../hooks/usePWAInstall';
 import {
   LayoutDashboard,
   Database,
@@ -28,7 +30,8 @@ import {
   BookOpen,
   Smartphone,
   Download,
-  Trash2
+  Trash2,
+  CheckCircle2
 } from 'lucide-react';
 
 export type ActiveTab =
@@ -87,6 +90,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [openPelaporan, setOpenPelaporan] = useState(true);
   const [openAnalisis, setOpenAnalisis] = useState(false);
   const [showPwaModal, setShowPwaModal] = useState(false);
+
+  const { isInstallable, isInstalled, install } = usePWAInstall();
+
+  const handleSidebarInstallClick = async () => {
+    if (isInstallable) {
+      try {
+        const accepted = await install();
+        if (!accepted) {
+          setShowPwaModal(true);
+        }
+      } catch {
+        setShowPwaModal(true);
+      }
+    } else {
+      setShowPwaModal(true);
+    }
+  };
 
   // Auto-expand accordion when activeTab belongs to that category
   React.useEffect(() => {
@@ -387,30 +407,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
 
         {/* PWA App Install Banner Card */}
-        <div className="mx-2 my-3 p-3.5 rounded-2xl bg-gradient-to-b from-slate-900 to-red-950/40 border border-amber-500/30 text-white shadow-xl relative overflow-hidden group">
+        <div className="mx-2 my-3 p-3.5 rounded-2xl bg-gradient-to-b from-slate-900 to-emerald-950/40 border border-emerald-500/30 text-white shadow-xl relative overflow-hidden group">
           <div className="flex items-center gap-3">
-            <div className="relative h-11 w-11 shrink-0 rounded-xl bg-slate-950 border border-amber-400/50 overflow-hidden shadow-md">
-              <img src="/app-logo.jpg" alt="Rusa Logo NTB" className="h-full w-full object-cover" />
+            <div className="relative h-11 w-11 shrink-0 rounded-xl bg-slate-950 border border-amber-400/50 overflow-hidden shadow-md flex items-center justify-center p-0.5">
+              <NTBLogo size={36} />
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-[10px] font-black uppercase text-amber-400 truncate">
-                Instal Di HP & Laptop
+                {isInstalled ? 'Aplikasi Terpasang' : 'Instal Di HP & Laptop'}
               </span>
               <span className="text-xs font-bold text-white truncate">
-                Aplikasi Layar Utama
+                {isInstalled ? 'BFMS NTB Aktif' : 'Aplikasi Layar Utama'}
               </span>
               <span className="text-[9px] text-slate-300 font-medium">
-                PWA Fast Access
+                {isInstalled ? 'Siap digunakan offline' : 'PWA Fast Access'}
               </span>
             </div>
           </div>
           <button
-            onClick={() => setShowPwaModal(true)}
-            className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-red-600 to-amber-500 py-1.5 px-3 text-[11px] font-extrabold text-white shadow hover:brightness-110 transition active:scale-95"
+            onClick={handleSidebarInstallClick}
+            className={`mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl py-2 px-3 text-[11px] font-black text-white shadow transition active:scale-95 ${
+              isInstalled
+                ? 'bg-emerald-800 hover:bg-emerald-700 text-emerald-100 border border-emerald-600'
+                : isInstallable
+                ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-amber-600 hover:brightness-110 shadow-emerald-950/60 ring-2 ring-amber-400/40 animate-pulse'
+                : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:brightness-110'
+            }`}
             id="btn-sidebar-pwa-install"
           >
-            <Download className="h-3.5 w-3.5 text-amber-200" />
-            <span>Pasang Sekarang</span>
+            {isInstalled ? (
+              <>
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300" />
+                <span>Buka Petunjuk Aplikasi</span>
+              </>
+            ) : (
+              <>
+                <Download className="h-3.5 w-3.5 text-amber-200" />
+                <span>{isInstallable ? 'Pasang Sekarang (1-Klik)' : 'Pasang ke HP / Laptop'}</span>
+              </>
+            )}
           </button>
         </div>
       </div>
