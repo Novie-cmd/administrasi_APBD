@@ -533,6 +533,12 @@ export const InputRealisasiView: React.FC = () => {
     .filter(r => selectedIds.includes(r.id))
     .reduce((sum, r) => sum + (Number(r.nilai) || 0), 0);
 
+  const totalFilteredNilai = filteredRealisasi.reduce((sum, r) => sum + (Number(r.nilai) || 0), 0);
+  const totalCurrentNilai = currentRealisasi.reduce((sum, r) => sum + (Number(r.nilai) || 0), 0);
+  const approvedCount = currentRealisasi.filter(r => (r.statusValidation || 'Disetujui PPK') === 'Disetujui PPK').length;
+  const approvedNilai = currentRealisasi.filter(r => (r.statusValidation || 'Disetujui PPK') === 'Disetujui PPK').reduce((sum, r) => sum + (Number(r.nilai) || 0), 0);
+  const pendingCount = currentRealisasi.filter(r => r.statusValidation === 'Draft').length;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -617,6 +623,30 @@ export const InputRealisasiView: React.FC = () => {
               </button>
             </>
           )}
+        </div>
+      </div>
+
+      {/* Summary Cards Total Realisasi */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 border-l-4 border-l-teal-500 shadow">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-teal-400">Total Realisasi SP2D (TA {selectedTahun})</span>
+          <div className="mt-1 text-base font-black text-white font-mono">Rp {totalCurrentNilai.toLocaleString('id-ID')}</div>
+          <div className="mt-1 text-[11px] text-slate-400">{currentRealisasi.length} Dokumen SP2D Tercatat</div>
+        </div>
+        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 border-l-4 border-l-emerald-500 shadow">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">Disetujui PPK</span>
+          <div className="mt-1 text-base font-black text-emerald-300 font-mono">Rp {approvedNilai.toLocaleString('id-ID')}</div>
+          <div className="mt-1 text-[11px] text-slate-400">{approvedCount} Dokumen Sah</div>
+        </div>
+        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 border-l-4 border-l-amber-500 shadow">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">Draft / Menunggu Verifikasi</span>
+          <div className="mt-1 text-base font-black text-amber-300">{pendingCount} Dokumen</div>
+          <div className="mt-1 text-[11px] text-slate-400">Menunggu Verifikasi PPK</div>
+        </div>
+        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 border-l-4 border-l-sky-500 shadow">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-sky-400">Jumlah Tampil (Filter)</span>
+          <div className="mt-1 text-base font-black text-sky-300 font-mono">Rp {totalFilteredNilai.toLocaleString('id-ID')}</div>
+          <div className="mt-1 text-[11px] text-slate-400">{filteredRealisasi.length} Transaksi SP2D</div>
         </div>
       </div>
 
@@ -1086,6 +1116,37 @@ export const InputRealisasiView: React.FC = () => {
                 })
               )}
             </tbody>
+            {filteredRealisasi.length > 0 && (
+              <tfoot className="bg-slate-950 font-bold border-t-2 border-slate-700 text-white">
+                <tr>
+                  <td colSpan={6} className="px-4 py-3.5 text-right font-extrabold uppercase text-xs tracking-wider bg-slate-950">
+                    <div className="flex flex-col sm:flex-row items-end sm:items-center justify-end gap-2">
+                      <span className="text-teal-300 flex items-center gap-1.5">
+                        <CheckCircle2 className="h-4 w-4 text-teal-400" />
+                        JUMLAH TOTAL REALISASI (SP2D):
+                      </span>
+                      <span className="text-[11px] font-normal text-slate-400">
+                        ({filteredRealisasi.length} transaksi)
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3.5 text-right font-mono font-black text-sm text-emerald-300 whitespace-nowrap bg-emerald-950/40 border-x border-emerald-900/50 shadow-inner">
+                    Rp {totalFilteredNilai.toLocaleString('id-ID')}
+                  </td>
+                  <td colSpan={isReadOnly ? 2 : 3} className="px-4 py-3.5 text-xs text-slate-400 bg-slate-950">
+                    {selectedIds.length > 0 ? (
+                      <span className="text-teal-300 text-[11px] font-semibold">
+                        Terpilih: {selectedIds.length} data (Rp {totalSelectedNilai.toLocaleString('id-ID')})
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-slate-500">
+                        Total serapan dana SP2D TA {selectedTahun}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       </div>

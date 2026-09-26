@@ -41,6 +41,9 @@ export const KoreksiDataView: React.FC = () => {
   const isAllSelected = filteredItems.length > 0 && selectedIds.length === filteredItems.length;
   const isPartiallySelected = selectedIds.length > 0 && selectedIds.length < filteredItems.length;
 
+  const filteredTotalNilai = filteredItems.reduce((acc, r) => acc + (Number(r.nilai) || 0), 0);
+  const selectedTotalNilai = filteredItems.filter(r => selectedIds.includes(r.id)).reduce((acc, r) => acc + (Number(r.nilai) || 0), 0);
+
   const handleToggleSelectAll = () => {
     if (isAllSelected) {
       setSelectedIds([]);
@@ -292,6 +295,29 @@ export const KoreksiDataView: React.FC = () => {
                 );
               })}
             </tbody>
+            {filteredItems.length > 0 && (
+              <tfoot className="bg-slate-950 font-bold border-t-2 border-slate-700 text-white">
+                <tr>
+                  <td colSpan={4} className="px-4 py-3.5 text-right font-extrabold uppercase text-xs tracking-wider bg-slate-950 text-emerald-300">
+                    JUMLAH TOTAL REALISASI ({filteredItems.length} Dokumen):
+                  </td>
+                  <td className="px-4 py-3.5 text-right font-mono font-black text-sm text-emerald-300 whitespace-nowrap bg-emerald-950/40 border-x border-emerald-900/50 shadow-inner">
+                    Rp {filteredTotalNilai.toLocaleString('id-ID')}
+                  </td>
+                  <td colSpan={isPPK ? 3 : 2} className="px-4 py-3.5 text-xs text-slate-400 bg-slate-950">
+                    {selectedIds.length > 0 ? (
+                      <span className="text-emerald-300 font-semibold text-[11px]">
+                        Terpilih: {selectedIds.length} data (Rp {selectedTotalNilai.toLocaleString('id-ID')})
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-slate-500">
+                        Total nilai SP2D dalam status filter aktif
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       </div>

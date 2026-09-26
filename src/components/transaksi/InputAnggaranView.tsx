@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Anggaran } from '../../types';
 import { isCodeEqual } from '../../utils/codeUtils';
@@ -52,6 +52,7 @@ export const InputAnggaranView: React.FC = () => {
     belanjaList,
     sumberDanaList,
     anggaranList,
+    realisasiList,
     addAnggaran,
     updateAnggaran,
     deleteAnggaran,
@@ -487,10 +488,15 @@ export const InputAnggaranView: React.FC = () => {
   };
 
   const currentAnggaran = anggaranList.filter(a => Number(a.tahun) === Number(selectedTahun));
-  const totalPaguMurni = currentAnggaran.reduce((s, a) => s + a.pagu, 0);
-  const totalRevisi = currentAnggaran.reduce((s, a) => s + a.revisi, 0);
-  const totalNilaiSPD = currentAnggaran.reduce((s, a) => s + (a.nilaiSPD !== undefined ? a.nilaiSPD : a.paguAkhir), 0);
-  const totalPaguAkhir = currentAnggaran.reduce((s, a) => s + a.paguAkhir, 0);
+  const totalPaguMurni = currentAnggaran.reduce((s, a) => s + (Number(a.pagu) || 0), 0);
+  const totalRevisi = currentAnggaran.reduce((s, a) => s + (Number(a.revisi) || 0), 0);
+  const totalNilaiSPD = currentAnggaran.reduce((s, a) => s + (a.nilaiSPD !== undefined ? Number(a.nilaiSPD) : Number(a.paguAkhir) || 0), 0);
+  const totalPaguAkhir = currentAnggaran.reduce((s, a) => s + (Number(a.paguAkhir) || 0), 0);
+
+  const currentYearRealisasi = realisasiList.filter(r => Number(r.tahun) === Number(selectedTahun));
+  const totalRealisasiTahun = currentYearRealisasi.reduce((s, r) => s + (Number(r.nilai) || 0), 0);
+  const sisaPaguTahun = totalPaguAkhir - totalRealisasiTahun;
+  const persenRealisasiTahun = totalPaguAkhir > 0 ? (totalRealisasiTahun / totalPaguAkhir) * 100 : 0;
 
   const filteredAnggaran = currentAnggaran.filter(a => {
     const subObj = subKegiatanList.find(s => s.kodeSub === a.kodeSub);
@@ -503,6 +509,26 @@ export const InputAnggaranView: React.FC = () => {
       subSearchText.toLowerCase().includes(term)
     );
   });
+
+  const filteredPaguMurni = filteredAnggaran.reduce((s, a) => s + (Number(a.pagu) || 0), 0);
+  const filteredRevisi = filteredAnggaran.reduce((s, a) => s + (Number(a.revisi) || 0), 0);
+  const filteredNilaiSPD = filteredAnggaran.reduce((s, a) => s + (a.nilaiSPD !== undefined ? Number(a.nilaiSPD) : Number(a.paguAkhir) || 0), 0);
+  const filteredPaguAkhir = filteredAnggaran.reduce((s, a) => s + (Number(a.paguAkhir) || 0), 0);
+
+  // Realisasi specifically matching filtered anggaran rows
+  const filteredRealisasiTotal = useMemo(() => {
+    if (filteredAnggaran.length === 0) return 0;
+    if (filteredAnggaran.length === currentAnggaran.length) return totalRealisasiTahun;
+    const targetCodes = new Set(
+      filteredAnggaran.map(a => `${(a.kodeSub || '').trim().toLowerCase()}_${(a.kodeBelanja || '').trim().toLowerCase()}`)
+    );
+    return currentYearRealisasi
+      .filter(r => targetCodes.has(`${(r.kodeSub || '').trim().toLowerCase()}_${(r.kodeBelanja || '').trim().toLowerCase()}`))
+      .reduce((s, r) => s + (Number(r.nilai) || 0), 0);
+  }, [filteredAnggaran, currentAnggaran.length, currentYearRealisasi, totalRealisasiTahun]);
+
+  const filteredSisaPagu = filteredPaguAkhir - filteredRealisasiTotal;
+  const filteredPersenRealisasi = filteredPaguAkhir > 0 ? (filteredRealisasiTotal / filteredPaguAkhir) * 100 : 0;
 
   const allFilteredIds = filteredAnggaran.map(a => a.id);
   const isAllSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selectedIds.includes(id));
@@ -618,24 +644,34 @@ export const InputAnggaranView: React.FC = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Pagu Murni</span>
-          <div className="mt-1 text-base font-black text-white">Rp {totalPaguMurni.toLocaleString('id-ID')}</div>
+          <div className="mt-1 text-base font-black text-white font-mono">Rp {totalPaguMurni.toLocaleString('id-ID')}</div>
         </div>
         <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Revisi / Pergeseran</span>
-          <div className="mt-1 text-base font-black text-amber-400">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Revisi / Pergeseran</span>
+          <div className="mt-1 text-base font-black text-amber-400 font-mono">
             {totalRevisi >= 0 ? '+' : ''}Rp {totalRevisi.toLocaleString('id-ID')}
           </div>
         </div>
         <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 border-l-4 border-l-sky-500">
           <span className="text-[11px] font-bold uppercase tracking-wider text-sky-400">Total Nilai SPD</span>
-          <div className="mt-1 text-base font-black text-sky-300">Rp {totalNilaiSPD.toLocaleString('id-ID')}</div>
+          <div className="mt-1 text-base font-black text-sky-300 font-mono">Rp {totalNilaiSPD.toLocaleString('id-ID')}</div>
         </div>
         <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 border-l-4 border-l-emerald-500">
           <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">Total Pagu Akhir</span>
-          <div className="mt-1 text-base font-black text-emerald-300">Rp {totalPaguAkhir.toLocaleString('id-ID')}</div>
+          <div className="mt-1 text-base font-black text-emerald-300 font-mono">Rp {totalPaguAkhir.toLocaleString('id-ID')}</div>
+        </div>
+        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 border-l-4 border-l-teal-500 shadow">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-teal-400">Total Realisasi SP2D</span>
+          <div className="mt-1 text-base font-black text-teal-300 font-mono">Rp {totalRealisasiTahun.toLocaleString('id-ID')}</div>
+          <div className="mt-0.5 text-[10px] text-teal-400 font-semibold">{persenRealisasiTahun.toFixed(2)}% Terserap</div>
+        </div>
+        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 border-l-4 border-l-indigo-500 shadow">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-400">Sisa Pagu Anggaran</span>
+          <div className="mt-1 text-base font-black text-indigo-300 font-mono">Rp {sisaPaguTahun.toLocaleString('id-ID')}</div>
+          <div className="mt-0.5 text-[10px] text-slate-400">{currentAnggaran.length} Rekening Belanja</div>
         </div>
       </div>
 
@@ -1012,6 +1048,78 @@ export const InputAnggaranView: React.FC = () => {
                 })
               )}
             </tbody>
+            {filteredAnggaran.length > 0 && (
+              <tfoot className="bg-slate-950 font-bold border-t-2 border-slate-700 text-white">
+                <tr className="border-t-2 border-slate-700 bg-slate-950">
+                  <td colSpan={5} className="px-4 py-3.5 text-right font-extrabold uppercase text-xs tracking-wider text-emerald-400">
+                    <div className="flex flex-col sm:flex-row items-end sm:items-center justify-end gap-2">
+                      <span className="flex items-center gap-1.5">
+                        <DollarSign className="h-4 w-4 text-emerald-400" />
+                        JUMLAH TOTAL PAGU ANGGARAN:
+                      </span>
+                      <span className="text-[11px] font-normal text-slate-400">
+                        ({filteredAnggaran.length} Rekening Belanja)
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3.5 text-right font-mono font-black text-xs text-white whitespace-nowrap bg-slate-900/60 border-x border-slate-800">
+                    Rp {filteredPaguMurni.toLocaleString('id-ID')}
+                  </td>
+                  <td className="px-4 py-3.5 text-right font-mono font-black text-xs text-amber-300 whitespace-nowrap bg-slate-900/60 border-r border-slate-800">
+                    {filteredRevisi >= 0 ? '+' : ''}Rp {filteredRevisi.toLocaleString('id-ID')}
+                  </td>
+                  <td className="px-4 py-3.5 text-right font-mono font-black text-xs text-sky-300 whitespace-nowrap bg-sky-950/30 border-r border-sky-900/50">
+                    Rp {filteredNilaiSPD.toLocaleString('id-ID')}
+                  </td>
+                  <td className="px-4 py-3.5 text-right font-mono font-black text-sm text-emerald-300 whitespace-nowrap bg-emerald-950/40 border-r border-emerald-900/50 shadow-inner">
+                    Rp {filteredPaguAkhir.toLocaleString('id-ID')}
+                  </td>
+                  <td colSpan={isReadOnly ? 2 : 3} className="px-4 py-3.5 text-xs text-slate-400 bg-slate-950">
+                    {selectedIds.length > 0 ? (
+                      <span className="text-emerald-300 text-[11px] font-semibold">
+                        Terpilih: {selectedIds.length} item (Rp {totalSelectedPagu.toLocaleString('id-ID')})
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-slate-500">
+                        Total alokasi pagu TA {selectedTahun}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+                <tr className="border-t border-slate-800 bg-slate-950/90">
+                  <td colSpan={5} className="px-4 py-3 text-right font-extrabold uppercase text-xs tracking-wider text-teal-300 bg-slate-950">
+                    <span className="flex items-center justify-end gap-1.5">
+                      <FileSpreadsheet className="h-4 w-4 text-teal-400" />
+                      JUMLAH NILAI REALISASI TERSERAP:
+                    </span>
+                  </td>
+                  <td colSpan={4} className="px-4 py-3 bg-teal-950/30 border-x border-teal-900/40">
+                    <div className="flex flex-col sm:flex-row items-end sm:items-center justify-between gap-2 text-xs font-mono">
+                      <div className="flex items-center gap-2">
+                        <span className="text-teal-400 font-bold">Realisasi:</span>
+                        <span className="font-black text-teal-200 text-sm">
+                          Rp {filteredRealisasiTotal.toLocaleString('id-ID')}
+                        </span>
+                        <span className="rounded-full bg-teal-900/80 text-teal-300 px-2 py-0.5 text-[10px] font-extrabold border border-teal-700">
+                          {filteredPersenRealisasi.toFixed(2)}%
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-indigo-400 font-bold">Sisa Pagu:</span>
+                        <span className="font-black text-indigo-200 text-sm">
+                          Rp {filteredSisaPagu.toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+                  <td colSpan={isReadOnly ? 2 : 3} className="px-4 py-3 text-xs text-slate-400 bg-slate-950">
+                    <span className="text-[11px] text-teal-400">
+                      Sinkron otomatis dengan transaksi SP2D
+                    </span>
+                  </td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       </div>

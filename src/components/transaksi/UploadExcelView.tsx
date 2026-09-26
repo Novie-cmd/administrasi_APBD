@@ -122,6 +122,8 @@ export const UploadExcelView: React.FC = () => {
     );
   });
 
+  const filteredDbNominal = filteredDbRealisasi.reduce((acc, r) => acc + (Number(r.nilai) || 0), 0);
+
   // Existing composite keys for instant duplicate detection in preview
   const existingKeySet = new Set(
     overwriteMode
@@ -1215,6 +1217,29 @@ export const UploadExcelView: React.FC = () => {
                   );
                 })}
               </tbody>
+              {filteredDbRealisasi.length > 0 && (
+                <tfoot className="bg-slate-950 font-bold border-t-2 border-slate-700 text-white">
+                  <tr>
+                    <td colSpan={5} className="px-4 py-3.5 text-right font-extrabold uppercase text-xs tracking-wider bg-slate-950 text-emerald-300">
+                      JUMLAH TOTAL REALISASI SP2D ({filteredDbRealisasi.length} Transaksi):
+                    </td>
+                    <td className="px-3 py-3.5 text-right font-mono font-black text-sm text-emerald-300 whitespace-nowrap bg-emerald-950/40 border-x border-emerald-900/50 shadow-inner">
+                      Rp {filteredDbNominal.toLocaleString('id-ID')}
+                    </td>
+                    <td colSpan={4} className="px-3 py-3.5 text-xs text-slate-400 bg-slate-950">
+                      {selectedDbIds.length > 0 ? (
+                        <span className="text-teal-300 font-semibold text-[11px]">
+                          Terpilih: {selectedDbIds.length} transaksi (Rp {filteredDbRealisasi.filter(r => selectedDbIds.includes(r.id)).reduce((s, r) => s + (Number(r.nilai) || 0), 0).toLocaleString('id-ID')})
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-500">
+                          Total serapan dana SP2D TA {selectedTahun}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         )}
