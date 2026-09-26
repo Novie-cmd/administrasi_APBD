@@ -134,7 +134,7 @@ export function isOfflineOrUnavailable(err: any): boolean {
 }
 
 /**
- * Loads all realisasi chunks from Firestore using collection query with fallback.
+ * Loads all realisasi chunks from Firestore using dedicated collection.
  */
 async function loadRealisasiChunks(chunkCount?: number): Promise<any[]> {
   if (getIsFirestoreQuotaExceeded()) return [];
@@ -142,7 +142,6 @@ async function loadRealisasiChunks(chunkCount?: number): Promise<any[]> {
   if (chunkCount === 0) return [];
   const allRealisasi: any[] = [];
 
-  // Strategy 1: Load from dedicated collection
   try {
     const chunksColRef = collection(db, REALISASI_CHUNKS_COLLECTION);
     const snap = await getDocs(chunksColRef);
@@ -173,36 +172,14 @@ async function loadRealisasiChunks(chunkCount?: number): Promise<any[]> {
       await markFirestoreQuotaExceeded();
       return [];
     }
-    console.warn('Strategy 1 chunk load failed, trying Strategy 2:', e);
+    console.warn('Dedicated realisasi chunk load failed:', e);
   }
-
-  if (getIsFirestoreQuotaExceeded()) return [];
-
-  // Strategy 2: Fallback to SHARED_DATA_COLLECTION prefixed docs
-  const maxChunksToScan = typeof chunkCount === 'number' ? chunkCount : 0;
-  if (maxChunksToScan <= 0) return [];
-
-  const chunkPromises = [];
-  for (let i = 0; i < maxChunksToScan; i++) {
-    const chunkDocRef = doc(db, SHARED_DATA_COLLECTION, `${REALISASI_CHUNK_PREFIX}${i}`);
-    chunkPromises.push(getDoc(chunkDocRef).catch(() => null));
-  }
-
-  const chunkSnapshots = await Promise.all(chunkPromises);
-  chunkSnapshots.forEach(snap => {
-    if (snap && snap.exists()) {
-      const data = snap.data();
-      if (Array.isArray(data.items)) {
-        allRealisasi.push(...data.items);
-      }
-    }
-  });
 
   return allRealisasi;
 }
 
 /**
- * Loads all anggaran chunks from Firestore using collection query with fallback.
+ * Loads all anggaran chunks from Firestore using dedicated collection.
  */
 async function loadAnggaranChunks(chunkCount?: number): Promise<any[]> {
   if (getIsFirestoreQuotaExceeded()) return [];
@@ -210,7 +187,6 @@ async function loadAnggaranChunks(chunkCount?: number): Promise<any[]> {
   if (chunkCount === 0) return [];
   const allAnggaran: any[] = [];
 
-  // Strategy 1: Load from dedicated collection
   try {
     const chunksColRef = collection(db, ANGGARAN_CHUNKS_COLLECTION);
     const snap = await getDocs(chunksColRef);
@@ -241,30 +217,8 @@ async function loadAnggaranChunks(chunkCount?: number): Promise<any[]> {
       await markFirestoreQuotaExceeded();
       return [];
     }
-    console.warn('Strategy 1 anggaran chunk load failed, trying Strategy 2:', e);
+    console.warn('Dedicated anggaran chunk load failed:', e);
   }
-
-  if (getIsFirestoreQuotaExceeded()) return [];
-
-  // Strategy 2: Fallback to SHARED_DATA_COLLECTION prefixed docs
-  const maxChunksToScan = typeof chunkCount === 'number' ? chunkCount : 0;
-  if (maxChunksToScan <= 0) return [];
-
-  const chunkPromises = [];
-  for (let i = 0; i < maxChunksToScan; i++) {
-    const chunkDocRef = doc(db, SHARED_DATA_COLLECTION, `${ANGGARAN_CHUNK_PREFIX}${i}`);
-    chunkPromises.push(getDoc(chunkDocRef).catch(() => null));
-  }
-
-  const chunkSnapshots = await Promise.all(chunkPromises);
-  chunkSnapshots.forEach(snap => {
-    if (snap && snap.exists()) {
-      const data = snap.data();
-      if (Array.isArray(data.items)) {
-        allAnggaran.push(...data.items);
-      }
-    }
-  });
 
   return allAnggaran;
 }
@@ -292,17 +246,17 @@ export const subscribeToSharedData = (
         let finalRealisasi = rawData.realisasiList || [];
         let finalAnggaran = rawData.anggaranList || [];
 
-        // Check chunks and merge intelligently
+        // Check chunks and resolve accurate realisasi list
         try {
           if (rawData.realisasiCount === 0 || (rawData.realisasiChunkCount === 0 && (!rawData.realisasiList || rawData.realisasiList.length === 0))) {
             finalRealisasi = [];
           } else {
             const chunkedItems = await loadRealisasiChunks(rawData.realisasiChunkCount);
             if (chunkedItems.length > 0) {
-              const map = new Map<string, any>();
-              finalRealisasi.forEach(item => { if (item?.id) map.set(item.id, item); });
-              chunkedItems.forEach(item => { if (item?.id) map.set(item.id, item); });
-              finalRealisasi = Array.from(map.values());
+              finalRealisasi = chunkedItems;
+            } else if (rawData.realisasiChunkCount && rawData.realisasiChunkCount > 0) {
+              // Chunks were expected but none found
+              finalRealisasi = [];
             }
           }
         } catch (e) {
@@ -318,10 +272,9 @@ export const subscribeToSharedData = (
           } else {
             const chunkedAnggaran = await loadAnggaranChunks(rawData.anggaranChunkCount);
             if (chunkedAnggaran.length > 0) {
-              const map = new Map<string, any>();
-              finalAnggaran.forEach(item => { if (item?.id) map.set(item.id, item); });
-              chunkedAnggaran.forEach(item => { if (item?.id) map.set(item.id, item); });
-              finalAnggaran = Array.from(map.values());
+              finalAnggaran = chunkedAnggaran;
+            } else if (rawData.anggaranChunkCount && rawData.anggaranChunkCount > 0) {
+              finalAnggaran = [];
             }
           }
         } catch (e) {
@@ -367,10 +320,9 @@ export const fetchSharedDataOnce = async (): Promise<FirestoreAppData | null> =>
         } else {
           const chunkedItems = await loadRealisasiChunks(rawData.realisasiChunkCount);
           if (chunkedItems.length > 0) {
-            const map = new Map<string, any>();
-            finalRealisasi.forEach(item => { if (item?.id) map.set(item.id, item); });
-            chunkedItems.forEach(item => { if (item?.id) map.set(item.id, item); });
-            finalRealisasi = Array.from(map.values());
+            finalRealisasi = chunkedItems;
+          } else if (rawData.realisasiChunkCount && rawData.realisasiChunkCount > 0) {
+            finalRealisasi = [];
           }
         }
       } catch (e) {
@@ -383,10 +335,9 @@ export const fetchSharedDataOnce = async (): Promise<FirestoreAppData | null> =>
         } else {
           const chunkedAnggaran = await loadAnggaranChunks(rawData.anggaranChunkCount);
           if (chunkedAnggaran.length > 0) {
-            const map = new Map<string, any>();
-            finalAnggaran.forEach(item => { if (item?.id) map.set(item.id, item); });
-            chunkedAnggaran.forEach(item => { if (item?.id) map.set(item.id, item); });
-            finalAnggaran = Array.from(map.values());
+            finalAnggaran = chunkedAnggaran;
+          } else if (rawData.anggaranChunkCount && rawData.anggaranChunkCount > 0) {
+            finalAnggaran = [];
           }
         }
       } catch (e) {

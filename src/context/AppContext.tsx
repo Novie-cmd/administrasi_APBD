@@ -529,6 +529,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
   };
 
+  // Helper to apply state changes to latestStateRef, localStorage, and Cloud synchronously
+  const applyAndPersistState = (partialNext: Record<string, any>) => {
+    const base = latestStateRef.current || {
+      currentUser,
+      users,
+      selectedTahun,
+      tahunList,
+      opdList,
+      programs,
+      kegiatanList,
+      subKegiatanList,
+      belanjaList,
+      sumberDanaList,
+      rekananList,
+      anggaranList,
+      realisasiList,
+      importLogs,
+      activityLogs,
+      sheetConfig
+    };
+    const nextState = { ...base, ...partialNext };
+    latestStateRef.current = nextState;
+    persistToLocalStorage(nextState);
+    saveStateBundleToCloud(nextState);
+    return nextState;
+  };
+
   // 1. Subscribe to Firestore Real-Time Updates (Live single source of truth with conflict protection)
   useEffect(() => {
     const unsubscribe = subscribeToSharedData(
@@ -539,10 +566,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const localSavedTimestampStr = localStorage.getItem(LOCAL_TIMESTAMP_KEY);
         const localUpdatedTime = localSavedTimestampStr ? Number(localSavedTimestampStr) : (localModifiedAtRef.current || 0);
 
-        // Conflict check: if local changes were made more recently than the remote Firestore snapshot,
-        // retain local inputs without ping-ponging writes back to the server in onSnapshot
-        if (localUpdatedTime > remoteUpdatedTime + 1000) {
-          console.info('Local state is newer than remote Firestore snapshot. Retaining local inputs.');
+        // Conflict check: if local changes were made very recently (<3000ms) or local timestamp is newer,
+        // retain local inputs so in-flight snapshots or race conditions don't resurrect deleted records
+        const timeSinceLocalEdit = Date.now() - (localModifiedAtRef.current || 0);
+        if (timeSinceLocalEdit < 3000 || localUpdatedTime > remoteUpdatedTime + 1000) {
+          console.info('Local state is newer or recently modified. Retaining local inputs.');
+          return;
+        }
+
+        const currentFingerprint = computeStateFingerprint(latestStateRef.current);
+        const remoteFingerprint = computeStateFingerprint(remoteData);
+        if (currentFingerprint && remoteFingerprint && currentFingerprint === remoteFingerprint) {
           return;
         }
 
@@ -1008,103 +1042,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteAnggaran = (id: string) => {
-    const curRealisasi = latestStateRef.current?.realisasiList !== undefined ? latestStateRef.current.realisasiList : realisasiList;
-    setAnggaranList(prev => {
-      const nextList = prev.filter(a => a.id !== id);
-      const nextState = {
-        ...(latestStateRef.current || {}),
-        currentUser,
-        users,
-        selectedTahun,
-        tahunList,
-        opdList,
-        programs,
-        kegiatanList,
-        subKegiatanList,
-        belanjaList,
-        sumberDanaList,
-        rekananList,
-        anggaranList: nextList,
-        realisasiList: curRealisasi,
-        importLogs,
-        activityLogs,
-        sheetConfig
-      };
-      latestStateRef.current = nextState;
-      persistToLocalStorage(nextState);
-      saveStateBundleToCloud(nextState);
-      return nextList;
-    });
+    const curList = latestStateRef.current?.anggaranList !== undefined ? latestStateRef.current.anggaranList : anggaranList;
+    const nextList = curList.filter((a: Anggaran) => a.id !== id);
+    setAnggaranList(nextList);
+    applyAndPersistState({ anggaranList: nextList });
     logActivity(`Menghapus data Anggaran ID ${id}`);
   };
 
   const deleteBatchAnggaran = (ids: string[]) => {
     if (!ids || ids.length === 0) return;
     const idSet = new Set(ids);
-    const curRealisasi = latestStateRef.current?.realisasiList !== undefined ? latestStateRef.current.realisasiList : realisasiList;
-    setAnggaranList(prev => {
-      const nextList = prev.filter(a => !idSet.has(a.id));
-      const nextState = {
-        ...(latestStateRef.current || {}),
-        currentUser,
-        users,
-        selectedTahun,
-        tahunList,
-        opdList,
-        programs,
-        kegiatanList,
-        subKegiatanList,
-        belanjaList,
-        sumberDanaList,
-        rekananList,
-        anggaranList: nextList,
-        realisasiList: curRealisasi,
-        importLogs,
-        activityLogs,
-        sheetConfig
-      };
-      latestStateRef.current = nextState;
-      persistToLocalStorage(nextState);
-      saveStateBundleToCloud(nextState);
-      return nextList;
-    });
+    const curList = latestStateRef.current?.anggaranList !== undefined ? latestStateRef.current.anggaranList : anggaranList;
+    const nextList = curList.filter((a: Anggaran) => !idSet.has(a.id));
+    setAnggaranList(nextList);
+    applyAndPersistState({ anggaranList: nextList });
     logActivity(`Menghapus Massal ${ids.length} data Pagu Anggaran`);
   };
 
   const clearAnggaranDatabase = (tahun?: number) => {
-    const curRealisasi = latestStateRef.current?.realisasiList !== undefined ? latestStateRef.current.realisasiList : realisasiList;
-    setAnggaranList(prev => {
-      let nextList: Anggaran[] = [];
-      if (tahun !== undefined && tahun !== null) {
-        const targetTahun = Number(tahun);
-        nextList = prev.filter(a => Number(a.tahun) !== targetTahun);
-      } else {
-        nextList = [];
-      }
-      const nextState = {
-        ...(latestStateRef.current || {}),
-        currentUser,
-        users,
-        selectedTahun,
-        tahunList,
-        opdList,
-        programs,
-        kegiatanList,
-        subKegiatanList,
-        belanjaList,
-        sumberDanaList,
-        rekananList,
-        anggaranList: nextList,
-        realisasiList: curRealisasi,
-        importLogs,
-        activityLogs,
-        sheetConfig
-      };
-      latestStateRef.current = nextState;
-      persistToLocalStorage(nextState);
-      saveStateBundleToCloud(nextState);
-      return nextList;
-    });
+    const curList = latestStateRef.current?.anggaranList !== undefined ? latestStateRef.current.anggaranList : anggaranList;
+    let nextList: Anggaran[] = [];
+    if (tahun !== undefined && tahun !== null) {
+      const targetTahun = Number(tahun);
+      nextList = curList.filter((a: Anggaran) => Number(a.tahun) !== targetTahun);
+    } else {
+      nextList = [];
+    }
+    setAnggaranList(nextList);
+    applyAndPersistState({ anggaranList: nextList });
     if (tahun !== undefined && tahun !== null) {
       logActivity(`Kosongkan Database Pagu Anggaran TA ${Number(tahun)}`);
     } else {
@@ -1278,103 +1243,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteRealisasi = (id: string) => {
-    const curAnggaran = latestStateRef.current?.anggaranList !== undefined ? latestStateRef.current.anggaranList : anggaranList;
-    setRealisasiList(prev => {
-      const nextList = prev.filter(r => r.id !== id);
-      const nextState = {
-        ...(latestStateRef.current || {}),
-        currentUser,
-        users,
-        selectedTahun,
-        tahunList,
-        opdList,
-        programs,
-        kegiatanList,
-        subKegiatanList,
-        belanjaList,
-        sumberDanaList,
-        rekananList,
-        anggaranList: curAnggaran,
-        realisasiList: nextList,
-        importLogs,
-        activityLogs,
-        sheetConfig
-      };
-      latestStateRef.current = nextState;
-      persistToLocalStorage(nextState);
-      saveStateBundleToCloud(nextState);
-      return nextList;
-    });
+    const curList = latestStateRef.current?.realisasiList !== undefined ? latestStateRef.current.realisasiList : realisasiList;
+    const nextList = curList.filter((r: Realisasi) => r.id !== id);
+    setRealisasiList(nextList);
+    applyAndPersistState({ realisasiList: nextList });
     logActivity(`Menghapus Transaksi Realisasi ID ${id}`);
   };
 
   const deleteBatchRealisasi = (ids: string[]) => {
     if (!ids || ids.length === 0) return;
     const idSet = new Set(ids);
-    const curAnggaran = latestStateRef.current?.anggaranList !== undefined ? latestStateRef.current.anggaranList : anggaranList;
-    setRealisasiList(prev => {
-      const nextList = prev.filter(r => !idSet.has(r.id));
-      const nextState = {
-        ...(latestStateRef.current || {}),
-        currentUser,
-        users,
-        selectedTahun,
-        tahunList,
-        opdList,
-        programs,
-        kegiatanList,
-        subKegiatanList,
-        belanjaList,
-        sumberDanaList,
-        rekananList,
-        anggaranList: curAnggaran,
-        realisasiList: nextList,
-        importLogs,
-        activityLogs,
-        sheetConfig
-      };
-      latestStateRef.current = nextState;
-      persistToLocalStorage(nextState);
-      saveStateBundleToCloud(nextState);
-      return nextList;
-    });
+    const curList = latestStateRef.current?.realisasiList !== undefined ? latestStateRef.current.realisasiList : realisasiList;
+    const nextList = curList.filter((r: Realisasi) => !idSet.has(r.id));
+    setRealisasiList(nextList);
+    applyAndPersistState({ realisasiList: nextList });
     logActivity(`Menghapus Massal ${ids.length} Transaksi Realisasi SP2D`);
   };
 
   const clearRealisasiDatabase = (tahun?: number) => {
-    const curAnggaran = latestStateRef.current?.anggaranList !== undefined ? latestStateRef.current.anggaranList : anggaranList;
-    setRealisasiList(prev => {
-      let nextList: Realisasi[] = [];
-      if (tahun !== undefined && tahun !== null) {
-        const targetTahun = Number(tahun);
-        nextList = prev.filter(r => Number(r.tahun) !== targetTahun);
-      } else {
-        nextList = [];
-      }
-      const nextState = {
-        ...(latestStateRef.current || {}),
-        currentUser,
-        users,
-        selectedTahun,
-        tahunList,
-        opdList,
-        programs,
-        kegiatanList,
-        subKegiatanList,
-        belanjaList,
-        sumberDanaList,
-        rekananList,
-        anggaranList: curAnggaran,
-        realisasiList: nextList,
-        importLogs,
-        activityLogs,
-        sheetConfig
-      };
-      latestStateRef.current = nextState;
-      persistToLocalStorage(nextState);
-      saveStateBundleToCloud(nextState);
-      return nextList;
-    });
+    const curList = latestStateRef.current?.realisasiList !== undefined ? latestStateRef.current.realisasiList : realisasiList;
+    let nextList: Realisasi[] = [];
+    if (tahun !== undefined && tahun !== null) {
+      const targetTahun = Number(tahun);
+      nextList = curList.filter((r: Realisasi) => Number(r.tahun) !== targetTahun);
+    } else {
+      nextList = [];
+    }
+    setRealisasiList(nextList);
+    applyAndPersistState({ realisasiList: nextList });
     if (tahun !== undefined && tahun !== null) {
       logActivity(`Kosongkan Database Realisasi SP2D TA ${Number(tahun)}`);
     } else {
