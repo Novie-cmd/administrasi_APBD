@@ -27,7 +27,8 @@ import {
   FileSearch,
   BookOpen,
   Smartphone,
-  Download
+  Download,
+  Trash2
 } from 'lucide-react';
 
 export type ActiveTab =
@@ -251,6 +252,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </button>
                   );
                 })}
+
+                <div className="pt-2 border-t border-slate-800/80 mt-1 space-y-1">
+                  <button
+                    onClick={() => {
+                      setActiveTab('transaksi-excel');
+                      if (window.innerWidth < 1024) setIsOpen(false);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-950/70 hover:text-white transition"
+                    title="Menu Pembersihan & Kosongkan Data Transaksi/Database"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-rose-400" />
+                    <span>Kosongkan Transaksi / DB</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>

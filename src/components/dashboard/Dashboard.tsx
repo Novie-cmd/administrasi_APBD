@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { isCodeEqual } from '../../utils/codeUtils';
 import { NTBLogo } from '../common/NTBLogo';
@@ -14,7 +14,9 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Sparkles,
-  Info
+  Info,
+  Trash2,
+  Database
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -42,8 +44,16 @@ export const Dashboard: React.FC = () => {
     programs,
     kegiatanList,
     notifications,
-    opd
+    opd,
+    currentUser,
+    clearRealisasiDatabase,
+    clearAnggaranDatabase,
+    clearAllDatabase,
+    sheetConfig
   } = useApp();
+
+  const [clearModalType, setClearModalType] = useState<'transaksi' | 'database' | null>(null);
+  const [alsoClearSheet, setAlsoClearSheet] = useState(false);
 
   // Compute metrics for selected fiscal year
   const currentAnggaranList = anggaranList.filter(a => Number(a.tahun) === Number(selectedTahun));
@@ -240,6 +250,54 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* QUICK DATABASE MANAGEMENT TOOLBAR */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900/90 px-4 py-3 shadow-md">
+        <div className="flex flex-wrap items-center gap-2">
+          <Database className="h-4 w-4 text-emerald-400" />
+          <span className="text-xs font-bold text-white">Status Transaksi TA {selectedTahun}:</span>
+          <span className="rounded-full bg-emerald-950 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300 border border-emerald-800">
+            {currentRealisasiList.length} Transaksi Realisasi (Rp {totalRealisasi.toLocaleString('id-ID')})
+          </span>
+          <span className="rounded-full bg-sky-950 px-2.5 py-0.5 text-[11px] font-bold text-sky-300 border border-sky-800">
+            {currentAnggaranList.length} Pagu Anggaran
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => {
+              if (currentUser.role === 'Auditor') {
+                alert('Peran Auditor hanya memiliki izin lihat (Read-Only). Masuk sebagai Administrator/Operator untuk mengosongkan transaksi.');
+                return;
+              }
+              setClearModalType('transaksi');
+            }}
+            className="flex items-center gap-1.5 rounded-xl border border-rose-700/80 bg-rose-950/70 hover:bg-rose-900 hover:border-rose-500 px-3.5 py-2 text-xs font-bold text-rose-200 hover:text-white transition shadow-sm"
+            id="btn-dashboard-clear-transaksi"
+            title="Kosongkan Data Transaksi Realisasi SP2D"
+          >
+            <Trash2 className="h-3.5 w-3.5 text-rose-400" />
+            <span>Kosongkan Transaksi</span>
+          </button>
+
+          <button
+            onClick={() => {
+              if (currentUser.role === 'Auditor') {
+                alert('Peran Auditor hanya memiliki izin lihat (Read-Only). Masuk sebagai Administrator/Operator untuk mengosongkan database.');
+                return;
+              }
+              setClearModalType('database');
+            }}
+            className="flex items-center gap-1.5 rounded-xl border border-red-700/90 bg-red-950/80 hover:bg-red-900 hover:border-red-500 px-3.5 py-2 text-xs font-bold text-red-200 hover:text-white transition shadow-sm"
+            id="btn-dashboard-clear-database"
+            title="Kosongkan Seluruh Database Transaksi (Realisasi & Pagu Anggaran)"
+          >
+            <Database className="h-3.5 w-3.5 text-rose-400" />
+            <span>Kosongkan Database</span>
+          </button>
+        </div>
+      </div>
 
       {/* 4 STATISTIC SUMMARY CARDS */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -515,6 +573,132 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* CLEAR MODAL (TRANSAKSI / DATABASE) */}
+      {clearModalType !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-md space-y-4 rounded-2xl border border-rose-900/80 bg-slate-900 p-6 shadow-2xl">
+            <div className="flex items-center gap-3 border-b border-slate-800 pb-3">
+              <div className="rounded-xl bg-rose-950 p-2.5 text-rose-400 border border-rose-800">
+                {clearModalType === 'database' ? (
+                  <Database className="h-6 w-6 text-rose-400" />
+                ) : (
+                  <Trash2 className="h-6 w-6 text-rose-400" />
+                )}
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">
+                  {clearModalType === 'database' ? 'Konfirmasi Kosongkan Database' : 'Konfirmasi Kosongkan Transaksi'}
+                </h3>
+                <p className="text-xs text-rose-300">
+                  {clearModalType === 'database'
+                    ? 'Penghapusan Seluruh Database Realisasi & Pagu Anggaran'
+                    : 'Penghapusan Transaksi Realisasi SP2D'}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2 text-xs text-slate-300">
+              <p className="font-bold text-rose-300">Peringatan Penting!</p>
+              <p>
+                {clearModalType === 'database'
+                  ? 'Tindakan ini akan mengosongkan seluruh database transaksi (Realisasi SP2D dan Pagu Anggaran) dari sistem lokal dan cloud.'
+                  : 'Tindakan ini akan menghapus data transaksi Realisasi SP2D. Data yang terhapus tidak dapat dikembalikan.'}
+              </p>
+
+              {sheetConfig.webAppUrl && (
+                <label className="flex items-center gap-2 rounded-xl bg-slate-950 border border-slate-800 p-2.5 text-xs text-slate-300 cursor-pointer hover:border-slate-700 mt-2">
+                  <input
+                    type="checkbox"
+                    checked={alsoClearSheet}
+                    onChange={e => setAlsoClearSheet(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-rose-500 focus:ring-rose-500"
+                  />
+                  <span>Sekaligus kosongkan data di Google Spreadsheet yang terhubung</span>
+                </label>
+              )}
+            </div>
+
+            <div className="space-y-2 pt-2">
+              {clearModalType === 'transaksi' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearRealisasiDatabase(selectedTahun);
+                      setClearModalType(null);
+                      alert(`Berhasil mengosongkan seluruh transaksi realisasi untuk Tahun Anggaran ${selectedTahun}.`);
+                    }}
+                    className="w-full rounded-xl bg-rose-600 hover:bg-rose-500 p-3 text-xs font-bold text-white transition flex items-center justify-between shadow-md"
+                  >
+                    <span>Hapus Transaksi TA {selectedTahun} Saja ({currentRealisasiList.length} Data)</span>
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearRealisasiDatabase();
+                      setClearModalType(null);
+                      alert('Berhasil mengosongkan seluruh transaksi realisasi untuk semua Tahun Anggaran.');
+                    }}
+                    className="w-full rounded-xl bg-slate-800 hover:bg-rose-950 hover:text-rose-300 border border-slate-700 hover:border-rose-800 p-3 text-xs font-bold text-slate-300 transition flex items-center justify-between"
+                  >
+                    <span>Hapus Transaksi Semua Tahun ({realisasiList.length} Data)</span>
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      clearRealisasiDatabase(selectedTahun);
+                      clearAnggaranDatabase(selectedTahun);
+                      if (alsoClearSheet && sheetConfig.webAppUrl) {
+                        try {
+                          await clearAllDatabase(false, true);
+                        } catch (e) {
+                          console.error(e);
+                        }
+                      }
+                      setClearModalType(null);
+                      alert(`Berhasil mengosongkan transaksi Realisasi & Pagu Anggaran TA ${selectedTahun}.`);
+                    }}
+                    className="w-full rounded-xl bg-rose-600 hover:bg-rose-500 p-3 text-xs font-bold text-white transition flex items-center justify-between shadow-md"
+                  >
+                    <span>Kosongkan Database TA {selectedTahun} Saja (Realisasi & Pagu)</span>
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await clearAllDatabase(false, alsoClearSheet);
+                      setClearModalType(null);
+                      alert('Berhasil mengosongkan SELURUH database transaksi (Realisasi & Pagu) semua Tahun Anggaran.');
+                    }}
+                    className="w-full rounded-xl bg-red-800 hover:bg-red-700 border border-red-700 p-3 text-xs font-bold text-white transition flex items-center justify-between shadow-md"
+                  >
+                    <span>Kosongkan TOTAL Database Transaksi (Semua Tahun)</span>
+                    <Database className="h-4 w-4" />
+                  </button>
+                </>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setClearModalType(null)}
+                className="rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-2 text-xs font-bold text-slate-300 transition"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

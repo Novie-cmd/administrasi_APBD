@@ -21,7 +21,8 @@ import {
   Cloud,
   CloudCheck,
   Radio,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Trash2
 } from 'lucide-react';
 
 export const Navbar: React.FC<{
@@ -35,12 +36,16 @@ export const Navbar: React.FC<{
     setSelectedTahun,
     tahunList,
     realisasiList,
+    anggaranList,
     notifications,
     sheetConfig,
     syncStatus,
     syncWithSpreadsheet,
     cloudSync,
     forceSyncCloud,
+    clearRealisasiDatabase,
+    clearAnggaranDatabase,
+    clearAllDatabase,
     opd
   } = useApp();
 
@@ -48,6 +53,8 @@ export const Navbar: React.FC<{
   const [showNotifMenu, setShowNotifMenu] = useState(false);
   const [showPwaModal, setShowPwaModal] = useState(false);
   const [showSheetModal, setShowSheetModal] = useState(false);
+  const [clearModalType, setClearModalType] = useState<'transaksi' | 'database' | null>(null);
+  const [alsoClearSheet, setAlsoClearSheet] = useState(false);
 
   const roles: UserRole[] = [
     'Administrator',
@@ -217,6 +224,42 @@ export const Navbar: React.FC<{
           <span className="inline sm:hidden font-semibold">Sheet</span>
         </button>
 
+        {/* Tombol Kosongkan Transaksi */}
+        <button
+          onClick={() => {
+            if (currentUser.role === 'Auditor') {
+              alert('Peran Auditor hanya memiliki izin lihat (Read-Only). Masuk sebagai Administrator/Operator untuk mengosongkan transaksi.');
+              return;
+            }
+            setClearModalType('transaksi');
+          }}
+          className="flex items-center gap-1.5 rounded-xl border border-rose-700/80 bg-rose-950/70 hover:bg-rose-900 hover:border-rose-500 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-rose-200 hover:text-white transition-all shadow-sm"
+          title="Kosongkan Transaksi Realisasi SP2D (TA Aktif atau Semua Tahun)"
+          id="btn-navbar-clear-transaksi"
+        >
+          <Trash2 className="h-3.5 w-3.5 text-rose-400" />
+          <span className="hidden sm:inline">Kosongkan Transaksi</span>
+          <span className="inline sm:hidden">Transaksi</span>
+        </button>
+
+        {/* Tombol Kosongkan Database */}
+        <button
+          onClick={() => {
+            if (currentUser.role === 'Auditor') {
+              alert('Peran Auditor hanya memiliki izin lihat (Read-Only). Masuk sebagai Administrator/Operator untuk mengosongkan database.');
+              return;
+            }
+            setClearModalType('database');
+          }}
+          className="flex items-center gap-1.5 rounded-xl border border-red-700/90 bg-red-950/80 hover:bg-red-900 hover:border-red-500 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-red-200 hover:text-white transition-all shadow-sm"
+          title="Kosongkan Seluruh Database Transaksi (Realisasi & Pagu Anggaran)"
+          id="btn-navbar-clear-database"
+        >
+          <Database className="h-3.5 w-3.5 text-rose-400" />
+          <span className="hidden sm:inline">Kosongkan Database</span>
+          <span className="inline sm:hidden">Database</span>
+        </button>
+
         {/* Notifications Alert Dropdown */}
         <div className="relative">
           <button
@@ -346,6 +389,132 @@ export const Navbar: React.FC<{
 
       <PWAInstallModal isOpen={showPwaModal} onClose={() => setShowPwaModal(false)} />
       <GoogleSheetSyncModal isOpen={showSheetModal} onClose={() => setShowSheetModal(false)} />
+
+      {/* GLOBAL NAVBAR CLEAR MODAL (TRANSAKSI / DATABASE) */}
+      {clearModalType !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-md space-y-4 rounded-2xl border border-rose-900/80 bg-slate-900 p-6 shadow-2xl">
+            <div className="flex items-center gap-3 border-b border-slate-800 pb-3">
+              <div className="rounded-xl bg-rose-950 p-2.5 text-rose-400 border border-rose-800">
+                {clearModalType === 'database' ? (
+                  <Database className="h-6 w-6 text-rose-400" />
+                ) : (
+                  <Trash2 className="h-6 w-6 text-rose-400" />
+                )}
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">
+                  {clearModalType === 'database' ? 'Konfirmasi Kosongkan Database' : 'Konfirmasi Kosongkan Transaksi'}
+                </h3>
+                <p className="text-xs text-rose-300">
+                  {clearModalType === 'database'
+                    ? 'Penghapusan Seluruh Database Realisasi & Pagu Anggaran'
+                    : 'Penghapusan Transaksi Realisasi SP2D'}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2 text-xs text-slate-300">
+              <p className="font-bold text-rose-300">Peringatan Penting!</p>
+              <p>
+                {clearModalType === 'database'
+                  ? 'Tindakan ini akan mengosongkan seluruh database transaksi (Realisasi SP2D dan Pagu Anggaran) dari sistem lokal dan cloud.'
+                  : 'Tindakan ini akan menghapus data transaksi Realisasi SP2D. Data yang terhapus tidak dapat dikembalikan.'}
+              </p>
+
+              {sheetConfig.webAppUrl && (
+                <label className="flex items-center gap-2 rounded-xl bg-slate-950 border border-slate-800 p-2.5 text-xs text-slate-300 cursor-pointer hover:border-slate-700 mt-2">
+                  <input
+                    type="checkbox"
+                    checked={alsoClearSheet}
+                    onChange={e => setAlsoClearSheet(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-rose-500 focus:ring-rose-500"
+                  />
+                  <span>Sekaligus kosongkan data di Google Spreadsheet yang terhubung</span>
+                </label>
+              )}
+            </div>
+
+            <div className="space-y-2 pt-2">
+              {clearModalType === 'transaksi' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearRealisasiDatabase(selectedTahun);
+                      setClearModalType(null);
+                      alert(`Berhasil mengosongkan seluruh transaksi realisasi untuk Tahun Anggaran ${selectedTahun}.`);
+                    }}
+                    className="w-full rounded-xl bg-rose-600 hover:bg-rose-500 p-3 text-xs font-bold text-white transition flex items-center justify-between shadow-md"
+                  >
+                    <span>Hapus Transaksi TA {selectedTahun} Saja ({realisasiList.filter(r => Number(r.tahun) === Number(selectedTahun)).length} Data)</span>
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearRealisasiDatabase();
+                      setClearModalType(null);
+                      alert('Berhasil mengosongkan seluruh transaksi realisasi untuk semua Tahun Anggaran.');
+                    }}
+                    className="w-full rounded-xl bg-slate-800 hover:bg-rose-950 hover:text-rose-300 border border-slate-700 hover:border-rose-800 p-3 text-xs font-bold text-slate-300 transition flex items-center justify-between"
+                  >
+                    <span>Hapus Transaksi Semua Tahun ({realisasiList.length} Data)</span>
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      clearRealisasiDatabase(selectedTahun);
+                      clearAnggaranDatabase(selectedTahun);
+                      if (alsoClearSheet && sheetConfig.webAppUrl) {
+                        try {
+                          await clearAllDatabase(false, true);
+                        } catch (e) {
+                          console.error(e);
+                        }
+                      }
+                      setClearModalType(null);
+                      alert(`Berhasil mengosongkan transaksi Realisasi & Pagu Anggaran TA ${selectedTahun}.`);
+                    }}
+                    className="w-full rounded-xl bg-rose-600 hover:bg-rose-500 p-3 text-xs font-bold text-white transition flex items-center justify-between shadow-md"
+                  >
+                    <span>Kosongkan Database TA {selectedTahun} Saja (Realisasi & Pagu)</span>
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await clearAllDatabase(false, alsoClearSheet);
+                      setClearModalType(null);
+                      alert('Berhasil mengosongkan SELURUH database transaksi (Realisasi & Pagu) semua Tahun Anggaran.');
+                    }}
+                    className="w-full rounded-xl bg-red-800 hover:bg-red-700 border border-red-700 p-3 text-xs font-bold text-white transition flex items-center justify-between shadow-md"
+                  >
+                    <span>Kosongkan TOTAL Database Transaksi (Semua Tahun)</span>
+                    <Database className="h-4 w-4" />
+                  </button>
+                </>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setClearModalType(null)}
+                className="rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-2 text-xs font-bold text-slate-300 transition"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };
