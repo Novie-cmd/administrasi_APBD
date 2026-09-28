@@ -520,6 +520,83 @@ export const saveSharedDataToFirestore = async (
   }
 };
 
+export const CONFIG_DOC_ID = 'sheet_config';
+
+/**
+ * Saves and broadcasts Google Sheet / Apps Script WebApp configuration instantly
+ * across all connected devices in realtime without touching bulky data chunks.
+ */
+export const saveSheetConfigToFirestore = async (
+  sheetConfig: any,
+  userIdentifier: string = 'System'
+): Promise<void> => {
+  if (getIsFirestoreQuotaExceeded()) return;
+
+  const nowIso = new Date().toISOString();
+  const cleanConfig = {
+    ...sheetConfig,
+    updatedAt: nowIso,
+    lastUpdatedBy: userIdentifier
+  };
+
+  const tasks: Promise<any>[] = [];
+
+  // 1. Update the dedicated fast configuration document
+  const cfgDocRef = doc(db, SHARED_DATA_COLLECTION, CONFIG_DOC_ID);
+  tasks.push(
+    setDoc(cfgDocRef, cleanConfig, { merge: true })
+  );
+
+  // 2. Also merge into the main application state document for complete backward compatibility
+  const mainDocRef = doc(db, SHARED_DATA_COLLECTION, SHARED_DATA_DOC_ID);
+  tasks.push(
+    setDoc(
+      mainDocRef,
+      {
+        sheetConfig: cleanConfig,
+        updatedAt: nowIso,
+        updatedBy: userIdentifier
+      },
+      { merge: true }
+    )
+  );
+
+  try {
+    await Promise.all(tasks);
+  } catch (error) {
+    if (isQuotaError(error)) {
+      await markFirestoreQuotaExceeded();
+    }
+    console.warn('Could not save sheetConfig to Firestore:', error);
+    throw error;
+  }
+};
+
+/**
+ * Real-time fast listener specifically for Google Sheet / Apps Script WebApp URL changes.
+ * Propagates URL and connection changes to all connected devices in < 100ms.
+ */
+export const subscribeToSheetConfig = (
+  onConfig: (cfg: any) => void,
+  onError?: (err: any) => void
+) => {
+  const cfgDocRef = doc(db, SHARED_DATA_COLLECTION, CONFIG_DOC_ID);
+  return onSnapshot(
+    cfgDocRef,
+    snapshot => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        if (data && (data.webAppUrl || data.spreadsheetId)) {
+          onConfig(data);
+        }
+      }
+    },
+    error => {
+      if (onError) onError(error);
+    }
+  );
+};
+
 /**
  * Directly purges all shared data from Firestore (main doc and all chunks).
  */

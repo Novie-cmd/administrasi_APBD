@@ -24,6 +24,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
   const {
     sheetConfig,
     setSheetConfig,
+    updateSheetConfig,
     realisasiList,
     anggaranList,
     syncStatus,
@@ -238,19 +239,24 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
         {/* Input Web App URL & Spreadsheet ID */}
         <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-slate-300">Google Apps Script Web App URL (Aktif):</label>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-bold text-slate-300">Google Apps Script Web App URL (Aktif):</label>
+              <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded-full font-medium">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                Auto-Sync Semua Perangkat
+              </span>
+            </div>
             <button
               type="button"
-              onClick={() => {
-                setSheetConfig({
-                  ...sheetConfig,
+              onClick={async () => {
+                await updateSheetConfig({
                   webAppUrl: 'https://script.google.com/macros/s/AKfycbxt-sWb1tWsnBmUXaflIgBArl_KIqPnEBUJBxbr-XRhbeTmvRfbuce5QWaz1fsQ4Nw9LQ/exec',
                   spreadsheetId: '1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY',
                   status: 'Connected'
-                });
+                }, true);
                 setSheetMessage({
                   type: 'success',
-                  text: 'URL WebApp dan Spreadsheet ID resmi berhasil ditetapkan!'
+                  text: '✓ URL WebApp dan Spreadsheet ID resmi berhasil ditetapkan & langsung disinkronkan ke seluruh perangkat!'
                 });
               }}
               className="text-[11px] text-amber-400 hover:text-amber-300 underline font-semibold"
@@ -263,6 +269,11 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
             placeholder="https://script.google.com/macros/s/AKfycbxt-sWb1tWsnBmUXaflIgBArl_KIqPnEBUJBxbr-XRhbeTmvRfbuce5QWaz1fsQ4Nw9LQ/exec"
             value={sheetConfig.webAppUrl}
             onChange={e => setSheetConfig({ ...sheetConfig, webAppUrl: e.target.value })}
+            onBlur={() => {
+              if (sheetConfig.webAppUrl) {
+                updateSheetConfig({ webAppUrl: sheetConfig.webAppUrl.trim(), spreadsheetId: sheetConfig.spreadsheetId.trim() }, true);
+              }
+            }}
             className="w-full rounded-xl border border-slate-700 bg-slate-900 p-2.5 text-xs text-emerald-300 font-mono focus:border-emerald-500 focus:outline-none"
           />
 
@@ -285,6 +296,11 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
               placeholder="1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY"
               value={sheetConfig.spreadsheetId}
               onChange={e => setSheetConfig({ ...sheetConfig, spreadsheetId: e.target.value })}
+              onBlur={() => {
+                if (sheetConfig.spreadsheetId) {
+                  updateSheetConfig({ webAppUrl: sheetConfig.webAppUrl.trim(), spreadsheetId: sheetConfig.spreadsheetId.trim() }, true);
+                }
+              }}
               className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-2.5 text-xs text-slate-300 font-mono focus:border-emerald-500 focus:outline-none"
             />
           </div>
@@ -440,7 +456,7 @@ function doPost(e) {
 
     // 2. Simpan Master Program
     if (payload.programList && Array.isArray(payload.programList)) {
-      var sheetProg = getOrCreateSheet(ss, 'Master_Program');
+      var sheetProg = getOrCreateSheet(ss, 'Program', ['Master_Program', 'Master Program', 'Program']);
       var headersProg = ['Kode_Program', 'Nama_Program', 'Tahun'];
       sheetProg.clear();
       sheetProg.appendRow(headersProg);
@@ -457,7 +473,7 @@ function doPost(e) {
 
     // 3. Simpan Master Kegiatan
     if (payload.kegiatanList && Array.isArray(payload.kegiatanList)) {
-      var sheetKeg = getOrCreateSheet(ss, 'Master_Kegiatan');
+      var sheetKeg = getOrCreateSheet(ss, 'Kegiatan', ['Master_Kegiatan', 'Master Kegiatan', 'Kegiatan']);
       var headersKeg = ['Kode_Program', 'Kode_Kegiatan', 'Nama_Kegiatan', 'Tahun'];
       sheetKeg.clear();
       sheetKeg.appendRow(headersKeg);
@@ -474,7 +490,7 @@ function doPost(e) {
 
     // 4. Simpan Master Sub Kegiatan
     if (payload.subKegiatanList && Array.isArray(payload.subKegiatanList)) {
-      var sheetSub = getOrCreateSheet(ss, 'Master_Sub_Kegiatan');
+      var sheetSub = getOrCreateSheet(ss, 'Sub_Kegiatan', ['Master_Sub_Kegiatan', 'Sub_Kegiatan', 'Sub Kegiatan', 'SubKegiatan']);
       var headersSub = ['Kode_Program', 'Kode_Kegiatan', 'Kode_Sub_Kegiatan', 'Nama_Sub_Kegiatan', 'Tahun'];
       sheetSub.clear();
       sheetSub.appendRow(headersSub);
@@ -491,7 +507,7 @@ function doPost(e) {
 
     // 5. Simpan Master Rekening Belanja
     if (payload.belanjaList && Array.isArray(payload.belanjaList)) {
-      var sheetBel = getOrCreateSheet(ss, 'Master_Rekening_Belanja');
+      var sheetBel = getOrCreateSheet(ss, 'Rekening_Belanja', ['Master_Rekening_Belanja', 'Rekening_Belanja', 'Rekening Belanja', 'Rekening', 'Belanja']);
       var headersBel = ['Kode_Rekening_Belanja', 'Nama_Rekening_Belanja', 'Jenis_Belanja', 'Tahun'];
       sheetBel.clear();
       sheetBel.appendRow(headersBel);
@@ -599,9 +615,15 @@ function ensureRows(sheet, neededCount) {
   }
 }
 
-function getOrCreateSheet(ss, name) {
-  var s = ss.getSheetByName(name);
-  return s ? s : ss.insertSheet(name);
+function getOrCreateSheet(ss, name, aliases) {
+  if (aliases && aliases.length) {
+    for (var i = 0; i < aliases.length; i++) {
+      var s = ss.getSheetByName(aliases[i]);
+      if (s) return s;
+    }
+  }
+  var exist = ss.getSheetByName(name);
+  return exist ? exist : ss.insertSheet(name);
 }
 
 function formatHeader(sheet, bg) {

@@ -19,6 +19,7 @@
         "realisasiList": { "type": "array" },
         "importLogs": { "type": "array" },
         "activityLogs": { "type": "array" },
+        "sheetConfig": { "type": "object" },
         "updatedAt": { "type": "string" },
         "updatedBy": { "type": "string" }
       }

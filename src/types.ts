@@ -158,6 +158,8 @@ export interface GoogleSheetConfig {
   autoSync: boolean;
   lastSyncedAt?: string;
   status: 'Connected' | 'Disconnected' | 'Syncing' | 'Error';
+  lastUpdatedBy?: string;
+  updatedAt?: string;
 }
 
 export interface CloudSyncStatus {

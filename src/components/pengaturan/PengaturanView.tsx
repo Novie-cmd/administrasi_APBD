@@ -43,6 +43,8 @@ export const PengaturanView: React.FC = () => {
     deleteUser,
     sheetConfig,
     setSheetConfig,
+    updateSheetConfig,
+    getShareableConfigUrl,
     syncStatus,
     syncWithSpreadsheet,
     pushToGoogleSheet,
@@ -81,6 +83,8 @@ export const PengaturanView: React.FC = () => {
   const [isPullingSheet, setIsPullingSheet] = useState(false);
   const [pullSyncMode, setPullSyncMode] = useState<'replace' | 'merge'>('replace');
   const [isClearingSheet, setIsClearingSheet] = useState(false);
+  const [isSavingUrl, setIsSavingUrl] = useState(false);
+  const [copiedShareLink, setCopiedShareLink] = useState(false);
 
   // Search filter
   const [searchTerm, setSearchTerm] = useState('');
@@ -789,31 +793,59 @@ export const PengaturanView: React.FC = () => {
 
           {/* Konfigurasi URL */}
           <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-3 gap-2">
               <div className="flex items-center gap-2">
                 <Database className="h-5 w-5 text-emerald-400" />
-                <h3 className="text-sm font-bold text-white">Konfigurasi URL Google Apps Script WebApp</h3>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Konfigurasi URL Google Apps Script WebApp</h3>
+                  <p className="text-[11px] text-slate-400">Sinkronisasi otomatis ke seluruh perangkat via Realtime Cloud</p>
+                </div>
               </div>
-              <span className="rounded-full bg-emerald-950 px-3 py-1 text-xs font-bold text-emerald-300 border border-emerald-700">
-                Status: {sheetConfig.status}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="flex items-center gap-1.5 rounded-full bg-emerald-950 px-3 py-1 text-xs font-bold text-emerald-300 border border-emerald-700">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span>{sheetConfig.status}</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Banner Sinkronisasi Real-Time Otomatis */}
+            <div className="rounded-xl border border-cyan-500/30 bg-cyan-950/20 p-3.5 space-y-1.5 text-xs text-cyan-200">
+              <div className="flex items-center gap-2 font-bold text-cyan-300">
+                <Globe className="h-4 w-4 text-cyan-400 shrink-0" />
+                <span>Sinkronisasi Otomatis ke Seluruh Perangkat (Real-time Cloud Sync)</span>
+              </div>
+              <p className="text-[11px] text-cyan-200/90 leading-relaxed pl-6">
+                Setiap perubahan WebApp URL atau Spreadsheet ID yang Anda simpan di sini akan <strong>secara otomatis berubah di semua perangkat (HP, laptop, tablet, dan komputer lain)</strong> yang membuka aplikasi ini tanpa perlu memasukkan ulang.
+              </p>
+              {sheetConfig.lastUpdatedBy && (
+                <div className="text-[10px] text-cyan-400/80 pl-6 pt-0.5">
+                  Terakhir diperbarui oleh: <strong className="text-white">{sheetConfig.lastUpdatedBy}</strong>
+                  {sheetConfig.updatedAt && ` pada ${new Date(sheetConfig.updatedAt).toLocaleString('id-ID')}`}
+                </div>
+              )}
             </div>
 
             <div>
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-300">Google Apps Script Web App URL (Aktif):</label>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-bold text-slate-300">Google Apps Script Web App URL (Aktif):</label>
+                  <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded-full font-medium">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Sinkron Otomatis Antar Perangkat
+                  </span>
+                </div>
                 <button
                   type="button"
-                  onClick={() => {
-                    setSheetConfig({
-                      ...sheetConfig,
+                  onClick={async () => {
+                    await updateSheetConfig({
                       webAppUrl: 'https://script.google.com/macros/s/AKfycbxt-sWb1tWsnBmUXaflIgBArl_KIqPnEBUJBxbr-XRhbeTmvRfbuce5QWaz1fsQ4Nw9LQ/exec',
                       spreadsheetId: '1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY',
                       status: 'Connected'
-                    });
+                    }, true);
                     setSheetMessage({
                       type: 'success',
-                      text: 'URL WebApp dan Spreadsheet ID resmi berhasil ditetapkan!'
+                      text: '✓ URL WebApp dan Spreadsheet ID resmi berhasil ditetapkan & langsung disinkronkan otomatis ke seluruh perangkat!'
                     });
                   }}
                   className="text-[11px] text-amber-400 hover:text-amber-300 underline font-semibold"
@@ -826,9 +858,14 @@ export const PengaturanView: React.FC = () => {
                 placeholder="https://script.google.com/macros/s/AKfycbxt-sWb1tWsnBmUXaflIgBArl_KIqPnEBUJBxbr-XRhbeTmvRfbuce5QWaz1fsQ4Nw9LQ/exec"
                 value={sheetConfig.webAppUrl}
                 onChange={e => setSheetConfig({ ...sheetConfig, webAppUrl: e.target.value })}
+                onBlur={() => {
+                  if (sheetConfig.webAppUrl) {
+                    updateSheetConfig({ webAppUrl: sheetConfig.webAppUrl.trim(), spreadsheetId: sheetConfig.spreadsheetId.trim() }, true);
+                  }
+                }}
                 className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-emerald-300 font-mono focus:border-emerald-500 focus:outline-none"
               />
-              <p className="text-[11px] text-slate-400 mt-1">URL Endpoint Google Apps Script yang menjalankan transfer data antara aplikasi dan Google Sheets.</p>
+              <p className="text-[11px] text-slate-400 mt-1">URL Endpoint Google Apps Script yang menjalankan transfer data antara aplikasi dan Google Sheets. Setiap perubahan otomatis tersinkron ke semua perangkat yang memiliki link.</p>
             </div>
 
             <div>
@@ -850,35 +887,95 @@ export const PengaturanView: React.FC = () => {
                 placeholder="1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY"
                 value={sheetConfig.spreadsheetId}
                 onChange={e => setSheetConfig({ ...sheetConfig, spreadsheetId: e.target.value })}
+                onBlur={() => {
+                  if (sheetConfig.spreadsheetId) {
+                    updateSheetConfig({ webAppUrl: sheetConfig.webAppUrl.trim(), spreadsheetId: sheetConfig.spreadsheetId.trim() }, true);
+                  }
+                }}
                 className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-slate-300 font-mono focus:border-emerald-500 focus:outline-none"
               />
               <p className="text-[11px] text-slate-400 mt-1">ID dokumen Google Spreadsheet tujuan sinkronisasi (1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY).</p>
             </div>
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between pt-2 border-t border-slate-800 gap-3">
               <span className="text-xs text-slate-400">
                 Terakhir Sinkronisasi: <strong className="text-white">{sheetConfig.lastSyncedAt || 'Belum pernah'}</strong>
               </span>
-              <button
-                onClick={async () => {
-                  if (!sheetConfig.webAppUrl) {
-                    setSheetMessage({ type: 'error', text: 'Masukkan Web App URL terlebih dahulu.' });
-                    return;
-                  }
-                  setIsPushingSheet(true);
-                  const res = await pushToGoogleSheet();
-                  setIsPushingSheet(false);
-                  setSheetMessage({
-                    type: res.success ? 'success' : 'error',
-                    text: res.message
-                  });
-                }}
-                disabled={isPushingSheet || syncStatus === 'syncing'}
-                className="flex items-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-2 text-xs font-bold text-white border border-slate-700 shadow"
-              >
-                <RefreshCw className={`h-3.5 w-3.5 ${isPushingSheet ? 'animate-spin' : ''}`} />
-                <span>Simpan & Tes Koneksi</span>
-              </button>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Tombol Salin Link Berisi URL */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const shareUrl = getShareableConfigUrl();
+                    if (navigator?.clipboard) {
+                      navigator.clipboard.writeText(shareUrl);
+                      setCopiedShareLink(true);
+                      setTimeout(() => setCopiedShareLink(false), 3000);
+                    }
+                  }}
+                  className="flex items-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 border border-slate-700 transition"
+                  title="Salin tautan web yang otomatis memuat URL dan ID Spreadsheet ini"
+                >
+                  {copiedShareLink ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5 text-cyan-400" />}
+                  <span>{copiedShareLink ? 'Tautan Tersalin!' : 'Salin Link dengan URL Ini'}</span>
+                </button>
+
+                {/* Tombol Simpan & Terapkan ke Seluruh Perangkat */}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!sheetConfig.webAppUrl) {
+                      setSheetMessage({ type: 'error', text: 'Masukkan Web App URL terlebih dahulu.' });
+                      return;
+                    }
+                    setIsSavingUrl(true);
+                    await updateSheetConfig({
+                      webAppUrl: sheetConfig.webAppUrl.trim(),
+                      spreadsheetId: sheetConfig.spreadsheetId.trim(),
+                      status: 'Connected'
+                    }, true);
+                    setIsSavingUrl(false);
+                    setSheetMessage({
+                      type: 'success',
+                      text: '✓ URL WebApp & Spreadsheet ID berhasil disimpan dan langsung disiarkan ke seluruh perangkat (HP, laptop, tablet)!'
+                    });
+                  }}
+                  disabled={isSavingUrl}
+                  className="flex items-center gap-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-cyan-950 transition active:scale-95 disabled:opacity-50"
+                >
+                  {isSavingUrl ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                  <span>Simpan ke Semua Perangkat</span>
+                </button>
+
+                {/* Tombol Tes Koneksi & Kirim */}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!sheetConfig.webAppUrl) {
+                      setSheetMessage({ type: 'error', text: 'Masukkan Web App URL terlebih dahulu.' });
+                      return;
+                    }
+                    setIsPushingSheet(true);
+                    // Also ensure latest URL is saved to cloud
+                    await updateSheetConfig({
+                      webAppUrl: sheetConfig.webAppUrl.trim(),
+                      spreadsheetId: sheetConfig.spreadsheetId.trim()
+                    }, true);
+                    const res = await pushToGoogleSheet();
+                    setIsPushingSheet(false);
+                    setSheetMessage({
+                      type: res.success ? 'success' : 'error',
+                      text: res.message
+                    });
+                  }}
+                  disabled={isPushingSheet || syncStatus === 'syncing'}
+                  className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-emerald-950 transition active:scale-95 disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${isPushingSheet ? 'animate-spin' : ''}`} />
+                  <span>Tes &amp; Kirim Data</span>
+                </button>
+              </div>
             </div>
           </div>
 

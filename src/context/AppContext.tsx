@@ -30,6 +30,8 @@ import {
 import {
   subscribeToSharedData,
   saveSharedDataToFirestore,
+  saveSheetConfigToFirestore,
+  subscribeToSheetConfig,
   fetchSharedDataOnce,
   getIsFirestoreQuotaExceeded,
   resetFirestoreQuotaFlag,
@@ -86,6 +88,8 @@ interface AppContextType {
   
   sheetConfig: GoogleSheetConfig;
   setSheetConfig: React.Dispatch<React.SetStateAction<GoogleSheetConfig>>;
+  updateSheetConfig: (newConfig: Partial<GoogleSheetConfig>, broadcastToCloud?: boolean) => Promise<void>;
+  getShareableConfigUrl: () => string;
   syncStatus: 'idle' | 'syncing' | 'success' | 'error';
   syncWithSpreadsheet: () => Promise<void>;
   
@@ -220,6 +224,9 @@ const computeStateFingerprint = (data: any): string => {
   const rHeadTail = rCount > 0 ? `${rList[0]?.id}_${rList[0]?.nilai}_${rList[0]?.statusValidation}_${rList[rCount - 1]?.id}` : '';
   const aHeadTail = aCount > 0 ? `${aList[0]?.id}_${aList[0]?.paguAkhir || aList[0]?.pagu}_${aList[aCount - 1]?.id}` : '';
   
+  const cfgUrl = data.sheetConfig?.webAppUrl || '';
+  const cfgId = data.sheetConfig?.spreadsheetId || '';
+
   return [
     rCount,
     rSum,
@@ -234,26 +241,26 @@ const computeStateFingerprint = (data: any): string => {
     data.sumberDanaList?.length || 0,
     data.rekananList?.length || 0,
     data.users?.length || 0,
-    data.opdList?.length || 0
+    data.opdList?.length || 0,
+    cfgUrl,
+    cfgId
   ].join('::');
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Local modification timestamp tracker
-  const localModifiedAtRef = useRef<number>(
-    typeof window !== 'undefined' && localStorage.getItem(LOCAL_TIMESTAMP_KEY)
-      ? Number(localStorage.getItem(LOCAL_TIMESTAMP_KEY))
-      : Date.now()
-  );
+  // Local modification timestamp tracker (0 until an actual user action occurs in this session)
+  const localModifiedAtRef = useRef<number>(0);
   const latestStateRef = useRef<any>(null);
 
   // Helper to persist snapshot to both primary and backup storage synchronously
-  const persistToLocalStorage = (data: any) => {
+  const persistToLocalStorage = (data: any, markAsUserLocalEdit: boolean = false) => {
     try {
       const now = Date.now();
-      localModifiedAtRef.current = now;
+      if (markAsUserLocalEdit) {
+        localModifiedAtRef.current = now;
+        localStorage.setItem(LOCAL_TIMESTAMP_KEY, String(now));
+      }
       latestStateRef.current = data;
-      localStorage.setItem(LOCAL_TIMESTAMP_KEY, String(now));
       localStorage.setItem('bfms_has_ever_initialized', 'true');
       if (data.selectedTahun) {
         localStorage.setItem(SELECTED_TAHUN_KEY, String(data.selectedTahun));
@@ -409,9 +416,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(
     storedData?.activityLogs || INITIAL_ACTIVITY_LOGS
   );
-  const [sheetConfig, setSheetConfig] = useState<GoogleSheetConfig>(() => {
+  const [sheetConfig, setSheetConfigState] = useState<GoogleSheetConfig>(() => {
     const defaultUrl = 'https://script.google.com/macros/s/AKfycbxt-sWb1tWsnBmUXaflIgBArl_KIqPnEBUJBxbr-XRhbeTmvRfbuce5QWaz1fsQ4Nw9LQ/exec';
     const defaultSheetId = '1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY';
+
+    // 1. Prioritize URL query parameters if present (allowing instant sync on any device opening a shared link)
+    if (typeof window !== 'undefined') {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const paramUrl = params.get('webAppUrl') || params.get('sheetUrl') || params.get('url');
+        const paramId = params.get('spreadsheetId') || params.get('sheetId');
+        if (paramUrl || paramId) {
+          return {
+            spreadsheetId: (paramId || defaultSheetId).trim(),
+            webAppUrl: (paramUrl || defaultUrl).trim(),
+            autoSync: true,
+            status: 'Connected',
+            lastSyncedAt: '',
+            updatedAt: new Date().toISOString()
+          };
+        }
+      } catch {}
+    }
+
     const cfg = storedData?.sheetConfig;
     if (cfg) {
       const isOldDummyUrl = !cfg.webAppUrl || cfg.webAppUrl.includes('AKfycbx_BAKESBANGPOLDAGRI_NTB_WEBAPP') || cfg.webAppUrl.includes('...');
@@ -425,6 +452,160 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     return INITIAL_SHEET_CONFIG;
   });
+
+  const sheetConfigDebounceTimer = useRef<any>(null);
+
+  // Synchronously merges and applies incoming remote sheet config across devices
+  const applyIncomingSheetConfig = (remoteCfg: any, source: string = 'remote') => {
+    if (!remoteCfg) return;
+    const current = latestStateRef.current?.sheetConfig || sheetConfig;
+
+    const defaultUrl = 'https://script.google.com/macros/s/AKfycbxt-sWb1tWsnBmUXaflIgBArl_KIqPnEBUJBxbr-XRhbeTmvRfbuce5QWaz1fsQ4Nw9LQ/exec';
+    const defaultSheetId = '1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY';
+    const isOldDummyUrl = !remoteCfg.webAppUrl || remoteCfg.webAppUrl.includes('AKfycbx_BAKESBANGPOLDAGRI_NTB_WEBAPP') || remoteCfg.webAppUrl.includes('...');
+    const isOldDummyId = !remoteCfg.spreadsheetId || remoteCfg.spreadsheetId.includes('1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms');
+
+    const cleanRemoteUrl = (isOldDummyUrl ? defaultUrl : (remoteCfg.webAppUrl || defaultUrl)).trim();
+    const cleanRemoteId = (isOldDummyId ? defaultSheetId : (remoteCfg.spreadsheetId || defaultSheetId)).trim();
+
+    const hasChanged = cleanRemoteUrl !== current.webAppUrl || cleanRemoteId !== current.spreadsheetId;
+
+    if (hasChanged) {
+      const mergedCfg: GoogleSheetConfig = {
+        ...current,
+        ...remoteCfg,
+        webAppUrl: cleanRemoteUrl,
+        spreadsheetId: cleanRemoteId,
+        status: remoteCfg.status || 'Connected',
+        updatedAt: remoteCfg.updatedAt || new Date().toISOString()
+      };
+
+      setSheetConfigState(mergedCfg);
+
+      const nextState = {
+        ...(latestStateRef.current || {}),
+        sheetConfig: mergedCfg
+      };
+      latestStateRef.current = nextState;
+      persistToLocalStorage(nextState, false);
+
+      console.info(`[Sync] Google Sheet URL updated automatically across devices (${source}):`, cleanRemoteUrl);
+    }
+  };
+
+  // Wrapped setSheetConfig that also immediately updates local cache and ref, with 800ms debounce cloud sync
+  const setSheetConfig: React.Dispatch<React.SetStateAction<GoogleSheetConfig>> = (valueOrFn) => {
+    setSheetConfigState(prev => {
+      const next = typeof valueOrFn === 'function' ? valueOrFn(prev) : valueOrFn;
+      const nextState = {
+        ...(latestStateRef.current || {}),
+        sheetConfig: next
+      };
+      latestStateRef.current = nextState;
+      persistToLocalStorage(nextState, true);
+
+      // Auto-broadcast URL changes across all devices after 800ms debounce
+      if (sheetConfigDebounceTimer.current) {
+        clearTimeout(sheetConfigDebounceTimer.current);
+      }
+      sheetConfigDebounceTimer.current = setTimeout(() => {
+        if (next.webAppUrl && (next.webAppUrl.startsWith('http://') || next.webAppUrl.startsWith('https://'))) {
+          saveSheetConfigToFirestore(next, currentUser.nama || currentUser.username).catch(() => {});
+          try {
+            if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+              const bc = new BroadcastChannel('bfms_url_sync_channel');
+              bc.postMessage({ type: 'URL_UPDATE', sheetConfig: next });
+              bc.close();
+            }
+          } catch {}
+        }
+      }, 800);
+
+      return next;
+    });
+  };
+
+  // Dedicated method to update and broadcast sheet configuration across all connected devices in realtime
+  const updateSheetConfig = async (newConfig: Partial<GoogleSheetConfig>, broadcastToCloud: boolean = true) => {
+    const defaultUrl = 'https://script.google.com/macros/s/AKfycbxt-sWb1tWsnBmUXaflIgBArl_KIqPnEBUJBxbr-XRhbeTmvRfbuce5QWaz1fsQ4Nw9LQ/exec';
+    const defaultSheetId = '1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY';
+    const isOldDummyUrl = !newConfig.webAppUrl || newConfig.webAppUrl.includes('AKfycbx_BAKESBANGPOLDAGRI_NTB_WEBAPP') || newConfig.webAppUrl.includes('...');
+    const isOldDummyId = !newConfig.spreadsheetId || newConfig.spreadsheetId.includes('1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms');
+
+    const updated: GoogleSheetConfig = {
+      ...sheetConfig,
+      ...newConfig,
+      webAppUrl: isOldDummyUrl ? defaultUrl : (newConfig.webAppUrl ? newConfig.webAppUrl.trim() : sheetConfig.webAppUrl),
+      spreadsheetId: isOldDummyId ? defaultSheetId : (newConfig.spreadsheetId ? newConfig.spreadsheetId.trim() : sheetConfig.spreadsheetId),
+      lastUpdatedBy: currentUser.nama || currentUser.username,
+      updatedAt: new Date().toISOString(),
+      status: newConfig.status || 'Connected'
+    };
+    setSheetConfigState(updated);
+
+    const nextState = {
+      ...(latestStateRef.current || {}),
+      sheetConfig: updated
+    };
+    latestStateRef.current = nextState;
+    persistToLocalStorage(nextState, true);
+
+    // Broadcast across browser tabs on the same device immediately
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('bfms_url_sync_channel');
+        bc.postMessage({ type: 'URL_UPDATE', sheetConfig: updated });
+        bc.close();
+      }
+    } catch {}
+
+    if (broadcastToCloud) {
+      try {
+        await saveSheetConfigToFirestore(updated, currentUser.nama || currentUser.username);
+      } catch (e) {
+        console.warn('saveSheetConfigToFirestore error:', e);
+      }
+      logActivity(`Memperbarui URL Google Apps Script WebApp & disinkronkan ke seluruh perangkat: ${updated.webAppUrl.substring(0, 60)}...`);
+    }
+  };
+
+  // 0a. Dedicated Real-Time Listener for URL & Sheet Configuration across all devices (<100ms response)
+  useEffect(() => {
+    const unsub = subscribeToSheetConfig(
+      cfg => {
+        if (cfg) {
+          applyIncomingSheetConfig(cfg, 'Fast Config Doc');
+        }
+      },
+      err => {
+        console.warn('subscribeToSheetConfig error:', err);
+      }
+    );
+    return () => unsub();
+  }, []);
+
+  // 0b. BroadcastChannel for zero-latency multi-tab sync on same machine
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
+    const bc = new BroadcastChannel('bfms_url_sync_channel');
+    bc.onmessage = (ev) => {
+      if (ev.data?.type === 'URL_UPDATE' && ev.data?.sheetConfig) {
+        applyIncomingSheetConfig(ev.data.sheetConfig, 'Cross-tab Broadcast');
+      }
+    };
+    return () => bc.close();
+  }, []);
+
+  // Helper to generate a shareable app link containing current URL configurations
+  const getShareableConfigUrl = (): string => {
+    if (typeof window === 'undefined') return '';
+    const base = window.location.origin + window.location.pathname;
+    const params = new URLSearchParams();
+    if (sheetConfig.webAppUrl) params.set('webAppUrl', sheetConfig.webAppUrl);
+    if (sheetConfig.spreadsheetId) params.set('spreadsheetId', sheetConfig.spreadsheetId);
+    return `${base}?${params.toString()}`;
+  };
+
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
 
   // Cloud Real-Time Firebase Sync State
@@ -437,6 +618,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const isApplyingRemoteChange = useRef(false);
   const isInitialMount = useRef(true);
   const lastSavedDataSignature = useRef<string>('');
+
+  // 0. Auto-adopt URL query params if a shared link is opened, clean URL bar, and sync to Cloud
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search) {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const paramUrl = params.get('webAppUrl') || params.get('sheetUrl') || params.get('url');
+        const paramId = params.get('spreadsheetId') || params.get('sheetId');
+        if (paramUrl || paramId) {
+          const newUrl = (paramUrl || sheetConfig.webAppUrl).trim();
+          const newId = (paramId || sheetConfig.spreadsheetId).trim();
+          
+          // Clean URL in browser address bar without page reload
+          const cleanUrl = window.location.origin + window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
+
+          updateSheetConfig({
+            webAppUrl: newUrl,
+            spreadsheetId: newId,
+            status: 'Connected'
+          }, true);
+        }
+      } catch (err) {
+        console.warn('URL param parse error:', err);
+      }
+    }
+  }, []);
 
   // Continually sync latestStateRef to prevent stale closures during deletions and push/pull
   useEffect(() => {
@@ -562,14 +770,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       remoteData => {
         if (!remoteData) return;
 
+        // CRITICAL: Always immediately process and apply remote sheetConfig across devices,
+        // so URL changes propagate without being held back by transaction edit guards
+        if (remoteData.sheetConfig) {
+          applyIncomingSheetConfig(remoteData.sheetConfig, 'Main App State');
+        }
+
         const remoteUpdatedTime = remoteData.updatedAt ? new Date(remoteData.updatedAt).getTime() : 0;
         const localSavedTimestampStr = localStorage.getItem(LOCAL_TIMESTAMP_KEY);
-        const localUpdatedTime = localSavedTimestampStr ? Number(localSavedTimestampStr) : (localModifiedAtRef.current || 0);
+        const localUpdatedTime = localSavedTimestampStr ? Number(localSavedTimestampStr) : 0;
 
         // Conflict check: if local changes were made very recently (<3000ms) or local timestamp is newer,
         // retain local inputs so in-flight snapshots or race conditions don't resurrect deleted records
-        const timeSinceLocalEdit = Date.now() - (localModifiedAtRef.current || 0);
-        if (timeSinceLocalEdit < 3000 || localUpdatedTime > remoteUpdatedTime + 1000) {
+        const timeSinceLocalEdit = localModifiedAtRef.current > 0 ? (Date.now() - localModifiedAtRef.current) : Infinity;
+        if (timeSinceLocalEdit < 3000 || (localModifiedAtRef.current > 0 && localUpdatedTime > remoteUpdatedTime + 1000)) {
           console.info('Local state is newer or recently modified. Retaining local inputs.');
           return;
         }
@@ -627,11 +841,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const defaultSheetId = '1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY';
           const isOldDummyUrl = !cfg.webAppUrl || cfg.webAppUrl.includes('AKfycbx_BAKESBANGPOLDAGRI_NTB_WEBAPP') || cfg.webAppUrl.includes('...');
           const isOldDummyId = !cfg.spreadsheetId || cfg.spreadsheetId.includes('1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms');
-          setSheetConfig({
+          const resolvedCfg: GoogleSheetConfig = {
             ...cfg,
             webAppUrl: isOldDummyUrl ? defaultUrl : cfg.webAppUrl,
-            spreadsheetId: isOldDummyId ? defaultSheetId : cfg.spreadsheetId
-          });
+            spreadsheetId: isOldDummyId ? defaultSheetId : cfg.spreadsheetId,
+            status: cfg.status || 'Connected'
+          };
+          setSheetConfigState(resolvedCfg);
+          if (latestStateRef.current) {
+            latestStateRef.current.sheetConfig = resolvedCfg;
+          }
         }
 
         setCloudSync({
@@ -2573,6 +2792,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         resetFilters,
         sheetConfig,
         setSheetConfig,
+        updateSheetConfig,
+        getShareableConfigUrl,
         syncStatus,
         syncWithSpreadsheet,
         cloudSync,
