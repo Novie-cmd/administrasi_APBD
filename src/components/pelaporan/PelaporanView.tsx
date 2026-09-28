@@ -1304,6 +1304,11 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
       }));
     } else if (activeTab === 'laporan-triwulan') {
       titleName = `Laporan_Triwulan_Anggaran_Realisasi_${selectedTahun}`;
+      const totalTargetTw = triwulanReportData.reduce((s, tw) => s + tw.target, 0);
+      const totalRealTw = triwulanReportData.reduce((s, tw) => s + tw.realisasi, 0);
+      const totalSisaTw = totalPaguTahun - totalRealTw;
+      const totalPctTw = totalPaguTahun > 0 ? (totalRealTw / totalPaguTahun) * 100 : 0;
+
       exportRows = triwulanReportData.map(tw => ({
         'No': tw.no,
         'Periode Triwulan': tw.nama,
@@ -1314,8 +1319,24 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
         'Sisa Pagu Anggaran (Rp)': tw.sisa,
         'Serapan Kumulatif (%)': tw.persenSerapan.toFixed(2)
       }));
+
+      exportRows.push({
+        'No': '',
+        'Periode Triwulan': `TOTAL TA ${selectedTahun}`,
+        'Cakupan Bulan': 'Januari s.d Desember',
+        'Target Anggaran Triwulan (Rp)': totalTargetTw,
+        'Realisasi SP2D Triwulan Ini (Rp)': totalRealTw,
+        'Realisasi Kumulatif (Rp)': totalRealTw,
+        'Sisa Pagu Anggaran (Rp)': totalSisaTw,
+        'Serapan Kumulatif (%)': totalPctTw.toFixed(2)
+      });
     } else if (activeTab === 'laporan-semester') {
       titleName = `Laporan_Semester_Anggaran_Realisasi_${selectedTahun}`;
+      const totalTargetSem = semesterReportData.reduce((s, sem) => s + sem.target, 0);
+      const totalRealSem = semesterReportData.reduce((s, sem) => s + sem.realisasi, 0);
+      const totalSisaSem = totalPaguTahun - totalRealSem;
+      const totalPctSem = totalPaguTahun > 0 ? (totalRealSem / totalPaguTahun) * 100 : 0;
+
       exportRows = semesterReportData.map(sem => ({
         'No': sem.no,
         'Periode Semester': sem.nama,
@@ -1326,6 +1347,17 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
         'Sisa Pagu Anggaran (Rp)': sem.sisa,
         'Serapan Kumulatif (%)': sem.persenSerapan.toFixed(2)
       }));
+
+      exportRows.push({
+        'No': '',
+        'Periode Semester': `TOTAL TA ${selectedTahun}`,
+        'Cakupan Bulan': 'Januari s.d Desember',
+        'Target Anggaran Semester (Rp)': totalTargetSem,
+        'Realisasi SP2D Semester Ini (Rp)': totalRealSem,
+        'Realisasi Kumulatif (Rp)': totalRealSem,
+        'Sisa Pagu Anggaran (Rp)': totalSisaSem,
+        'Serapan Kumulatif (%)': totalPctSem.toFixed(2)
+      });
     } else if (activeTab === 'laporan-tahunan') {
       const totalMurni = currentAnggaran.reduce((s, a) => s + a.pagu, 0);
       const totalRev = currentAnggaran.reduce((s, a) => s + a.revisi, 0);
@@ -2973,116 +3005,260 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
         )}
 
         {/* 6. LAPORAN TRIWULAN */}
-        {activeTab === 'laporan-triwulan' && (
-          <div className="space-y-6">
-            <div className="border-b border-slate-800 pb-2">
-              <h3 className="text-xs font-bold uppercase text-amber-400 print:text-slate-900 flex items-center gap-2">
-                <CalendarDays className="h-4 w-4 text-cyan-400 print:hidden" />
-                <span>VI. Laporan Triwulan (Target Anggaran vs Realisasi Per Triwulan)</span>
-              </h3>
-              <p className="text-[11px] text-slate-400 print:text-slate-700 mt-0.5">
-                Rekapitulasi target alokasi anggaran dan realisasi SP2D per triwulan (Triwulan I - IV) TA {selectedTahun}.
-              </p>
-            </div>
+        {activeTab === 'laporan-triwulan' && (() => {
+          const totalTargetTw = triwulanReportData.reduce((s, tw) => s + tw.target, 0);
+          const totalRealTw = triwulanReportData.reduce((s, tw) => s + tw.realisasi, 0);
+          const totalSisaTw = totalPaguTahun - totalRealTw;
+          const totalPctTw = totalPaguTahun > 0 ? (totalRealTw / totalPaguTahun) * 100 : 0;
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-slate-950 print:bg-slate-200 text-slate-300 print:text-slate-900 font-bold uppercase border-b border-slate-800">
-                  <tr>
-                    <th className="p-3 w-10 text-center">No</th>
-                    <th className="p-3 min-w-[180px]">Periode Triwulan</th>
-                    <th className="p-3">Cakupan Bulan</th>
-                    <th className="p-3 text-right">Target Anggaran (Rp)</th>
-                    <th className="p-3 text-right">Realisasi Triwulan (Rp)</th>
-                    <th className="p-3 text-right">Realisasi Kumulatif (Rp)</th>
-                    <th className="p-3 text-right">Sisa Pagu (Rp)</th>
-                    <th className="p-3 text-center">% Serapan Kumulatif</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800 print:divide-slate-300">
-                  {triwulanReportData.map(tw => (
-                    <tr key={tw.no} className="hover:bg-slate-800/40">
-                      <td className="p-3 text-center font-mono text-slate-400">{tw.no}</td>
-                      <td className="p-3 font-bold text-white print:text-slate-900">{tw.nama}</td>
-                      <td className="p-3 text-slate-400 print:text-slate-700 font-mono">{tw.bulanList}</td>
-                      <td className="p-3 text-right font-mono text-slate-300 print:text-slate-900">
-                        Rp {tw.target.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+          return (
+            <div className="space-y-6">
+              <div className="border-b border-slate-800 pb-2">
+                <h3 className="text-xs font-bold uppercase text-amber-400 print:text-slate-900 flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4 text-cyan-400 print:hidden" />
+                  <span>VI. Laporan Triwulan (Target Anggaran vs Realisasi Per Triwulan)</span>
+                </h3>
+                <p className="text-[11px] text-slate-400 print:text-slate-700 mt-0.5">
+                  Rekapitulasi target alokasi anggaran dan realisasi SP2D per triwulan (Triwulan I - IV) TA {selectedTahun}.
+                </p>
+              </div>
+
+              {/* KPI Summary Cards for Triwulan */}
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4 print:hidden">
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-3.5 shadow-sm">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+                    Total Target Anggaran
+                  </span>
+                  <p className="mt-1 text-base sm:text-lg font-black font-mono text-cyan-400">
+                    Rp {totalTargetTw.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                  </p>
+                  <span className="text-[10px] text-slate-500">Akumulasi Target TW I - IV</span>
+                </div>
+
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-3.5 shadow-sm">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+                    Total Realisasi SP2D
+                  </span>
+                  <p className="mt-1 text-base sm:text-lg font-black font-mono text-emerald-400">
+                    Rp {totalRealTw.toLocaleString('id-ID')}
+                  </p>
+                  <span className="text-[10px] text-emerald-400/80">Realisasi Semua Triwulan</span>
+                </div>
+
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-3.5 shadow-sm">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+                    Sisa Pagu / SiLPA
+                  </span>
+                  <p className="mt-1 text-base sm:text-lg font-black font-mono text-rose-400">
+                    Rp {totalSisaTw.toLocaleString('id-ID')}
+                  </p>
+                  <span className="text-[10px] text-slate-500">Sisa Pagu Anggaran TA {selectedTahun}</span>
+                </div>
+
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-3.5 shadow-sm">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+                    % Serapan Triwulan
+                  </span>
+                  <p className="mt-1 text-base sm:text-lg font-black font-mono text-amber-300">
+                    {totalPctTw.toFixed(2)} %
+                  </p>
+                  <span className="text-[10px] text-amber-400/80">Capaian Serapan Total</span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-slate-950 print:bg-slate-200 text-slate-300 print:text-slate-900 font-bold uppercase border-b border-slate-800">
+                    <tr>
+                      <th className="p-3 w-10 text-center">No</th>
+                      <th className="p-3 min-w-[180px]">Periode Triwulan</th>
+                      <th className="p-3">Cakupan Bulan</th>
+                      <th className="p-3 text-right">Target Anggaran (Rp)</th>
+                      <th className="p-3 text-right">Realisasi Triwulan (Rp)</th>
+                      <th className="p-3 text-right">Realisasi Kumulatif (Rp)</th>
+                      <th className="p-3 text-right">Sisa Pagu (Rp)</th>
+                      <th className="p-3 text-center">% Serapan Kumulatif</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800 print:divide-slate-300">
+                    {triwulanReportData.map(tw => (
+                      <tr key={tw.no} className="hover:bg-slate-800/40">
+                        <td className="p-3 text-center font-mono text-slate-400">{tw.no}</td>
+                        <td className="p-3 font-bold text-white print:text-slate-900">{tw.nama}</td>
+                        <td className="p-3 text-slate-400 print:text-slate-700 font-mono">{tw.bulanList}</td>
+                        <td className="p-3 text-right font-mono text-slate-300 print:text-slate-900">
+                          Rp {tw.target.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                        </td>
+                        <td className="p-3 text-right font-mono font-bold text-emerald-400 print:text-slate-900">
+                          Rp {tw.realisasi.toLocaleString('id-ID')}
+                        </td>
+                        <td className="p-3 text-right font-mono font-bold text-cyan-300 print:text-slate-900">
+                          Rp {tw.realisasiKumulatif.toLocaleString('id-ID')}
+                        </td>
+                        <td className="p-3 text-right font-mono font-bold text-rose-400 print:text-slate-900 bg-rose-950/20 print:bg-transparent">
+                          Rp {tw.sisa.toLocaleString('id-ID')}
+                        </td>
+                        <td className="p-3 text-center font-mono font-bold text-amber-300 print:text-slate-900">
+                          {tw.persenSerapan.toFixed(2)} %
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-slate-950 font-bold border-t-2 border-slate-700 text-white print:bg-slate-100 print:text-black">
+                    <tr>
+                      <td colSpan={3} className="p-3 text-right uppercase tracking-wider text-xs font-bold text-white print:text-black">
+                        TOTAL AKUMULASI TRIWULAN (TA {selectedTahun}):
                       </td>
-                      <td className="p-3 text-right font-mono font-bold text-emerald-400 print:text-slate-900">
-                        Rp {tw.realisasi.toLocaleString('id-ID')}
+                      <td className="p-3 text-right font-mono text-cyan-400 print:text-slate-900">
+                        Rp {totalTargetTw.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                       </td>
-                      <td className="p-3 text-right font-mono font-bold text-cyan-300 print:text-slate-900">
-                        Rp {tw.realisasiKumulatif.toLocaleString('id-ID')}
+                      <td className="p-3 text-right font-mono text-emerald-400 print:text-slate-900">
+                        Rp {totalRealTw.toLocaleString('id-ID')}
                       </td>
-                      <td className="p-3 text-right font-mono font-bold text-rose-400 print:text-slate-900 bg-rose-950/20 print:bg-transparent">
-                        Rp {tw.sisa.toLocaleString('id-ID')}
+                      <td className="p-3 text-right font-mono text-cyan-300 print:text-slate-900">
+                        Rp {totalRealTw.toLocaleString('id-ID')}
                       </td>
-                      <td className="p-3 text-center font-mono font-bold text-amber-300 print:text-slate-900">
-                        {tw.persenSerapan.toFixed(2)} %
+                      <td className="p-3 text-right font-mono font-black text-rose-400 print:text-slate-900 bg-rose-950/30 print:bg-transparent">
+                        Rp {totalSisaTw.toLocaleString('id-ID')}
+                      </td>
+                      <td className="p-3 text-center font-mono font-black text-amber-300 print:text-slate-900">
+                        {totalPctTw.toFixed(2)} %
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </tfoot>
+                </table>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* 7. LAPORAN SEMESTER */}
-        {activeTab === 'laporan-semester' && (
-          <div className="space-y-6">
-            <div className="border-b border-slate-800 pb-2">
-              <h3 className="text-xs font-bold uppercase text-amber-400 print:text-slate-900 flex items-center gap-2">
-                <CalendarDays className="h-4 w-4 text-cyan-400 print:hidden" />
-                <span>VII. Laporan Semester (Target Anggaran vs Realisasi Per Semester)</span>
-              </h3>
-              <p className="text-[11px] text-slate-400 print:text-slate-700 mt-0.5">
-                Rekapitulasi target alokasi anggaran dan realisasi SP2D per semester (Semester I - II) TA {selectedTahun}.
-              </p>
-            </div>
+        {activeTab === 'laporan-semester' && (() => {
+          const totalTargetSem = semesterReportData.reduce((s, sem) => s + sem.target, 0);
+          const totalRealSem = semesterReportData.reduce((s, sem) => s + sem.realisasi, 0);
+          const totalSisaSem = totalPaguTahun - totalRealSem;
+          const totalPctSem = totalPaguTahun > 0 ? (totalRealSem / totalPaguTahun) * 100 : 0;
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-slate-950 print:bg-slate-200 text-slate-300 print:text-slate-900 font-bold uppercase border-b border-slate-800">
-                  <tr>
-                    <th className="p-3 w-10 text-center">No</th>
-                    <th className="p-3 min-w-[180px]">Periode Semester</th>
-                    <th className="p-3">Cakupan Bulan</th>
-                    <th className="p-3 text-right">Target Anggaran (Rp)</th>
-                    <th className="p-3 text-right">Realisasi Semester (Rp)</th>
-                    <th className="p-3 text-right">Realisasi Kumulatif (Rp)</th>
-                    <th className="p-3 text-right">Sisa Pagu (Rp)</th>
-                    <th className="p-3 text-center">% Serapan Kumulatif</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800 print:divide-slate-300">
-                  {semesterReportData.map(sem => (
-                    <tr key={sem.no} className="hover:bg-slate-800/40">
-                      <td className="p-3 text-center font-mono text-slate-400">{sem.no}</td>
-                      <td className="p-3 font-bold text-white print:text-slate-900">{sem.nama}</td>
-                      <td className="p-3 text-slate-400 print:text-slate-700 font-mono">{sem.bulanList}</td>
-                      <td className="p-3 text-right font-mono text-slate-300 print:text-slate-900">
-                        Rp {sem.target.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+          return (
+            <div className="space-y-6">
+              <div className="border-b border-slate-800 pb-2">
+                <h3 className="text-xs font-bold uppercase text-amber-400 print:text-slate-900 flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4 text-cyan-400 print:hidden" />
+                  <span>VII. Laporan Semester (Target Anggaran vs Realisasi Per Semester)</span>
+                </h3>
+                <p className="text-[11px] text-slate-400 print:text-slate-700 mt-0.5">
+                  Rekapitulasi target alokasi anggaran dan realisasi SP2D per semester (Semester I - II) TA {selectedTahun}.
+                </p>
+              </div>
+
+              {/* KPI Summary Cards for Semester */}
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4 print:hidden">
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-3.5 shadow-sm">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+                    Total Target Anggaran
+                  </span>
+                  <p className="mt-1 text-base sm:text-lg font-black font-mono text-cyan-400">
+                    Rp {totalTargetSem.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                  </p>
+                  <span className="text-[10px] text-slate-500">Akumulasi Target Semester I & II</span>
+                </div>
+
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-3.5 shadow-sm">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+                    Total Realisasi SP2D
+                  </span>
+                  <p className="mt-1 text-base sm:text-lg font-black font-mono text-emerald-400">
+                    Rp {totalRealSem.toLocaleString('id-ID')}
+                  </p>
+                  <span className="text-[10px] text-emerald-400/80">Realisasi Semua Semester</span>
+                </div>
+
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-3.5 shadow-sm">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+                    Sisa Pagu / SiLPA
+                  </span>
+                  <p className="mt-1 text-base sm:text-lg font-black font-mono text-rose-400">
+                    Rp {totalSisaSem.toLocaleString('id-ID')}
+                  </p>
+                  <span className="text-[10px] text-slate-500">Sisa Pagu Anggaran TA {selectedTahun}</span>
+                </div>
+
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-3.5 shadow-sm">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+                    % Serapan Semester
+                  </span>
+                  <p className="mt-1 text-base sm:text-lg font-black font-mono text-amber-300">
+                    {totalPctSem.toFixed(2)} %
+                  </p>
+                  <span className="text-[10px] text-amber-400/80">Capaian Serapan Total</span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-slate-950 print:bg-slate-200 text-slate-300 print:text-slate-900 font-bold uppercase border-b border-slate-800">
+                    <tr>
+                      <th className="p-3 w-10 text-center">No</th>
+                      <th className="p-3 min-w-[180px]">Periode Semester</th>
+                      <th className="p-3">Cakupan Bulan</th>
+                      <th className="p-3 text-right">Target Anggaran (Rp)</th>
+                      <th className="p-3 text-right">Realisasi Semester (Rp)</th>
+                      <th className="p-3 text-right">Realisasi Kumulatif (Rp)</th>
+                      <th className="p-3 text-right">Sisa Pagu (Rp)</th>
+                      <th className="p-3 text-center">% Serapan Kumulatif</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800 print:divide-slate-300">
+                    {semesterReportData.map(sem => (
+                      <tr key={sem.no} className="hover:bg-slate-800/40">
+                        <td className="p-3 text-center font-mono text-slate-400">{sem.no}</td>
+                        <td className="p-3 font-bold text-white print:text-slate-900">{sem.nama}</td>
+                        <td className="p-3 text-slate-400 print:text-slate-700 font-mono">{sem.bulanList}</td>
+                        <td className="p-3 text-right font-mono text-slate-300 print:text-slate-900">
+                          Rp {sem.target.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
+                        </td>
+                        <td className="p-3 text-right font-mono font-bold text-emerald-400 print:text-slate-900">
+                          Rp {sem.realisasi.toLocaleString('id-ID')}
+                        </td>
+                        <td className="p-3 text-right font-mono font-bold text-cyan-300 print:text-slate-900">
+                          Rp {sem.realisasiKumulatif.toLocaleString('id-ID')}
+                        </td>
+                        <td className="p-3 text-right font-mono font-bold text-rose-400 print:text-slate-900 bg-rose-950/20 print:bg-transparent">
+                          Rp {sem.sisa.toLocaleString('id-ID')}
+                        </td>
+                        <td className="p-3 text-center font-mono font-bold text-amber-300 print:text-slate-900">
+                          {sem.persenSerapan.toFixed(2)} %
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-slate-950 font-bold border-t-2 border-slate-700 text-white print:bg-slate-100 print:text-black">
+                    <tr>
+                      <td colSpan={3} className="p-3 text-right uppercase tracking-wider text-xs font-bold text-white print:text-black">
+                        TOTAL AKUMULASI SEMESTER (TA {selectedTahun}):
                       </td>
-                      <td className="p-3 text-right font-mono font-bold text-emerald-400 print:text-slate-900">
-                        Rp {sem.realisasi.toLocaleString('id-ID')}
+                      <td className="p-3 text-right font-mono text-cyan-400 print:text-slate-900">
+                        Rp {totalTargetSem.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                       </td>
-                      <td className="p-3 text-right font-mono font-bold text-cyan-300 print:text-slate-900">
-                        Rp {sem.realisasiKumulatif.toLocaleString('id-ID')}
+                      <td className="p-3 text-right font-mono text-emerald-400 print:text-slate-900">
+                        Rp {totalRealSem.toLocaleString('id-ID')}
                       </td>
-                      <td className="p-3 text-right font-mono font-bold text-rose-400 print:text-slate-900 bg-rose-950/20 print:bg-transparent">
-                        Rp {sem.sisa.toLocaleString('id-ID')}
+                      <td className="p-3 text-right font-mono text-cyan-300 print:text-slate-900">
+                        Rp {totalRealSem.toLocaleString('id-ID')}
                       </td>
-                      <td className="p-3 text-center font-mono font-bold text-amber-300 print:text-slate-900">
-                        {sem.persenSerapan.toFixed(2)} %
+                      <td className="p-3 text-right font-mono font-black text-rose-400 print:text-slate-900 bg-rose-950/30 print:bg-transparent">
+                        Rp {totalSisaSem.toLocaleString('id-ID')}
+                      </td>
+                      <td className="p-3 text-center font-mono font-black text-amber-300 print:text-slate-900">
+                        {totalPctSem.toFixed(2)} %
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </tfoot>
+                </table>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* 8. LAPORAN TAHUNAN */}
         {activeTab === 'laporan-tahunan' && (
