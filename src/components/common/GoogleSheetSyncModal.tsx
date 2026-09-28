@@ -97,7 +97,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
                 <span>Simpan ke Spreadsheet</span>
               </div>
               <p className="text-[11px] text-slate-300">
-                Kirim seluruh <strong>{realisasiList.length}</strong> transaksi & <strong>{anggaranList.length}</strong> pagu anggaran ke Google Sheet.
+                Kirim seluruh <strong>{realisasiList.length}</strong> transaksi, <strong>{anggaranList.length}</strong> pagu, serta 4 Master Sheet (Program, Kegiatan, Sub Kegiatan, Rekening Belanja) ke Google Sheet.
               </p>
             </div>
             <button
@@ -345,7 +345,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
 };
 
 // Return script code
-function getGoogleAppsScriptCode(): string {
+export function getGoogleAppsScriptCode(): string {
   return `var DEFAULT_SPREADSHEET_ID = '1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY';
 
 function getTargetSpreadsheet(explicitId) {
@@ -358,22 +358,47 @@ function getTargetSpreadsheet(explicitId) {
   return SpreadsheetApp.getActiveSpreadsheet();
 }
 
+function findSheetByNames(ss, names) {
+  for (var i = 0; i < names.length; i++) {
+    var s = ss.getSheetByName(names[i]);
+    if (s) return s;
+  }
+  return null;
+}
+
 function doGet(e) {
   try {
     var sheetId = (e && e.parameter && e.parameter.spreadsheetId) ? e.parameter.spreadsheetId : DEFAULT_SPREADSHEET_ID;
     var ss = getTargetSpreadsheet(sheetId);
-    var realisasiSheet = getOrCreateSheet(ss, 'Realisasi_SP2D');
-    var anggaranSheet = getOrCreateSheet(ss, 'Pagu_Anggaran');
-    
-    var realisasiData = getSheetRowsAsJson(realisasiSheet);
-    var anggaranData = getSheetRowsAsJson(anggaranSheet);
-    
+
+    var programSheet = findSheetByNames(ss, ['Master_Program', 'Program']);
+    var kegiatanSheet = findSheetByNames(ss, ['Master_Kegiatan', 'Kegiatan']);
+    var subKegiatanSheet = findSheetByNames(ss, ['Master_Sub_Kegiatan', 'Sub_Kegiatan', 'SubKegiatan']);
+    var belanjaSheet = findSheetByNames(ss, ['Master_Rekening_Belanja', 'Rekening_Belanja', 'Rekening', 'Belanja']);
+    var realisasiSheet = findSheetByNames(ss, ['Realisasi_SP2D', 'Realisasi']);
+    var anggaranSheet = findSheetByNames(ss, ['Pagu_Anggaran', 'Anggaran']);
+
+    var programData = programSheet ? getSheetRowsAsJson(programSheet) : [];
+    var kegiatanData = kegiatanSheet ? getSheetRowsAsJson(kegiatanSheet) : [];
+    var subKegiatanData = subKegiatanSheet ? getSheetRowsAsJson(subKegiatanSheet) : [];
+    var belanjaData = belanjaSheet ? getSheetRowsAsJson(belanjaSheet) : [];
+    var realisasiData = realisasiSheet ? getSheetRowsAsJson(realisasiSheet) : [];
+    var anggaranData = anggaranSheet ? getSheetRowsAsJson(anggaranSheet) : [];
+
     return ContentService.createTextOutput(JSON.stringify({
       success: true,
       message: 'Data berhasil ditarik dari Google Spreadsheet',
       timestamp: new Date().toISOString(),
+      programCount: programData.length,
+      kegiatanCount: kegiatanData.length,
+      subKegiatanCount: subKegiatanData.length,
+      belanjaCount: belanjaData.length,
       realisasiCount: realisasiData.length,
       anggaranCount: anggaranData.length,
+      programList: programData,
+      kegiatanList: kegiatanData,
+      subKegiatanList: subKegiatanData,
+      belanjaList: belanjaData,
       realisasiList: realisasiData,
       anggaranList: anggaranData
     })).setMimeType(ContentService.MimeType.JSON);
@@ -388,59 +413,141 @@ function doPost(e) {
     var payload = JSON.parse(e.postData.contents || '{}');
     var sheetId = payload.spreadsheetId || DEFAULT_SPREADSHEET_ID;
     var ss = getTargetSpreadsheet(sheetId);
-    var savedR = 0, savedA = 0;
-    
-    // 1. Dukungan Aksi Kosongkan Database Bersih (clearAll / clearDatabase)
+    var savedR = 0, savedA = 0, savedP = 0, savedK = 0, savedS = 0, savedB = 0;
+
+    // 1. Dukungan Aksi Kosongkan Data Transaksi Bersih (clearAll / clearDatabase)
     if (payload.action === 'clearAll' || payload.action === 'clearDatabase') {
       var sheetRClear = getOrCreateSheet(ss, 'Realisasi_SP2D');
-      var headersRClear = ['ID', 'Tahun', 'Tanggal', 'No_SP2D', 'No_SPM', 'Kode_Sub_Kegiatan', 'Kode_Rekening_Belanja', 'Uraian_Belanja', 'Nilai_Realisasi_Rp', 'Rekanan_Penerima', 'Status_Validasi', 'Operator'];
+      var headersRClear = ['ID', 'Tahun', 'Tanggal', 'No_SP2D', 'No_SPM', 'Kode_Program', 'Kode_Kegiatan', 'Kode_Sub_Kegiatan', 'Nama_Sub_Kegiatan', 'Kode_Rekening_Belanja', 'Nama_Rekening_Belanja', 'Uraian_Belanja', 'Nilai_Realisasi_Rp', 'Rekanan_Penerima', 'Status_Validasi', 'Operator'];
       sheetRClear.clear();
       sheetRClear.appendRow(headersRClear);
       formatHeader(sheetRClear, '#047857');
-      
+
       var sheetAClear = getOrCreateSheet(ss, 'Pagu_Anggaran');
-      var headersAClear = ['ID', 'Tahun', 'Kode_Sub_Kegiatan', 'Kode_Rekening_Belanja', 'Pagu_Murni_Rp', 'Pagu_Perubahan_Rp', 'Nilai_Pagu_Efektif_Rp', 'Sumber_Dana'];
+      var headersAClear = ['ID', 'Tahun', 'Kode_Program', 'Kode_Kegiatan', 'Kode_Sub_Kegiatan', 'Nama_Sub_Kegiatan', 'Kode_Rekening_Belanja', 'Nama_Rekening_Belanja', 'Pagu_Murni_Rp', 'Pagu_Perubahan_Rp', 'Nilai_Pagu_Efektif_Rp', 'Sumber_Dana'];
       sheetAClear.clear();
       sheetAClear.appendRow(headersAClear);
       formatHeader(sheetAClear, '#0284c7');
-      
+
       return ContentService.createTextOutput(JSON.stringify({
         success: true,
-        message: 'Seluruh data transaksi di Google Spreadsheet berhasil dikosongkan bersih.',
+        message: 'Seluruh data transaksi di Google Spreadsheet berhasil dikosongkan bersih (Master tetap dipertahankan).',
         savedRealisasi: 0,
         savedAnggaran: 0,
         timestamp: new Date().toISOString()
       })).setMimeType(ContentService.MimeType.JSON);
     }
-    
-    // 2. Simpan Data Realisasi SP2D
-    if (payload.realisasiList && Array.isArray(payload.realisasiList)) {
-      var sheetR = getOrCreateSheet(ss, 'Realisasi_SP2D');
-      var headersR = ['ID', 'Tahun', 'Tanggal', 'No_SP2D', 'No_SPM', 'Kode_Sub_Kegiatan', 'Kode_Rekening_Belanja', 'Uraian_Belanja', 'Nilai_Realisasi_Rp', 'Rekanan_Penerima', 'Status_Validasi', 'Operator'];
-      sheetR.clear();
-      sheetR.appendRow(headersR);
-      formatHeader(sheetR, '#047857');
-      if (payload.realisasiList.length > 0) {
-        var rows = payload.realisasiList.map(function(r) {
-          return [r.id||'', r.tahun||'', r.tanggal||'', r.noSP2D||'', r.noSPM||'', r.kodeSub||'', r.kodeBelanja||'', r.uraian||'', Number(r.nilai)||0, r.rekanan||'', r.statusValidation||'Disetujui PPK', r.operator||''];
+
+    // 2. Simpan Master Program
+    if (payload.programList && Array.isArray(payload.programList)) {
+      var sheetProg = getOrCreateSheet(ss, 'Master_Program');
+      var headersProg = ['Kode_Program', 'Nama_Program', 'Tahun'];
+      sheetProg.clear();
+      sheetProg.appendRow(headersProg);
+      formatHeader(sheetProg, '#1e40af'); // Blue
+      if (payload.programList.length > 0) {
+        var rowsProg = payload.programList.map(function(p) {
+          return [p.kodeProgram || '', p.namaProgram || '', p.tahun || ''];
         });
-        var curMaxR = sheetR.getMaxRows();
-        if (curMaxR < rows.length + 5) {
-          sheetR.insertRowsAfter(curMaxR, rows.length + 5 - curMaxR);
-        }
-        sheetR.getRange(2, 1, rows.length, headersR.length).setValues(rows);
-        sheetR.getRange(2, 9, rows.length, 1).setNumberFormat('#,##0');
-        savedR = rows.length;
+        ensureRows(sheetProg, rowsProg.length);
+        sheetProg.getRange(2, 1, rowsProg.length, headersProg.length).setValues(rowsProg);
+        savedP = rowsProg.length;
       }
     }
-    
-    // 3. Simpan Data Pagu Anggaran
+
+    // 3. Simpan Master Kegiatan
+    if (payload.kegiatanList && Array.isArray(payload.kegiatanList)) {
+      var sheetKeg = getOrCreateSheet(ss, 'Master_Kegiatan');
+      var headersKeg = ['Kode_Program', 'Kode_Kegiatan', 'Nama_Kegiatan', 'Tahun'];
+      sheetKeg.clear();
+      sheetKeg.appendRow(headersKeg);
+      formatHeader(sheetKeg, '#4338ca'); // Indigo
+      if (payload.kegiatanList.length > 0) {
+        var rowsKeg = payload.kegiatanList.map(function(k) {
+          return [k.kodeProgram || '', k.kodeKegiatan || '', k.namaKegiatan || '', k.tahun || ''];
+        });
+        ensureRows(sheetKeg, rowsKeg.length);
+        sheetKeg.getRange(2, 1, rowsKeg.length, headersKeg.length).setValues(rowsKeg);
+        savedK = rowsKeg.length;
+      }
+    }
+
+    // 4. Simpan Master Sub Kegiatan
+    if (payload.subKegiatanList && Array.isArray(payload.subKegiatanList)) {
+      var sheetSub = getOrCreateSheet(ss, 'Master_Sub_Kegiatan');
+      var headersSub = ['Kode_Program', 'Kode_Kegiatan', 'Kode_Sub_Kegiatan', 'Nama_Sub_Kegiatan', 'Tahun'];
+      sheetSub.clear();
+      sheetSub.appendRow(headersSub);
+      formatHeader(sheetSub, '#0369a1'); // Sky/Cyan
+      if (payload.subKegiatanList.length > 0) {
+        var rowsSub = payload.subKegiatanList.map(function(s) {
+          return [s.kodeProgram || '', s.kodeKegiatan || '', s.kodeSub || '', s.namaSub || '', s.tahun || ''];
+        });
+        ensureRows(sheetSub, rowsSub.length);
+        sheetSub.getRange(2, 1, rowsSub.length, headersSub.length).setValues(rowsSub);
+        savedS = rowsSub.length;
+      }
+    }
+
+    // 5. Simpan Master Rekening Belanja
+    if (payload.belanjaList && Array.isArray(payload.belanjaList)) {
+      var sheetBel = getOrCreateSheet(ss, 'Master_Rekening_Belanja');
+      var headersBel = ['Kode_Rekening_Belanja', 'Nama_Rekening_Belanja', 'Jenis_Belanja', 'Tahun'];
+      sheetBel.clear();
+      sheetBel.appendRow(headersBel);
+      formatHeader(sheetBel, '#6d28d9'); // Purple
+      if (payload.belanjaList.length > 0) {
+        var rowsBel = payload.belanjaList.map(function(b) {
+          return [b.kodeBelanja || '', b.namaBelanja || '', b.jenisBelanja || 'Belanja Barang dan Jasa', b.tahun || ''];
+        });
+        ensureRows(sheetBel, rowsBel.length);
+        sheetBel.getRange(2, 1, rowsBel.length, headersBel.length).setValues(rowsBel);
+        savedB = rowsBel.length;
+      }
+    }
+
+    // 6. Simpan Data Realisasi SP2D
+    if (payload.realisasiList && Array.isArray(payload.realisasiList)) {
+      var sheetR = getOrCreateSheet(ss, 'Realisasi_SP2D');
+      var headersR = ['ID', 'Tahun', 'Tanggal', 'No_SP2D', 'No_SPM', 'Kode_Program', 'Kode_Kegiatan', 'Kode_Sub_Kegiatan', 'Nama_Sub_Kegiatan', 'Kode_Rekening_Belanja', 'Nama_Rekening_Belanja', 'Uraian_Belanja', 'Nilai_Realisasi_Rp', 'Rekanan_Penerima', 'Status_Validasi', 'Operator'];
+      sheetR.clear();
+      sheetR.appendRow(headersR);
+      formatHeader(sheetR, '#047857'); // Emerald green
+      if (payload.realisasiList.length > 0) {
+        var rowsR = payload.realisasiList.map(function(r) {
+          return [
+            r.id || '',
+            r.tahun || '',
+            r.tanggal || '',
+            r.noSP2D || '',
+            r.noSPM || '',
+            r.kodeProgram || '',
+            r.kodeKegiatan || '',
+            r.kodeSub || '',
+            r.namaSub || '',
+            r.kodeBelanja || '',
+            r.namaBelanja || '',
+            r.uraian || '',
+            Number(r.nilai) || 0,
+            r.rekanan || '',
+            r.statusValidation || 'Disetujui PPK',
+            r.operator || ''
+          ];
+        });
+        ensureRows(sheetR, rowsR.length);
+        sheetR.getRange(2, 1, rowsR.length, headersR.length).setValues(rowsR);
+        sheetR.getRange(2, 13, rowsR.length, 1).setNumberFormat('#,##0');
+        savedR = rowsR.length;
+      }
+    }
+
+    // 7. Simpan Data Pagu Anggaran
     if (payload.anggaranList && Array.isArray(payload.anggaranList)) {
       var sheetA = getOrCreateSheet(ss, 'Pagu_Anggaran');
-      var headersA = ['ID', 'Tahun', 'Kode_Sub_Kegiatan', 'Kode_Rekening_Belanja', 'Pagu_Murni_Rp', 'Pagu_Perubahan_Rp', 'Nilai_Pagu_Efektif_Rp', 'Sumber_Dana'];
+      var headersA = ['ID', 'Tahun', 'Kode_Program', 'Kode_Kegiatan', 'Kode_Sub_Kegiatan', 'Nama_Sub_Kegiatan', 'Kode_Rekening_Belanja', 'Nama_Rekening_Belanja', 'Pagu_Murni_Rp', 'Pagu_Perubahan_Rp', 'Nilai_Pagu_Efektif_Rp', 'Sumber_Dana'];
       sheetA.clear();
       sheetA.appendRow(headersA);
-      formatHeader(sheetA, '#0284c7');
+      formatHeader(sheetA, '#0284c7'); // Sky blue
       if (payload.anggaranList.length > 0) {
         var rowsA = payload.anggaranList.map(function(a) {
           var paguMurni = Number(a.pagu || a.nilaiMurni || a.nilai || 0);
@@ -449,34 +556,46 @@ function doPost(e) {
           return [
             a.id || '',
             a.tahun || '',
+            a.kodeProgram || '',
+            a.kodeKegiatan || '',
             a.kodeSub || '',
+            a.namaSub || '',
             a.kodeBelanja || '',
+            a.namaBelanja || '',
             paguMurni,
             revisi,
             paguAkhir,
             a.sumberDana || 'PAD'
           ];
         });
-        var curMaxA = sheetA.getMaxRows();
-        if (curMaxA < rowsA.length + 5) {
-          sheetA.insertRowsAfter(curMaxA, rowsA.length + 5 - curMaxA);
-        }
+        ensureRows(sheetA, rowsA.length);
         sheetA.getRange(2, 1, rowsA.length, headersA.length).setValues(rowsA);
-        sheetA.getRange(2, 5, rowsA.length, 3).setNumberFormat('#,##0');
+        sheetA.getRange(2, 9, rowsA.length, 3).setNumberFormat('#,##0');
         savedA = rowsA.length;
       }
     }
-    
+
     return ContentService.createTextOutput(JSON.stringify({
       success: true,
-      message: 'Berhasil menyimpan ' + savedR + ' realisasi & ' + savedA + ' anggaran.',
+      message: 'Berhasil menyimpan ' + savedR + ' realisasi, ' + savedA + ' anggaran, ' + savedP + ' program, ' + savedK + ' kegiatan, ' + savedS + ' sub kegiatan, ' + savedB + ' rekening.',
       savedRealisasi: savedR,
       savedAnggaran: savedA,
+      savedProgram: savedP,
+      savedKegiatan: savedK,
+      savedSubKegiatan: savedS,
+      savedBelanja: savedB,
       timestamp: new Date().toISOString()
     })).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({ success: false, error: err.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function ensureRows(sheet, neededCount) {
+  var curMax = sheet.getMaxRows();
+  if (curMax < neededCount + 5) {
+    sheet.insertRowsAfter(curMax, neededCount + 5 - curMax);
   }
 }
 
@@ -496,33 +615,74 @@ function getSheetRowsAsJson(sheet) {
   if (lastRow <= 1 || lastCol < 1) return [];
   var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
   var data = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+  var sheetName = sheet.getName().toLowerCase();
+
   return data.map(function(row) {
     var obj = {};
-    headers.forEach(function(h, idx) { obj[h.toString().trim()] = row[idx]; });
-    if (sheet.getName() === 'Realisasi_SP2D') {
+    headers.forEach(function(h, idx) {
+      if (h) obj[h.toString().trim()] = row[idx];
+    });
+
+    if (sheetName.indexOf('program') !== -1 && sheetName.indexOf('sub') === -1) {
+      return {
+        kodeProgram: String(obj['Kode_Program'] || obj['kodeProgram'] || ''),
+        namaProgram: String(obj['Nama_Program'] || obj['namaProgram'] || ''),
+        tahun: Number(obj['Tahun'] || obj['tahun']) || new Date().getFullYear()
+      };
+    } else if (sheetName.indexOf('kegiatan') !== -1 && sheetName.indexOf('sub') === -1) {
+      return {
+        kodeProgram: String(obj['Kode_Program'] || obj['kodeProgram'] || ''),
+        kodeKegiatan: String(obj['Kode_Kegiatan'] || obj['kodeKegiatan'] || ''),
+        namaKegiatan: String(obj['Nama_Kegiatan'] || obj['namaKegiatan'] || ''),
+        tahun: Number(obj['Tahun'] || obj['tahun']) || new Date().getFullYear()
+      };
+    } else if (sheetName.indexOf('sub') !== -1) {
+      return {
+        kodeProgram: String(obj['Kode_Program'] || obj['kodeProgram'] || ''),
+        kodeKegiatan: String(obj['Kode_Kegiatan'] || obj['kodeKegiatan'] || ''),
+        kodeSub: String(obj['Kode_Sub_Kegiatan'] || obj['Kode_Sub'] || obj['kodeSub'] || ''),
+        namaSub: String(obj['Nama_Sub_Kegiatan'] || obj['Nama_Sub'] || obj['namaSub'] || ''),
+        tahun: Number(obj['Tahun'] || obj['tahun']) || new Date().getFullYear()
+      };
+    } else if (sheetName.indexOf('rekening') !== -1 || sheetName.indexOf('belanja') !== -1) {
+      return {
+        kodeBelanja: String(obj['Kode_Rekening_Belanja'] || obj['Kode_Rekening'] || obj['Kode_Belanja'] || obj['kodeBelanja'] || ''),
+        namaBelanja: String(obj['Nama_Rekening_Belanja'] || obj['Nama_Rekening'] || obj['Nama_Belanja'] || obj['namaBelanja'] || ''),
+        jenisBelanja: String(obj['Jenis_Belanja'] || obj['jenisBelanja'] || 'Belanja Barang dan Jasa'),
+        tahun: Number(obj['Tahun'] || obj['tahun']) || new Date().getFullYear()
+      };
+    } else if (sheetName.indexOf('realisasi') !== -1) {
       return {
         id: String(obj['ID'] || ''),
         tahun: Number(obj['Tahun']) || new Date().getFullYear(),
         tanggal: String(obj['Tanggal'] || ''),
         noSP2D: String(obj['No_SP2D'] || ''),
         noSPM: String(obj['No_SPM'] || ''),
-        kodeSub: String(obj['Kode_Sub_Kegiatan'] || ''),
-        kodeBelanja: String(obj['Kode_Rekening_Belanja'] || ''),
-        uraian: String(obj['Uraian_Belanja'] || ''),
-        nilai: Number(obj['Nilai_Realisasi_Rp']) || 0,
-        rekanan: String(obj['Rekanan_Penerima'] || ''),
+        kodeProgram: String(obj['Kode_Program'] || ''),
+        kodeKegiatan: String(obj['Kode_Kegiatan'] || ''),
+        kodeSub: String(obj['Kode_Sub_Kegiatan'] || obj['Kode_Sub'] || ''),
+        namaSub: String(obj['Nama_Sub_Kegiatan'] || obj['Nama_Sub'] || ''),
+        kodeBelanja: String(obj['Kode_Rekening_Belanja'] || obj['Kode_Belanja'] || ''),
+        namaBelanja: String(obj['Nama_Rekening_Belanja'] || obj['Nama_Belanja'] || ''),
+        uraian: String(obj['Uraian_Belanja'] || obj['Uraian'] || ''),
+        nilai: Number(obj['Nilai_Realisasi_Rp'] || obj['Nilai']) || 0,
+        rekanan: String(obj['Rekanan_Penerima'] || obj['Rekanan'] || ''),
         statusValidation: String(obj['Status_Validasi'] || 'Disetujui PPK'),
         operator: String(obj['Operator'] || 'Sistem')
       };
     } else {
-      var paguMurni = Number(obj['Pagu_Murni_Rp']) || 0;
-      var revisi = Number(obj['Pagu_Perubahan_Rp']) || 0;
-      var paguAkhir = Number(obj['Nilai_Pagu_Efektif_Rp']) || Number(obj['Pagu_Murni_Rp']) || (paguMurni + revisi);
+      var paguMurni = Number(obj['Pagu_Murni_Rp']) || Number(obj['Pagu_Murni']) || 0;
+      var revisi = Number(obj['Pagu_Perubahan_Rp']) || Number(obj['Pagu_Perubahan']) || 0;
+      var paguAkhir = Number(obj['Nilai_Pagu_Efektif_Rp']) || Number(obj['Pagu_Akhir']) || (paguMurni + revisi);
       return {
         id: String(obj['ID'] || ''),
         tahun: Number(obj['Tahun']) || new Date().getFullYear(),
-        kodeSub: String(obj['Kode_Sub_Kegiatan'] || ''),
-        kodeBelanja: String(obj['Kode_Rekening_Belanja'] || ''),
+        kodeProgram: String(obj['Kode_Program'] || ''),
+        kodeKegiatan: String(obj['Kode_Kegiatan'] || ''),
+        kodeSub: String(obj['Kode_Sub_Kegiatan'] || obj['Kode_Sub'] || ''),
+        namaSub: String(obj['Nama_Sub_Kegiatan'] || obj['Nama_Sub'] || ''),
+        kodeBelanja: String(obj['Kode_Rekening_Belanja'] || obj['Kode_Belanja'] || ''),
+        namaBelanja: String(obj['Nama_Rekening_Belanja'] || obj['Nama_Belanja'] || ''),
         pagu: paguMurni,
         revisi: revisi,
         paguAkhir: paguAkhir,
@@ -533,5 +693,6 @@ function getSheetRowsAsJson(sheet) {
       };
     }
   });
-}`;
+}
+`;
 }
