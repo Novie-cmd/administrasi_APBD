@@ -11,6 +11,7 @@ import { KoreksiDataView } from './components/transaksi/KoreksiDataView';
 import { PelaporanView } from './components/pelaporan/PelaporanView';
 import { AnalisisView } from './components/analisis/AnalisisView';
 import { PengaturanView } from './components/pengaturan/PengaturanView';
+import { PortalSeluruhOPDView } from './components/portal-opd/PortalSeluruhOPDView';
 import { Cloud, AlertCircle, X, ArrowRight } from 'lucide-react';
 
 const MainContent: React.FC = () => {
@@ -18,11 +19,17 @@ const MainContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dismissQuotaBanner, setDismissQuotaBanner] = useState(false);
+  const [interfaceMode, setInterfaceMode] = useState<'bakesbang' | 'seluruh-opd'>('bakesbang');
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased flex flex-col">
       {/* Top Navbar */}
-      <Navbar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      <Navbar
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        interfaceMode={interfaceMode}
+        setInterfaceMode={setInterfaceMode}
+      />
 
       {/* Body Layout: Sidebar + Main Area */}
       <div className="flex flex-1 overflow-hidden">
@@ -32,6 +39,8 @@ const MainContent: React.FC = () => {
           setActiveTab={setActiveTab}
           isOpen={sidebarOpen}
           setIsOpen={setSidebarOpen}
+          interfaceMode={interfaceMode}
+          setInterfaceMode={setInterfaceMode}
         />
 
         {/* Backdrop overlay for mobile sidebar */}
@@ -78,30 +87,38 @@ const MainContent: React.FC = () => {
               </div>
             )}
 
-            {/* Tab 1: Dashboard */}
-            {activeTab === 'dashboard' && <Dashboard />}
+            {/* JIKA MODE SELURUH OPD NTB AKTIF: TAMPILKAN ANTARMUKA BARU SELURUH OPD NTB */}
+            {interfaceMode === 'seluruh-opd' ? (
+              <PortalSeluruhOPDView onSwitchToBakesbang={() => setInterfaceMode('bakesbang')} />
+            ) : (
+              /* JIKA MODE BAKESBANGPOLDAGRI AKTIF: TAMPILKAN ANTARMUKA KHUSUS SATKER */
+              <>
+                {/* Tab 1: Dashboard */}
+                {activeTab === 'dashboard' && <Dashboard />}
 
-            {/* Tab 2: Master Data */}
-            {activeTab.startsWith('master-') && (
-              <MasterDataView key={activeTab} initialSubTab={activeTab} />
+                {/* Tab 2: Master Data */}
+                {activeTab.startsWith('master-') && (
+                  <MasterDataView key={activeTab} initialSubTab={activeTab} />
+                )}
+
+                {/* Tab 3: Transaksi */}
+                {activeTab === 'transaksi-anggaran' && <InputAnggaranView />}
+                {activeTab === 'transaksi-realisasi' && <InputRealisasiView />}
+                {activeTab === 'transaksi-excel' && <UploadExcelView />}
+                {activeTab === 'transaksi-koreksi' && <KoreksiDataView />}
+
+                {/* Tab 4: Pelaporan */}
+                {activeTab.startsWith('laporan-') && (
+                  <PelaporanView key={activeTab} initialReportType={activeTab} />
+                )}
+
+                {/* Tab 5: Analisis */}
+                {activeTab.startsWith('analisis-') && <AnalisisView />}
+
+                {/* Tab 6: Pengaturan */}
+                {activeTab === 'pengaturan' && <PengaturanView />}
+              </>
             )}
-
-            {/* Tab 3: Transaksi */}
-            {activeTab === 'transaksi-anggaran' && <InputAnggaranView />}
-            {activeTab === 'transaksi-realisasi' && <InputRealisasiView />}
-            {activeTab === 'transaksi-excel' && <UploadExcelView />}
-            {activeTab === 'transaksi-koreksi' && <KoreksiDataView />}
-
-            {/* Tab 4: Pelaporan */}
-            {activeTab.startsWith('laporan-') && (
-              <PelaporanView key={activeTab} initialReportType={activeTab} />
-            )}
-
-            {/* Tab 5: Analisis */}
-            {activeTab.startsWith('analisis-') && <AnalisisView />}
-
-            {/* Tab 6: Pengaturan */}
-            {activeTab === 'pengaturan' && <PengaturanView />}
           </div>
         </main>
       </div>

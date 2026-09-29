@@ -23,13 +23,17 @@ import {
   CloudCheck,
   Radio,
   FileSpreadsheet,
-  Trash2
+  Trash2,
+  Building,
+  Building2
 } from 'lucide-react';
 
 export const Navbar: React.FC<{
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
-}> = ({ sidebarOpen, setSidebarOpen }) => {
+  interfaceMode?: 'bakesbang' | 'seluruh-opd';
+  setInterfaceMode?: (mode: 'bakesbang' | 'seluruh-opd') => void;
+}> = ({ sidebarOpen, setSidebarOpen, interfaceMode = 'bakesbang', setInterfaceMode }) => {
   const {
     currentUser,
     switchRole,
@@ -109,18 +113,52 @@ export const Navbar: React.FC<{
                 PROVINSI NTB
               </span>
               <span className="hidden text-xs text-emerald-400/90 sm:inline">
-                {opd.singkatan}
+                {interfaceMode === 'seluruh-opd' ? '40 OPD SE-NTB' : opd.singkatan}
               </span>
             </div>
             <h1 className="text-base font-bold tracking-tight text-white sm:text-lg lg:text-xl">
               SISTEM INFORMASI KEUANGAN
             </h1>
             <span className="text-xs font-medium text-emerald-300/80">
-              BAKESBANGPOLDAGRI NTB (BFMS)
+              {interfaceMode === 'seluruh-opd'
+                ? 'PORTAL KEUANGAN SELURUH OPD PEMPROV NTB'
+                : 'BAKESBANGPOLDAGRI NTB (BFMS)'}
             </span>
           </div>
         </div>
       </div>
+
+      {/* Center / Mode Antarmuka Switcher */}
+      {setInterfaceMode && (
+        <div className="hidden lg:flex items-center rounded-2xl bg-slate-950 p-1 border border-slate-800 shadow-inner">
+          <button
+            type="button"
+            onClick={() => setInterfaceMode('bakesbang')}
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+              interfaceMode === 'bakesbang'
+                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950'
+                : 'text-slate-400 hover:text-white'
+            }`}
+            title="Antarmuka Satuan Kerja BAKESBANGPOLDAGRI NTB"
+          >
+            <Building className="h-3.5 w-3.5" />
+            <span>BAKESBANGPOLDAGRI</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setInterfaceMode('seluruh-opd')}
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+              interfaceMode === 'seluruh-opd'
+                ? 'bg-cyan-600 text-white shadow-md shadow-cyan-950'
+                : 'text-slate-400 hover:text-white'
+            }`}
+            title="Antarmuka Konsolidasi Seluruh 40 OPD Pemerintah Provinsi NTB"
+          >
+            <Building2 className="h-3.5 w-3.5 text-cyan-300" />
+            <span>Seluruh OPD NTB (40 OPD)</span>
+          </button>
+        </div>
+      )}
 
       {/* Right Controls: Install PWA App, Fiscal Year, Role Switcher, Google Sheet Sync, Notifications */}
       <div className="flex items-center gap-2 sm:gap-3">

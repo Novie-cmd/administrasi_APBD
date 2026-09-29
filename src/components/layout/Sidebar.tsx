@@ -24,6 +24,7 @@ import {
   Activity,
   Award,
   DollarSign,
+  Building,
   Building2,
   FolderKanban,
   FileSearch,
@@ -74,13 +75,17 @@ interface SidebarProps {
   setActiveTab: (tab: ActiveTab) => void;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
+  interfaceMode?: 'bakesbang' | 'seluruh-opd';
+  setInterfaceMode?: (mode: 'bakesbang' | 'seluruh-opd') => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   setActiveTab,
   isOpen,
-  setIsOpen
+  setIsOpen,
+  interfaceMode = 'bakesbang',
+  setInterfaceMode
 }) => {
   const { currentUser, switchRole, resetAllData } = useApp();
 
@@ -147,8 +152,52 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Navigation Links Area */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1 scrollbar-thin scrollbar-thumb-slate-800">
+      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2 scrollbar-thin scrollbar-thumb-slate-800">
         
+        {/* Antarmuka Mode Switcher Card */}
+        {setInterfaceMode && (
+          <div className="rounded-2xl bg-slate-900/90 p-2.5 border border-slate-800 shadow-md">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 px-1 flex items-center justify-between">
+              <span>Mode Antarmuka:</span>
+              <span className="text-[9px] font-bold text-cyan-400 bg-cyan-950/80 px-1.5 py-0.5 rounded border border-cyan-800/60">
+                PROV NTB
+              </span>
+            </div>
+            <div className="grid grid-cols-1 gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setInterfaceMode('bakesbang');
+                  if (window.innerWidth < 1024) setIsOpen(false);
+                }}
+                className={`flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-bold transition text-left ${
+                  interfaceMode === 'bakesbang'
+                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950 font-bold'
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <Building className="h-3.5 w-3.5 shrink-0 text-emerald-300" />
+                <span className="truncate">BAKESBANGPOLDAGRI</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setInterfaceMode('seluruh-opd');
+                  if (window.innerWidth < 1024) setIsOpen(false);
+                }}
+                className={`flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-bold transition text-left ${
+                  interfaceMode === 'seluruh-opd'
+                    ? 'bg-cyan-600 text-white shadow-md shadow-cyan-950 font-bold'
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <Building2 className="h-3.5 w-3.5 shrink-0 text-cyan-300" />
+                <span className="truncate">Seluruh OPD NTB (40 OPD)</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* DASHBOARD */}
         <button
           onClick={() => {
