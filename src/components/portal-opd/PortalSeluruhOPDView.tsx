@@ -420,11 +420,112 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
     }
   };
 
-  // Clean numerical amounts from Excel (handles string formatted with currency or commas)
+  // Helper normalisasi nama OPD untuk pencocokan cerdas
+  const cleanOpdKeywords = (str: string): string => {
+    if (!str) return '';
+    return str.toLowerCase()
+      .replace(/pemerintah\s+provinsi\s+nusa\s+tenggara\s+barat/g, '')
+      .replace(/provinsi\s+nusa\s+tenggara\s+barat/g, '')
+      .replace(/pemerintah\s+provinsi\s+ntb/g, '')
+      .replace(/provinsi\s+ntb/g, '')
+      .replace(/prov\.\s*ntb/g, '')
+      .replace(/provinsi/g, '')
+      .replace(/ntb/g, '')
+      .replace(/dinas\s+daerah/g, '')
+      .replace(/badan\s+daerah/g, '')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  // Helper pencocokan OPD yang sangat fleksibel (Kode, Singkatan, Nama Lengkap & Kata Kunci)
+  const findMatchingOpdIndex = (kode: string, nama: string, singkatan: string, list: NTBOPDItem[]): number => {
+    const cleanKode = (kode || '').trim().replace(/[^0-9]/g, '');
+    const cleanNama = cleanOpdKeywords(nama);
+    const cleanSingk = (singkatan || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    // 1. Cocokkan Kode OPD (baik dengan titik maupun tanpa titik)
+    if (cleanKode.length >= 3) {
+      const idx = list.findIndex(o => {
+        const oKodeClean = o.kodeOPD.replace(/[^0-9]/g, '');
+        if (cleanKode === oKodeClean) return true;
+        if (cleanKode.length >= 4 && oKodeClean.length >= 4 && cleanKode.slice(0, 4) === oKodeClean.slice(0, 4)) return true;
+        return false;
+      });
+      if (idx >= 0) return idx;
+    }
+
+    // 2. Cocokkan Singkatan OPD (misal: DINKES, BPKAD, BAPPEDA, DISDIKBUD)
+    if (cleanSingk.length >= 3) {
+      const idx = list.findIndex(o => {
+        const oSingkClean = o.singkatan.toLowerCase().replace(/[^a-z0-9]/g, '');
+        return oSingkClean.includes(cleanSingk) || cleanSingk.includes(oSingkClean);
+      });
+      if (idx >= 0) return idx;
+    }
+
+    // 3. Cocokkan Nama OPD yang telah dibersihkan
+    if (cleanNama.length >= 3) {
+      // Direct string inclusion
+      let idx = list.findIndex(o => {
+        const oClean = cleanOpdKeywords(o.namaOPD);
+        return oClean.includes(cleanNama) || cleanNama.includes(oClean);
+      });
+      if (idx >= 0) return idx;
+
+      // Word-by-word token inclusion
+      const inputWords = cleanNama.split(' ').filter(w => w.length > 3 && !['dinas', 'badan', 'biro', 'dan', 'yang', 'untuk', 'pada'].includes(w));
+      if (inputWords.length > 0) {
+        idx = list.findIndex(o => {
+          const oClean = cleanOpdKeywords(o.namaOPD);
+          return inputWords.every(w => oClean.includes(w));
+        });
+        if (idx >= 0) return idx;
+
+        idx = list.findIndex(o => {
+          const oClean = cleanOpdKeywords(o.namaOPD);
+          return inputWords.some(w => oClean.includes(w));
+        });
+        if (idx >= 0) return idx;
+      }
+    }
+
+    return -1;
+  };
+
+  // Clean numerical amounts from Excel (handles Indonesian period/comma formats and text symbols)
   const parseNumeric = (val: any): number => {
     if (typeof val === 'number') return isNaN(val) ? 0 : val;
     if (!val) return 0;
-    const str = String(val).replace(/[^0-9.-]+/g, '');
+    let str = String(val).trim();
+    // Hilangkan prefix mata uang seperti Rp, IDR
+    str = str.replace(/^(rp|idr)\.?\s*/i, '').trim();
+
+    // Penanganan pemisah ribuan & desimal format Indonesia vs Inggris
+    if (str.includes('.') && str.includes(',')) {
+      if (str.lastIndexOf(',') > str.lastIndexOf('.')) {
+        // Format Indonesia: 15.000.000.000,00 -> titik ribuan, koma desimal
+        str = str.replace(/\./g, '').replace(',', '.');
+      } else {
+        // Format Inggris: 15,000,000.00 -> koma ribuan, titik desimal
+        str = str.replace(/,/g, '');
+      }
+    } else if (str.includes('.')) {
+      const parts = str.split('.');
+      // Jika memiliki lebih dari 1 titik (15.000.000.000) atau bagian setelah titik 3 digit -> ribuan
+      if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
+        str = str.replace(/\./g, '');
+      }
+    } else if (str.includes(',')) {
+      const parts = str.split(',');
+      if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
+        str = str.replace(/,/g, '');
+      } else {
+        str = str.replace(',', '.');
+      }
+    }
+
+    str = str.replace(/[^0-9.-]+/g, '');
     const num = parseFloat(str);
     return isNaN(num) ? 0 : num;
   };
@@ -456,46 +557,46 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
           if (!cellVal) return;
           const cStr = String(cellVal).trim().toLowerCase().replace(/[\s_\-()/.:]/g, '');
 
-          if (cStr.includes('kodesubskpd') || cStr === 'kodesub' || cStr.includes('subskpd') || (cStr.includes('kode') && cStr.includes('skpd'))) {
+          if (cStr.includes('kodesubskpd') || cStr === 'kodesub' || cStr.includes('subskpd') || (cStr.includes('kode') && cStr.includes('skpd')) || cStr === 'kodeopd' || (cStr.includes('kode') && cStr.includes('opd'))) {
             tempColMap['kodeSubSKPD'] = cIdx;
             matchCount++;
-          } else if (cStr.includes('namasubskpd') || (cStr.includes('nama') && cStr.includes('skpd')) || cStr === 'namasub' || cStr.includes('namaopd')) {
+          } else if (cStr.includes('namasubskpd') || (cStr.includes('nama') && cStr.includes('skpd')) || cStr === 'namasub' || cStr.includes('namaopd') || (cStr.includes('nama') && cStr.includes('opd')) || cStr === 'opd' || cStr === 'skpd') {
             tempColMap['namaSubSKPD'] = cIdx;
             matchCount++;
           } else if (cStr.includes('kodeprogram') || cStr === 'kodeprog') {
             tempColMap['kodeProgram'] = cIdx;
             matchCount++;
-          } else if (cStr.includes('namaprogram') || cStr === 'namaprog') {
+          } else if (cStr.includes('namaprogram') || cStr === 'namaprog' || cStr === 'program') {
             tempColMap['namaProgram'] = cIdx;
             matchCount++;
           } else if (cStr.includes('kodekegiatan') || cStr === 'kodekeg') {
             tempColMap['kodeKegiatan'] = cIdx;
             matchCount++;
-          } else if (cStr.includes('namakegiatan') || cStr === 'namakeg') {
+          } else if (cStr.includes('namakegiatan') || cStr === 'namakeg' || cStr === 'kegiatan') {
             tempColMap['namaKegiatan'] = cIdx;
             matchCount++;
           } else if (cStr.includes('kodesubkegiatan') || cStr === 'kodesubkeg') {
             tempColMap['kodeSubKegiatan'] = cIdx;
             matchCount++;
-          } else if (cStr.includes('namasubkegiatan') || cStr === 'namasubkeg') {
+          } else if (cStr.includes('namasubkegiatan') || cStr === 'namasubkeg' || cStr === 'subkegiatan') {
             tempColMap['namaSubKegiatan'] = cIdx;
             matchCount++;
           } else if (cStr.includes('koderekening') || cStr === 'koderek' || cStr.includes('kodebelanja') || cStr === 'kodeakun') {
             tempColMap['kodeRekening'] = cIdx;
             matchCount++;
-          } else if (cStr.includes('namarekening') || cStr.includes('uraianbelanja') || cStr.includes('uraianrekening') || cStr.includes('namabelanja')) {
+          } else if (cStr.includes('namarekening') || cStr.includes('uraianbelanja') || cStr.includes('uraianrekening') || cStr.includes('namabelanja') || cStr.includes('uraian')) {
             tempColMap['namaRekening'] = cIdx;
             matchCount++;
-          } else if (cStr.includes('alokasianggaran') || cStr.includes('paguanggaran') || cStr === 'alokasi' || cStr === 'pagumurni' || cStr === 'pagu' || cStr === 'anggaran') {
+          } else if (cStr.includes('alokasi') || cStr.includes('pagu') || cStr.includes('anggaran') || cStr.includes('targetpagu')) {
             tempColMap['alokasiAnggaran'] = cIdx;
             matchCount++;
-          } else if (cStr.includes('realisasianggaran') || cStr.includes('realisasisp2d') || cStr === 'realisasi' || cStr === 'nilairealisasi') {
+          } else if (cStr.includes('realisasi') || cStr.includes('sp2d') || cStr.includes('serapan') || cStr.includes('cair')) {
             tempColMap['realisasiAnggaran'] = cIdx;
             matchCount++;
           }
         });
 
-        if (matchCount >= 3) {
+        if (matchCount >= 2) {
           foundHeaderRowIdx = r;
           colMap = tempColMap;
           break;
@@ -631,7 +732,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
     e.target.value = '';
   };
 
-  // Apply Imported Excel Data to OPD List and Sub-data
+  // Apply Imported Excel Data to OPD List and Sub-data (Mendukung Multi-Baris Per OPD & Format Kolom M6 s.d X)
   const handleApplyExcelImport = () => {
     if (importPreviewData.length === 0) return;
 
@@ -639,6 +740,26 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
     let addedCount = 0;
     const newOpds = [...opdListState];
     const newBreakdowns: Record<string, any> = { ...customBreakdownMap };
+
+    // Kelompokkan baris import berdasarkan OPD untuk agregasi Pagu & Realisasi yang akurat
+    interface OpdImportCluster {
+      kode: string;
+      nama: string;
+      singkatan: string;
+      kategori: string;
+      kepala: string;
+      nip: string;
+      alamat: string;
+      rows: any[];
+      paguValues: number[];
+      realisasiValues: number[];
+      distinctPrograms: Map<string, any>;
+      distinctKegiatans: Map<string, any>;
+      distinctSubKegiatans: Map<string, any>;
+      distinctBelanja: Map<string, any>;
+    }
+
+    const clustersMap = new Map<string, OpdImportCluster>();
 
     importPreviewData.forEach((row, idx) => {
       const nama = String(row['Nama Sub SKPD'] || row['Nama_Sub_SKPD'] || row['Nama_OPD'] || row['nama_opd'] || row['OPD'] || row['Nama OPD'] || row['SKPD'] || row['Nama SKPD'] || '').trim();
@@ -651,161 +772,259 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
       const nip = String(row['NIP_Kepala'] || row['NIP'] || row['NIP Kepala'] || '').trim();
       const alamat = String(row['Alamat'] || row['alamat'] || '').trim();
 
-      if (!nama && !kode && !singkatan) return;
+      if (!nama && !kode && !singkatan && pagu === 0 && realisasi === 0) return;
 
-      const existingIndex = newOpds.findIndex(o => 
-        (kode && o.kodeOPD.trim() === kode) ||
-        (singkatan && o.singkatan.toLowerCase() === singkatan.toLowerCase()) ||
-        (nama && (o.namaOPD.toLowerCase().includes(nama.toLowerCase()) || nama.toLowerCase().includes(o.namaOPD.toLowerCase())))
-      );
+      // Kunci cluster unik per OPD
+      const cleanK = kode ? kode.replace(/[^0-9]/g, '') : '';
+      const cleanN = cleanOpdKeywords(nama);
+      const clusterKey = cleanK.length >= 4 ? cleanK : (cleanN || singkatan || `row-${idx}`);
+
+      if (!clustersMap.has(clusterKey)) {
+        clustersMap.set(clusterKey, {
+          kode,
+          nama,
+          singkatan,
+          kategori,
+          kepala,
+          nip,
+          alamat,
+          rows: [],
+          paguValues: [],
+          realisasiValues: [],
+          distinctPrograms: new Map(),
+          distinctKegiatans: new Map(),
+          distinctSubKegiatans: new Map(),
+          distinctBelanja: new Map()
+        });
+      }
+
+      const cluster = clustersMap.get(clusterKey)!;
+      if (nama && (!cluster.nama || cluster.nama.length < nama.length)) cluster.nama = nama;
+      if (kode && !cluster.kode) cluster.kode = kode;
+      if (singkatan && !cluster.singkatan) cluster.singkatan = singkatan;
+      if (kepala && !cluster.kepala) cluster.kepala = kepala;
+      if (nip && !cluster.nip) cluster.nip = nip;
+      if (alamat && !cluster.alamat) cluster.alamat = alamat;
+
+      cluster.rows.push(row);
+      if (pagu > 0) cluster.paguValues.push(pagu);
+      if (realisasi > 0) cluster.realisasiValues.push(realisasi);
+
+      // Catat Program
+      const pName = row['Nama Program'] || row['Nama_Program'] || row['Program'] || row['NAMA PROGRAM'];
+      const pCode = row['Kode Program'] || row['Kode_Program'] || row['KODE PROGRAM'] || (pName ? `P-${cluster.distinctPrograms.size + 1}` : '');
+      if (pName) {
+        const progKey = String(pCode || pName).trim().toLowerCase();
+        if (!cluster.distinctPrograms.has(progKey)) {
+          cluster.distinctPrograms.set(progKey, {
+            kodeProgram: pCode,
+            namaProgram: String(pName).toUpperCase(),
+            pagu: pagu > 0 ? pagu : 0,
+            realisasi: realisasi > 0 ? realisasi : 0
+          });
+        } else {
+          const ep = cluster.distinctPrograms.get(progKey)!;
+          if (pagu > 0) ep.pagu += pagu;
+          if (realisasi > 0) ep.realisasi += realisasi;
+        }
+      }
+
+      // Catat Kegiatan
+      const kName = row['Nama Kegiatan'] || row['Nama_Kegiatan'] || row['Kegiatan'] || row['NAMA KEGIATAN'];
+      const kCode = row['Kode Kegiatan'] || row['Kode_Kegiatan'] || row['KODE KEGIATAN'] || (kName ? `K-${cluster.distinctKegiatans.size + 1}` : '');
+      if (kName) {
+        const kegKey = String(kCode || kName).trim().toLowerCase();
+        if (!cluster.distinctKegiatans.has(kegKey)) {
+          cluster.distinctKegiatans.set(kegKey, {
+            kodeProgram: pCode || '',
+            kodeKegiatan: kCode,
+            namaKegiatan: String(kName),
+            pagu: pagu > 0 ? pagu : 0,
+            realisasi: realisasi > 0 ? realisasi : 0
+          });
+        } else {
+          const ek = cluster.distinctKegiatans.get(kegKey)!;
+          if (pagu > 0) ek.pagu += pagu;
+          if (realisasi > 0) ek.realisasi += realisasi;
+        }
+      }
+
+      // Catat Sub Kegiatan
+      const sName = row['Nama Sub Kegiatan'] || row['Nama_Sub_Kegiatan'] || row['Sub_Kegiatan'] || row['NAMA SUB KEGIATAN'];
+      const sCode = row['Kode Sub Kegiatan'] || row['Kode_Sub_Kegiatan'] || row['KODE SUB KEGIATAN'] || (sName ? `S-${cluster.distinctSubKegiatans.size + 1}` : '');
+      if (sName) {
+        const subKey = String(sCode || sName).trim().toLowerCase();
+        if (!cluster.distinctSubKegiatans.has(subKey)) {
+          cluster.distinctSubKegiatans.set(subKey, {
+            kodeProgram: pCode || '',
+            kodeKegiatan: kCode || '',
+            kodeSub: sCode,
+            namaSub: String(sName),
+            pagu: pagu > 0 ? pagu : 0,
+            realisasi: realisasi > 0 ? realisasi : 0
+          });
+        } else {
+          const es = cluster.distinctSubKegiatans.get(subKey)!;
+          if (pagu > 0) es.pagu += pagu;
+          if (realisasi > 0) es.realisasi += realisasi;
+        }
+      }
+
+      // Catat Rekening Belanja
+      const bName = row['Nama Rekening'] || row['Nama_Rekening'] || row['Nama_Rekening_Belanja'] || row['Nama_Belanja'] || row['Rekening_Belanja'] || row['NAMA REKENING'];
+      const bCode = row['Kode Rekening'] || row['Kode_Rekening'] || row['Kode_Rekening_Belanja'] || row['Kode_Belanja'] || (bName ? `B-${cluster.distinctBelanja.size + 1}` : '');
+      if (bName || bCode) {
+        const belKey = String(bCode || bName).trim().toLowerCase();
+        if (!cluster.distinctBelanja.has(belKey)) {
+          cluster.distinctBelanja.set(belKey, {
+            kodeBelanja: bCode || '5.1.02.01.01.0001',
+            namaBelanja: String(bName || `Belanja ${bCode}`),
+            jenisBelanja: row['Jenis_Belanja'] || row['JENIS BELANJA'] || (bCode?.startsWith('5.1.01') ? 'Belanja Pegawai' : bCode?.startsWith('5.2') ? 'Belanja Modal' : 'Belanja Operasi'),
+            pagu: pagu > 0 ? pagu : 0,
+            realisasi: realisasi > 0 ? realisasi : 0
+          });
+        } else {
+          const eb = cluster.distinctBelanja.get(belKey)!;
+          if (pagu > 0) eb.pagu += pagu;
+          if (realisasi > 0) eb.realisasi += realisasi;
+        }
+      }
+    });
+
+    // Proses dan terapkan setiap Cluster OPD ke state aplikasi
+    clustersMap.forEach(cluster => {
+      // Hitung akumulasi pagu dan realisasi yang benar
+      let totalPagu = 0;
+      let totalReal = 0;
+
+      if (cluster.distinctBelanja.size > 0) {
+        cluster.distinctBelanja.forEach(b => {
+          totalPagu += b.pagu;
+          totalReal += b.realisasi;
+        });
+      } else if (cluster.distinctSubKegiatans.size > 0) {
+        cluster.distinctSubKegiatans.forEach(s => {
+          totalPagu += s.pagu;
+          totalReal += s.realisasi;
+        });
+      } else if (cluster.distinctPrograms.size > 0) {
+        cluster.distinctPrograms.forEach(p => {
+          totalPagu += p.pagu;
+          totalReal += p.realisasi;
+        });
+      } else {
+        totalPagu = cluster.paguValues.reduce((a, b) => a + b, 0);
+        totalReal = cluster.realisasiValues.reduce((a, b) => a + b, 0);
+      }
+
+      // Cocokkan OPD dengan database 40 OPD NTB
+      const matchedIdx = findMatchingOpdIndex(cluster.kode, cluster.nama, cluster.singkatan, newOpds);
 
       let targetId = '';
-      if (existingIndex >= 0) {
-        targetId = newOpds[existingIndex].id;
-        const currentTarget = newOpds[existingIndex];
-        newOpds[existingIndex] = {
-          ...currentTarget,
-          targetPagu: pagu > 0 ? pagu : currentTarget.targetPagu,
-          realisasiSP2D: realisasi > 0 ? realisasi : currentTarget.realisasiSP2D,
-          kepalaBadan: kepala || currentTarget.kepalaBadan,
-          nipKepala: nip || currentTarget.nipKepala,
-          alamat: alamat || currentTarget.alamat,
-          statusKinerja: pagu > 0 ? ((realisasi/pagu) >= 0.8 ? 'Sangat Tinggi' : (realisasi/pagu) >= 0.65 ? 'Tinggi' : 'Sedang') : currentTarget.statusKinerja
+      if (matchedIdx >= 0) {
+        const cur = newOpds[matchedIdx];
+        targetId = cur.id;
+
+        newOpds[matchedIdx] = {
+          ...cur,
+          namaOPD: cluster.nama || cur.namaOPD, // Update Nama OPD sesuai file Excel!
+          kodeOPD: cluster.kode || cur.kodeOPD, // Update Kode Sub SKPD sesuai file Excel!
+          singkatan: cluster.singkatan || cur.singkatan,
+          targetPagu: totalPagu > 0 ? totalPagu : cur.targetPagu, // Update Nilai Pagu Anggaran!
+          realisasiSP2D: totalReal > 0 ? totalReal : cur.realisasiSP2D, // Update Nilai Realisasi Kasda!
+          kepalaBadan: cluster.kepala || cur.kepalaBadan,
+          nipKepala: cluster.nip || cur.nipKepala,
+          alamat: cluster.alamat || cur.alamat,
+          statusKinerja: totalPagu > 0 
+            ? ((totalReal / totalPagu) >= 0.8 ? 'Sangat Tinggi' : (totalReal / totalPagu) >= 0.65 ? 'Tinggi' : 'Sedang') 
+            : cur.statusKinerja
         };
         updatedCount++;
       } else {
+        // Buat entitas OPD baru jika tidak cocok dengan 40 SKPD bawaan
         targetId = `OPD-${String(newOpds.length + 1).padStart(3, '0')}`;
         newOpds.push({
           id: targetId,
-          kodeOPD: kode || `1.01.0.00.0.00.${String(newOpds.length + 1).padStart(2, '0')}.0000`,
-          namaOPD: nama || `OPD ${singkatan}`,
-          singkatan: singkatan || (nama ? nama.substring(0, 10).toUpperCase() : `OPD ${newOpds.length + 1}`),
-          kategori: kategori,
-          kepalaBadan: kepala || 'Belum Ditetapkan',
-          nipKepala: nip || '-',
-          alamat: alamat || 'Kota Mataram, NTB',
-          targetPagu: pagu > 0 ? pagu : 25000000000,
-          realisasiSP2D: realisasi > 0 ? realisasi : 18500000000,
-          jumlahProgram: 4,
-          jumlahKegiatan: 12,
-          jumlahTransaksi: 15,
-          statusKinerja: pagu > 0 ? ((realisasi/pagu) >= 0.8 ? 'Sangat Tinggi' : (realisasi/pagu) >= 0.65 ? 'Tinggi' : 'Sedang') : 'Sedang'
+          kodeOPD: cluster.kode || `1.01.0.00.0.00.${String(newOpds.length + 1).padStart(2, '0')}.0000`,
+          namaOPD: cluster.nama || `OPD ${cluster.singkatan || targetId}`,
+          singkatan: cluster.singkatan || (cluster.nama ? cluster.nama.substring(0, 10).toUpperCase() : `OPD ${newOpds.length + 1}`),
+          kategori: (cluster.kategori as any) || 'Dinas Daerah',
+          kepalaBadan: cluster.kepala || 'Belum Ditetapkan',
+          nipKepala: cluster.nip || '-',
+          alamat: cluster.alamat || 'Kota Mataram, NTB',
+          targetPagu: totalPagu > 0 ? totalPagu : 25000000000,
+          realisasiSP2D: totalReal > 0 ? totalReal : 18500000000,
+          jumlahProgram: Math.max(cluster.distinctPrograms.size, 4),
+          jumlahKegiatan: Math.max(cluster.distinctKegiatans.size, 12),
+          jumlahTransaksi: 25,
+          statusKinerja: totalPagu > 0 
+            ? ((totalReal / totalPagu) >= 0.8 ? 'Sangat Tinggi' : (totalReal / totalPagu) >= 0.65 ? 'Tinggi' : 'Sedang') 
+            : 'Sedang'
         });
         addedCount++;
       }
 
-      // Initialize breakdown for this OPD if not exists
-      const targetOpdObj = newOpds.find(o => o.id === targetId) || newOpds[0];
+      // Perbarui rincian breakdown (Program, Kegiatan, Sub Kegiatan, Belanja) untuk OPD ini
+      const targetOpd = newOpds.find(o => o.id === targetId)!;
       if (!newBreakdowns[targetId]) {
-        newBreakdowns[targetId] = getOPDDetailsBreakdown(targetOpdObj);
+        newBreakdowns[targetId] = getOPDDetailsBreakdown(targetOpd);
       }
+      const bd = newBreakdowns[targetId];
 
-      // If program row is provided
-      const progName = row['Nama Program'] || row['Nama_Program'] || row['Program'] || row['NAMA PROGRAM'];
-      if (progName) {
-        const pCode = row['Kode Program'] || row['Kode_Program'] || row['KODE PROGRAM'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.0${(newBreakdowns[targetId].programs.length + 1)}`;
-        const pPagu = parseNumeric(row['Alokasi Anggaran'] || row['Pagu_Program'] || row['PAGU PROGRAM'] || pagu * 0.35 || 5000000000);
-        const pReal = parseNumeric(row['Realisasi Anggaran'] || row['Realisasi_Program'] || row['REALISASI PROGRAM'] || realisasi * 0.35 || 3800000000);
-
-        const existingProg = newBreakdowns[targetId].programs.find((p: any) => p.kodeProgram === pCode || p.namaProgram.toLowerCase() === String(progName).toLowerCase());
-        if (existingProg) {
-          if (pPagu > 0) existingProg.pagu = pPagu;
-          if (pReal > 0) existingProg.realisasi = pReal;
-        } else {
-          newBreakdowns[targetId].programs.push({
-            id: `IMP-P-${targetId}-${idx}`,
-            opdId: targetId,
-            namaOPD: targetOpdObj.namaOPD,
-            kodeProgram: pCode,
-            namaProgram: String(progName).toUpperCase(),
-            pagu: pPagu,
-            realisasi: pReal
-          });
-        }
+      if (cluster.distinctPrograms.size > 0) {
+        bd.programs = Array.from(cluster.distinctPrograms.values()).map((p, pIdx) => ({
+          id: `IMP-P-${targetId}-${pIdx + 1}`,
+          opdId: targetId,
+          namaOPD: targetOpd.namaOPD,
+          kodeProgram: p.kodeProgram,
+          namaProgram: p.namaProgram,
+          pagu: p.pagu,
+          realisasi: p.realisasi
+        }));
       }
-
-      // If kegiatan row is provided
-      const kegName = row['Nama Kegiatan'] || row['Nama_Kegiatan'] || row['Kegiatan'] || row['NAMA KEGIATAN'];
-      if (kegName) {
-        const kCode = row['Kode Kegiatan'] || row['Kode_Kegiatan'] || row['KODE KEGIATAN'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.01.2.0${(newBreakdowns[targetId].kegiatans.length + 1)}`;
-        const kPagu = parseNumeric(row['Alokasi Anggaran'] || row['Pagu_Kegiatan'] || row['PAGU KEGIATAN'] || pagu * 0.20 || 2000000000);
-        const kReal = parseNumeric(row['Realisasi Anggaran'] || row['Realisasi_Kegiatan'] || row['REALISASI KEGIATAN'] || realisasi * 0.20 || 1600000000);
-
-        const existingKeg = newBreakdowns[targetId].kegiatans.find((k: any) => k.kodeKegiatan === kCode || k.namaKegiatan.toLowerCase() === String(kegName).toLowerCase());
-        if (existingKeg) {
-          if (kPagu > 0) existingKeg.pagu = kPagu;
-          if (kReal > 0) existingKeg.realisasi = kReal;
-        } else {
-          newBreakdowns[targetId].kegiatans.push({
-            id: `IMP-K-${targetId}-${idx}`,
-            opdId: targetId,
-            namaOPD: targetOpdObj.namaOPD,
-            kodeProgram: row['Kode Program'] || row['Kode_Program'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.01`,
-            kodeKegiatan: kCode,
-            namaKegiatan: String(kegName),
-            pagu: kPagu,
-            realisasi: kReal
-          });
-        }
+      if (cluster.distinctKegiatans.size > 0) {
+        bd.kegiatans = Array.from(cluster.distinctKegiatans.values()).map((k, kIdx) => ({
+          id: `IMP-K-${targetId}-${kIdx + 1}`,
+          opdId: targetId,
+          namaOPD: targetOpd.namaOPD,
+          kodeProgram: k.kodeProgram,
+          kodeKegiatan: k.kodeKegiatan,
+          namaKegiatan: k.namaKegiatan,
+          pagu: k.pagu,
+          realisasi: k.realisasi
+        }));
       }
-
-      // If sub kegiatan row is provided
-      const subName = row['Nama Sub Kegiatan'] || row['Nama_Sub_Kegiatan'] || row['Sub_Kegiatan'] || row['NAMA SUB KEGIATAN'];
-      if (subName) {
-        const sCode = row['Kode Sub Kegiatan'] || row['Kode_Sub_Kegiatan'] || row['KODE SUB KEGIATAN'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.01.2.01.0${(newBreakdowns[targetId].subKegiatans.length + 1)}`;
-        const sPagu = parseNumeric(row['Alokasi Anggaran'] || row['Pagu_Sub_Kegiatan'] || row['PAGU SUB KEGIATAN'] || pagu * 0.15 || 1000000000);
-        const sReal = parseNumeric(row['Realisasi Anggaran'] || row['Realisasi_Sub_Kegiatan'] || row['REALISASI SUB KEGIATAN'] || realisasi * 0.15 || 800000000);
-
-        const existingSub = newBreakdowns[targetId].subKegiatans.find((s: any) => s.kodeSub === sCode || s.namaSub.toLowerCase() === String(subName).toLowerCase());
-        if (existingSub) {
-          if (sPagu > 0) existingSub.pagu = sPagu;
-          if (sReal > 0) existingSub.realisasi = sReal;
-        } else {
-          newBreakdowns[targetId].subKegiatans.push({
-            id: `IMP-S-${targetId}-${idx}`,
-            opdId: targetId,
-            namaOPD: targetOpdObj.namaOPD,
-            kodeProgram: row['Kode Program'] || row['Kode_Program'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.01`,
-            kodeKegiatan: row['Kode Kegiatan'] || row['Kode_Kegiatan'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.01.2.01`,
-            kodeSub: sCode,
-            namaSub: String(subName),
-            pagu: sPagu,
-            realisasi: sReal
-          });
-        }
+      if (cluster.distinctSubKegiatans.size > 0) {
+        bd.subKegiatans = Array.from(cluster.distinctSubKegiatans.values()).map((s, sIdx) => ({
+          id: `IMP-S-${targetId}-${sIdx + 1}`,
+          opdId: targetId,
+          namaOPD: targetOpd.namaOPD,
+          kodeProgram: s.kodeProgram,
+          kodeKegiatan: s.kodeKegiatan,
+          kodeSub: s.kodeSub,
+          namaSub: s.namaSub,
+          pagu: s.pagu,
+          realisasi: s.realisasi
+        }));
       }
-
-      // If rekening belanja row is provided
-      const belanjaName = row['Nama Rekening'] || row['Nama_Rekening'] || row['Nama_Rekening_Belanja'] || row['Nama_Belanja'] || row['Rekening_Belanja'] || row['NAMA REKENING'];
-      if (belanjaName) {
-        const bCode = row['Kode Rekening'] || row['Kode_Rekening'] || row['Kode_Rekening_Belanja'] || row['Kode_Belanja'] || `5.1.0${(newBreakdowns[targetId].belanjaList.length + 1)}.01.0001`;
-        const bPagu = parseNumeric(row['Alokasi Anggaran'] || row['Pagu_Belanja'] || row['PAGU BELANJA'] || pagu * 0.15 || 1000000000);
-        const bReal = parseNumeric(row['Realisasi Anggaran'] || row['Realisasi_Belanja'] || row['REALISASI BELANJA'] || realisasi * 0.15 || 850000000);
-        const bJenis = row['Jenis_Belanja'] || row['JENIS BELANJA'] || 'Belanja Operasi';
-
-        const existingBelanja = newBreakdowns[targetId].belanjaList.find((b: any) => b.kodeBelanja === bCode || b.namaBelanja.toLowerCase() === String(belanjaName).toLowerCase());
-        if (existingBelanja) {
-          if (bPagu > 0) existingBelanja.pagu = bPagu;
-          if (bReal > 0) existingBelanja.realisasi = bReal;
-        } else {
-          newBreakdowns[targetId].belanjaList.push({
-            id: `IMP-B-${targetId}-${idx}`,
-            opdId: targetId,
-            namaOPD: targetOpdObj.namaOPD,
-            kodeBelanja: bCode,
-            namaBelanja: String(belanjaName),
-            jenisBelanja: bJenis,
-            pagu: bPagu,
-            realisasi: bReal
-          });
-        }
+      if (cluster.distinctBelanja.size > 0) {
+        bd.belanjaList = Array.from(cluster.distinctBelanja.values()).map((b, bIdx) => ({
+          id: `IMP-B-${targetId}-${bIdx + 1}`,
+          opdId: targetId,
+          namaOPD: targetOpd.namaOPD,
+          kodeBelanja: b.kodeBelanja,
+          namaBelanja: b.namaBelanja,
+          jenisBelanja: b.jenisBelanja,
+          pagu: b.pagu,
+          realisasi: b.realisasi
+        }));
       }
     });
 
     setOpdListState(newOpds);
     setCustomBreakdownMap(newBreakdowns);
 
-    // Save to localStorage for persistence across reloads
+    // Simpan permanen ke localStorage
     try {
       localStorage.setItem('bfms_seluruh_opd_data_v1', JSON.stringify(newOpds));
       localStorage.setItem('bfms_seluruh_opd_breakdowns_v1', JSON.stringify(newBreakdowns));
@@ -814,6 +1033,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
     }
 
     setImportStats({ total: importPreviewData.length, updated: updatedCount, added: addedCount });
+    setLaporanActionSuccessMsg(`Berhasil menerapkan import data untuk ${clustersMap.size} OPD (${updatedCount} diperbarui, ${addedCount} OPD baru). Nama OPD dan Anggaran telah disinkronkan.`);
     setShowImportModal(false);
   };
 
@@ -4057,14 +4277,10 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                   <span className="text-[10px] font-bold uppercase text-cyan-400">OPD Cocok (Update):</span>
                   <div className="text-base font-black text-cyan-300 mt-1">
                     {importPreviewData.filter(row => {
-                      const nama = String(row['Nama_OPD'] || row['nama_opd'] || row['OPD'] || row['Nama OPD'] || '').toLowerCase();
-                      const kode = String(row['Kode_OPD'] || row['kode_opd'] || '').trim();
-                      const singk = String(row['Singkatan'] || row['singkatan'] || '').toLowerCase();
-                      return opdListState.some(o => 
-                        (kode && o.kodeOPD.trim() === kode) ||
-                        (singk && o.singkatan.toLowerCase() === singk) ||
-                        (nama && o.namaOPD.toLowerCase().includes(nama))
-                      );
+                      const nama = String(row['Nama Sub SKPD'] || row['Nama_Sub_SKPD'] || row['Nama_OPD'] || row['nama_opd'] || row['OPD'] || row['Nama OPD'] || row['SKPD'] || row['Nama SKPD'] || '');
+                      const kode = String(row['Kode Sub SKPD'] || row['Kode_Sub_SKPD'] || row['Kode_OPD'] || row['kode_opd'] || row['Kode SKPD'] || '');
+                      const singk = String(row['Singkatan'] || row['singkatan'] || '');
+                      return findMatchingOpdIndex(kode, nama, singk, opdListState) >= 0;
                     }).length} OPD
                   </div>
                 </div>
@@ -4072,7 +4288,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                   <span className="text-[10px] font-bold uppercase text-emerald-400">Estimasi Total Pagu:</span>
                   <div className="text-base font-black text-emerald-300 mt-1">
                     {formatRupiahSingkat(
-                      importPreviewData.reduce((acc, r) => acc + parseNumeric(r['Pagu_Anggaran'] || r['pagu'] || r['Pagu'] || r['Anggaran']), 0)
+                      importPreviewData.reduce((acc, r) => acc + parseNumeric(r['Alokasi Anggaran'] || r['Alokasi_Anggaran'] || r['Pagu_Anggaran'] || r['pagu'] || r['Pagu'] || r['Anggaran']), 0)
                     )}
                   </div>
                 </div>
@@ -4080,7 +4296,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                   <span className="text-[10px] font-bold uppercase text-amber-400">Estimasi Realisasi:</span>
                   <div className="text-base font-black text-amber-300 mt-1">
                     {formatRupiahSingkat(
-                      importPreviewData.reduce((acc, r) => acc + parseNumeric(r['Realisasi_SP2D'] || r['realisasi'] || r['Realisasi'] || r['SP2D']), 0)
+                      importPreviewData.reduce((acc, r) => acc + parseNumeric(r['Realisasi Anggaran'] || r['Realisasi_Anggaran'] || r['Realisasi_SP2D'] || r['realisasi'] || r['Realisasi'] || r['SP2D']), 0)
                     )}
                   </div>
                 </div>
@@ -4091,35 +4307,35 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                 <span className="font-bold text-slate-300 mr-2">Kolom Terbaca:</span>
                 <span className="flex items-center gap-1 rounded-md bg-emerald-950/80 px-2 py-0.5 text-[11px] font-semibold text-emerald-300 border border-emerald-800">
                   <Check className="h-3 w-3" />
-                  <span>Nama OPD</span>
+                  <span>Nama Sub SKPD / OPD</span>
                 </span>
                 <span className="flex items-center gap-1 rounded-md bg-emerald-950/80 px-2 py-0.5 text-[11px] font-semibold text-emerald-300 border border-emerald-800">
                   <Check className="h-3 w-3" />
-                  <span>Pagu Anggaran</span>
+                  <span>Pagu / Alokasi Anggaran</span>
                 </span>
                 <span className="flex items-center gap-1 rounded-md bg-emerald-950/80 px-2 py-0.5 text-[11px] font-semibold text-emerald-300 border border-emerald-800">
                   <Check className="h-3 w-3" />
-                  <span>Realisasi SP2D</span>
+                  <span>Realisasi Kasda / SP2D</span>
                 </span>
-                {importPreviewData.some(r => r['Nama_Program'] || r['Program']) && (
+                {importPreviewData.some(r => r['Nama Program'] || r['Nama_Program'] || r['Program']) && (
                   <span className="flex items-center gap-1 rounded-md bg-cyan-950/80 px-2 py-0.5 text-[11px] font-semibold text-cyan-300 border border-cyan-800">
                     <Check className="h-3 w-3" />
-                    <span>Rincian Program</span>
+                    <span>Nomenklatur Program</span>
                   </span>
                 )}
-                {importPreviewData.some(r => r['Nama_Kegiatan'] || r['Kegiatan']) && (
+                {importPreviewData.some(r => r['Nama Kegiatan'] || r['Nama_Kegiatan'] || r['Kegiatan']) && (
                   <span className="flex items-center gap-1 rounded-md bg-cyan-950/80 px-2 py-0.5 text-[11px] font-semibold text-cyan-300 border border-cyan-800">
                     <Check className="h-3 w-3" />
-                    <span>Rincian Kegiatan</span>
+                    <span>Nomenklatur Kegiatan</span>
                   </span>
                 )}
-                {importPreviewData.some(r => r['Nama_Sub_Kegiatan'] || r['Sub_Kegiatan']) && (
+                {importPreviewData.some(r => r['Nama Sub Kegiatan'] || r['Nama_Sub_Kegiatan'] || r['Sub_Kegiatan']) && (
                   <span className="flex items-center gap-1 rounded-md bg-purple-950/80 px-2 py-0.5 text-[11px] font-semibold text-purple-300 border border-purple-800">
                     <Check className="h-3 w-3" />
                     <span>Sub Kegiatan</span>
                   </span>
                 )}
-                {importPreviewData.some(r => r['Nama_Rekening_Belanja'] || r['Rekening_Belanja'] || r['Nama_Belanja']) && (
+                {importPreviewData.some(r => r['Nama Rekening'] || r['Nama_Rekening'] || r['Nama_Rekening_Belanja'] || r['Nama_Belanja']) && (
                   <span className="flex items-center gap-1 rounded-md bg-amber-950/80 px-2 py-0.5 text-[11px] font-semibold text-amber-300 border border-amber-800">
                     <Check className="h-3 w-3" />
                     <span>Rekening Belanja</span>
@@ -4133,28 +4349,24 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                   <thead className="border-b border-slate-800 bg-slate-950 text-[11px] font-bold uppercase text-slate-300">
                     <tr>
                       <th className="p-3 text-center w-10">No</th>
-                      <th className="p-3">Nama Organisasi (OPD)</th>
-                      <th className="p-3">Kode SKPD / Singkatan</th>
-                      <th className="p-3 text-right">Pagu Anggaran</th>
-                      <th className="p-3 text-right">Realisasi SP2D</th>
+                      <th className="p-3">Nama Satuan Kerja (Sub SKPD)</th>
+                      <th className="p-3">Kode Sub SKPD / Singkatan</th>
+                      <th className="p-3 text-right">Alokasi Anggaran (Rp)</th>
+                      <th className="p-3 text-right">Realisasi SP2D (Rp)</th>
                       <th className="p-3 text-center">% Serapan</th>
                       <th className="p-3 text-center">Status Pemetaan</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800 font-sans">
                     {importPreviewData.slice(0, 15).map((row, i) => {
-                      const nama = String(row['Nama_OPD'] || row['nama_opd'] || row['OPD'] || row['Nama OPD'] || row['SKPD'] || '-');
-                      const kode = String(row['Kode_OPD'] || row['kode_opd'] || row['Kode SKPD'] || '-');
+                      const nama = String(row['Nama Sub SKPD'] || row['Nama_Sub_SKPD'] || row['Nama_OPD'] || row['nama_opd'] || row['OPD'] || row['Nama OPD'] || row['SKPD'] || row['Nama SKPD'] || '-');
+                      const kode = String(row['Kode Sub SKPD'] || row['Kode_Sub_SKPD'] || row['Kode_OPD'] || row['kode_opd'] || row['Kode SKPD'] || '-');
                       const singk = String(row['Singkatan'] || row['singkatan'] || '');
-                      const pagu = parseNumeric(row['Pagu_Anggaran'] || row['pagu'] || row['Pagu'] || row['Anggaran']);
-                      const real = parseNumeric(row['Realisasi_SP2D'] || row['realisasi'] || row['Realisasi'] || row['SP2D']);
+                      const pagu = parseNumeric(row['Alokasi Anggaran'] || row['Alokasi_Anggaran'] || row['Pagu_Anggaran'] || row['pagu'] || row['Pagu'] || row['Anggaran']);
+                      const real = parseNumeric(row['Realisasi Anggaran'] || row['Realisasi_Anggaran'] || row['Realisasi_SP2D'] || row['realisasi'] || row['Realisasi'] || row['SP2D']);
                       const pct = pagu > 0 ? (real / pagu) * 100 : 0;
 
-                      const isMatch = opdListState.some(o => 
-                        (kode !== '-' && o.kodeOPD.trim() === kode.trim()) ||
-                        (singk && o.singkatan.toLowerCase() === singk.toLowerCase()) ||
-                        (nama !== '-' && o.namaOPD.toLowerCase().includes(nama.toLowerCase()))
-                      );
+                      const isMatch = findMatchingOpdIndex(kode, nama, singk, opdListState) >= 0;
 
                       return (
                         <tr key={i} className="hover:bg-slate-800/40">
