@@ -5,6 +5,9 @@ import * as XLSX from 'xlsx';
 import {
   getOPDDetailsBreakdown,
   downloadOPDExcelTemplate,
+  downloadAnggaranExcelTemplate,
+  downloadRealisasiExcelTemplate,
+  downloadSIPDColumnMtoXTemplate,
   exportReportToExcel,
   OPDProgramItem,
   OPDKegiatanItem,
@@ -60,7 +63,10 @@ import {
   LayoutGrid,
   List,
   Tag,
-  FileCode
+  FileCode,
+  Edit3,
+  Trash2,
+  Save
 } from 'lucide-react';
 
 interface PortalSeluruhOPDViewProps {
@@ -103,6 +109,26 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
   const [masterImportErrors, setMasterImportErrors] = useState<string[]>([]);
   const [masterImportSuccessMsg, setMasterImportSuccessMsg] = useState<string | null>(null);
   const masterFileInputRef = useRef<HTMLInputElement>(null);
+
+  // States khusus Fungsi Edit dan Hapus pada Menu Pelaporan Konsolidasi
+  const [editLaporanModal, setEditLaporanModal] = useState<{
+    type: 'program' | 'kegiatan' | 'subkegiatan' | 'belanja' | 'opd';
+    opdId: string;
+    namaOPD?: string;
+    data: any;
+  } | null>(null);
+
+  const [deleteLaporanModal, setDeleteLaporanModal] = useState<{
+    type: 'program' | 'kegiatan' | 'subkegiatan' | 'belanja' | 'opd';
+    opdId: string;
+    namaOPD?: string;
+    id: string;
+    kode: string;
+    nama: string;
+    nominal: number;
+  } | null>(null);
+
+  const [laporanActionSuccessMsg, setLaporanActionSuccessMsg] = useState<string | null>(null);
   const [customBreakdownMap, setCustomBreakdownMap] = useState<Record<string, any>>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('bfms_seluruh_opd_breakdowns_v1');
@@ -403,7 +429,182 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
     return isNaN(num) ? 0 : num;
   };
 
-  // Handle Excel File Upload
+  // Parser Cerdas untuk Format Kolom A s.d X (Dimulai dari Baris M6 s.d X) maupun Format Standar
+  const parseExcelRowsSmart = (wb: XLSX.WorkBook): any[] => {
+    let combined: any[] = [];
+
+    wb.SheetNames.forEach(sheetName => {
+      const ws = wb.Sheets[sheetName];
+      if (!ws) return;
+
+      // 1. Ambil representasi matriks 2D (header: 1)
+      const rawMatrix: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      if (!rawMatrix || rawMatrix.length === 0) return;
+
+      let foundHeaderRowIdx = -1;
+      let colMap: Record<string, number> = {};
+
+      // Pindai baris 0 s.d 15 untuk mencari baris header
+      for (let r = 0; r < Math.min(15, rawMatrix.length); r++) {
+        const rowArr = rawMatrix[r];
+        if (!Array.isArray(rowArr)) continue;
+
+        let matchCount = 0;
+        const tempColMap: Record<string, number> = {};
+
+        rowArr.forEach((cellVal, cIdx) => {
+          if (!cellVal) return;
+          const cStr = String(cellVal).trim().toLowerCase().replace(/[\s_\-()/.:]/g, '');
+
+          if (cStr.includes('kodesubskpd') || cStr === 'kodesub' || cStr.includes('subskpd') || (cStr.includes('kode') && cStr.includes('skpd'))) {
+            tempColMap['kodeSubSKPD'] = cIdx;
+            matchCount++;
+          } else if (cStr.includes('namasubskpd') || (cStr.includes('nama') && cStr.includes('skpd')) || cStr === 'namasub' || cStr.includes('namaopd')) {
+            tempColMap['namaSubSKPD'] = cIdx;
+            matchCount++;
+          } else if (cStr.includes('kodeprogram') || cStr === 'kodeprog') {
+            tempColMap['kodeProgram'] = cIdx;
+            matchCount++;
+          } else if (cStr.includes('namaprogram') || cStr === 'namaprog') {
+            tempColMap['namaProgram'] = cIdx;
+            matchCount++;
+          } else if (cStr.includes('kodekegiatan') || cStr === 'kodekeg') {
+            tempColMap['kodeKegiatan'] = cIdx;
+            matchCount++;
+          } else if (cStr.includes('namakegiatan') || cStr === 'namakeg') {
+            tempColMap['namaKegiatan'] = cIdx;
+            matchCount++;
+          } else if (cStr.includes('kodesubkegiatan') || cStr === 'kodesubkeg') {
+            tempColMap['kodeSubKegiatan'] = cIdx;
+            matchCount++;
+          } else if (cStr.includes('namasubkegiatan') || cStr === 'namasubkeg') {
+            tempColMap['namaSubKegiatan'] = cIdx;
+            matchCount++;
+          } else if (cStr.includes('koderekening') || cStr === 'koderek' || cStr.includes('kodebelanja') || cStr === 'kodeakun') {
+            tempColMap['kodeRekening'] = cIdx;
+            matchCount++;
+          } else if (cStr.includes('namarekening') || cStr.includes('uraianbelanja') || cStr.includes('uraianrekening') || cStr.includes('namabelanja')) {
+            tempColMap['namaRekening'] = cIdx;
+            matchCount++;
+          } else if (cStr.includes('alokasianggaran') || cStr.includes('paguanggaran') || cStr === 'alokasi' || cStr === 'pagumurni' || cStr === 'pagu' || cStr === 'anggaran') {
+            tempColMap['alokasiAnggaran'] = cIdx;
+            matchCount++;
+          } else if (cStr.includes('realisasianggaran') || cStr.includes('realisasisp2d') || cStr === 'realisasi' || cStr === 'nilairealisasi') {
+            tempColMap['realisasiAnggaran'] = cIdx;
+            matchCount++;
+          }
+        });
+
+        if (matchCount >= 3) {
+          foundHeaderRowIdx = r;
+          colMap = tempColMap;
+          break;
+        }
+      }
+
+      // Bila ditemukan baris header eksplisit
+      if (foundHeaderRowIdx >= 0) {
+        for (let r = foundHeaderRowIdx + 1; r < rawMatrix.length; r++) {
+          const rowArr = rawMatrix[r];
+          if (!Array.isArray(rowArr) || rowArr.length === 0) continue;
+
+          const getCell = (key: string): any => {
+            const cIdx = colMap[key];
+            return cIdx !== undefined && cIdx >= 0 ? rowArr[cIdx] : '';
+          };
+
+          const kodeSubSKPD = String(getCell('kodeSubSKPD') || '').trim();
+          const namaSubSKPD = String(getCell('namaSubSKPD') || '').trim();
+          const kodeProg = String(getCell('kodeProgram') || '').trim();
+          const namaProg = String(getCell('namaProgram') || '').trim();
+          const kodeKeg = String(getCell('kodeKegiatan') || '').trim();
+          const namaKeg = String(getCell('namaKegiatan') || '').trim();
+          const kodeSub = String(getCell('kodeSubKegiatan') || '').trim();
+          const namaSub = String(getCell('namaSubKegiatan') || '').trim();
+          const kodeRek = String(getCell('kodeRekening') || '').trim();
+          const namaRek = String(getCell('namaRekening') || '').trim();
+          const alokasi = parseNumeric(getCell('alokasiAnggaran'));
+          const realisasi = parseNumeric(getCell('realisasiAnggaran'));
+
+          if (!kodeSubSKPD && !namaSubSKPD && !kodeRek && alokasi === 0 && realisasi === 0) continue;
+
+          combined.push({
+            'Kode Sub SKPD': kodeSubSKPD,
+            'Nama Sub SKPD': namaSubSKPD,
+            'Kode Program': kodeProg,
+            'Nama Program': namaProg,
+            'Kode Kegiatan': kodeKeg,
+            'Nama Kegiatan': namaKeg,
+            'Kode Sub Kegiatan': kodeSub,
+            'Nama Sub Kegiatan': namaSub,
+            'Kode Rekening': kodeRek,
+            'Nama Rekening': namaRek,
+            'Alokasi Anggaran': alokasi,
+            'Realisasi Anggaran': realisasi,
+            _sheetName: sheetName
+          });
+        }
+      } else if (rawMatrix.length >= 6 && rawMatrix[5] && rawMatrix[5].length >= 13) {
+        // Deteksi Khusus File SIPD: Kolom A s.d X dengan Baris M6 s.d X
+        // Col M (12), N (13), O (14), P (15), Q (16), R (17), S (18), T (19), U (20), V (21), W (22), X (23)
+        const row5Cell12 = String(rawMatrix[5][12] || '').toLowerCase();
+        const isHeaderAtRow6 = row5Cell12.includes('skpd') || row5Cell12.includes('kode') || String(rawMatrix[5][20] || '').toLowerCase().includes('rekening');
+        const startDataRow = isHeaderAtRow6 ? 6 : 5;
+
+        for (let r = startDataRow; r < rawMatrix.length; r++) {
+          const rowArr = rawMatrix[r];
+          if (!Array.isArray(rowArr) || rowArr.length < 13) continue;
+
+          const kodeSubSKPD = String(rowArr[12] || '').trim();
+          const namaSubSKPD = String(rowArr[13] || '').trim();
+          const kodeProg = String(rowArr[14] || '').trim();
+          const namaProg = String(rowArr[15] || '').trim();
+          const kodeKeg = String(rowArr[16] || '').trim();
+          const namaKeg = String(rowArr[17] || '').trim();
+          const kodeSub = String(rowArr[18] || '').trim();
+          const namaSub = String(rowArr[19] || '').trim();
+          const kodeRek = String(rowArr[20] || '').trim();
+          const namaRek = String(rowArr[21] || '').trim();
+          const valW = parseNumeric(rowArr[22]);
+          const valX = parseNumeric(rowArr[23]);
+
+          const isRealisasiSheet = sheetName.toLowerCase().includes('realisasi');
+          const alokasi = !isRealisasiSheet ? (valW > 0 ? valW : valX) : (valX > 0 && valW === 0 ? valW : 0);
+          const realisasi = isRealisasiSheet ? (valW > 0 ? valW : valX) : valX;
+
+          if (!kodeSubSKPD && !namaSubSKPD && !kodeRek && valW === 0 && valX === 0) continue;
+
+          combined.push({
+            'Kode Sub SKPD': kodeSubSKPD,
+            'Nama Sub SKPD': namaSubSKPD,
+            'Kode Program': kodeProg,
+            'Nama Program': namaProg,
+            'Kode Kegiatan': kodeKeg,
+            'Nama Kegiatan': namaKeg,
+            'Kode Sub Kegiatan': kodeSub,
+            'Nama Sub Kegiatan': namaSub,
+            'Kode Rekening': kodeRek,
+            'Nama Rekening': namaRek,
+            'Alokasi Anggaran': alokasi,
+            'Realisasi Anggaran': realisasi,
+            _sheetName: sheetName
+          });
+        }
+      } else {
+        // Fallback standard JSON
+        const jsonRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        if (jsonRows && jsonRows.length > 0) {
+          jsonRows.forEach(jRow => {
+            combined.push({ ...jRow, _sheetName: sheetName });
+          });
+        }
+      }
+    });
+
+    return combined;
+  };
+
+  // Handle Excel File Upload (Mendukung Kolom A s.d X & M6 s.d X)
   const handleExcelFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -414,15 +615,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
         const bstr = evt.target?.result;
         const wb = XLSX.read(bstr, { type: 'binary' });
         
-        let combinedRows: any[] = [];
-        // Scan all sheets or main sheets
-        wb.SheetNames.forEach(wsname => {
-          const ws = wb.Sheets[wsname];
-          const sheetJson: any[] = XLSX.utils.sheet_to_json(ws);
-          if (sheetJson && sheetJson.length > 0) {
-            combinedRows = [...combinedRows, ...sheetJson];
-          }
-        });
+        const combinedRows = parseExcelRowsSmart(wb);
         
         if (combinedRows.length === 0) {
           alert('File Excel kosong atau format kolom tidak dapat dibaca.');
@@ -448,11 +641,11 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
     const newBreakdowns: Record<string, any> = { ...customBreakdownMap };
 
     importPreviewData.forEach((row, idx) => {
-      const nama = String(row['Nama_OPD'] || row['nama_opd'] || row['OPD'] || row['Nama OPD'] || row['SKPD'] || row['Nama SKPD'] || '').trim();
+      const nama = String(row['Nama Sub SKPD'] || row['Nama_Sub_SKPD'] || row['Nama_OPD'] || row['nama_opd'] || row['OPD'] || row['Nama OPD'] || row['SKPD'] || row['Nama SKPD'] || '').trim();
       const singkatan = String(row['Singkatan'] || row['singkatan'] || row['SINGKATAN'] || '').trim();
-      const kode = String(row['Kode_OPD'] || row['kode_opd'] || row['Kode SKPD'] || row['KODE SKPD'] || '').trim();
-      const pagu = parseNumeric(row['Pagu_Anggaran'] || row['pagu'] || row['Pagu'] || row['PAGU ANGGARAN'] || row['Pagu Murni'] || row['Anggaran']);
-      const realisasi = parseNumeric(row['Realisasi_SP2D'] || row['realisasi'] || row['Realisasi'] || row['REALISASI SP2D'] || row['SP2D'] || row['Realisasi Anggaran']);
+      const kode = String(row['Kode Sub SKPD'] || row['Kode_Sub_SKPD'] || row['Kode_OPD'] || row['kode_opd'] || row['Kode SKPD'] || row['KODE SKPD'] || '').trim();
+      const pagu = parseNumeric(row['Alokasi Anggaran'] || row['Alokasi_Anggaran'] || row['Pagu_Anggaran'] || row['pagu'] || row['Pagu'] || row['PAGU ANGGARAN'] || row['Pagu Murni'] || row['Anggaran']);
+      const realisasi = parseNumeric(row['Realisasi Anggaran'] || row['Realisasi_Anggaran'] || row['Realisasi_SP2D'] || row['realisasi'] || row['Realisasi'] || row['REALISASI SP2D'] || row['SP2D']);
       const kategori = (row['Kategori'] || row['kategori'] || 'Dinas Daerah') as any;
       const kepala = String(row['Kepala_OPD'] || row['Kepala_Badan'] || row['Kepala Dinas'] || row['Kepala OPD'] || row['NAMA KEPALA'] || '').trim();
       const nip = String(row['NIP_Kepala'] || row['NIP'] || row['NIP Kepala'] || '').trim();
@@ -508,16 +701,16 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
       }
 
       // If program row is provided
-      const progName = row['Nama_Program'] || row['Program'] || row['NAMA PROGRAM'];
+      const progName = row['Nama Program'] || row['Nama_Program'] || row['Program'] || row['NAMA PROGRAM'];
       if (progName) {
-        const pCode = row['Kode_Program'] || row['KODE PROGRAM'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.0${(newBreakdowns[targetId].programs.length + 1)}`;
-        const pPagu = parseNumeric(row['Pagu_Program'] || row['PAGU PROGRAM'] || pagu * 0.35 || 5000000000);
-        const pReal = parseNumeric(row['Realisasi_Program'] || row['REALISASI PROGRAM'] || realisasi * 0.35 || 3800000000);
+        const pCode = row['Kode Program'] || row['Kode_Program'] || row['KODE PROGRAM'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.0${(newBreakdowns[targetId].programs.length + 1)}`;
+        const pPagu = parseNumeric(row['Alokasi Anggaran'] || row['Pagu_Program'] || row['PAGU PROGRAM'] || pagu * 0.35 || 5000000000);
+        const pReal = parseNumeric(row['Realisasi Anggaran'] || row['Realisasi_Program'] || row['REALISASI PROGRAM'] || realisasi * 0.35 || 3800000000);
 
         const existingProg = newBreakdowns[targetId].programs.find((p: any) => p.kodeProgram === pCode || p.namaProgram.toLowerCase() === String(progName).toLowerCase());
         if (existingProg) {
-          existingProg.pagu = pPagu;
-          existingProg.realisasi = pReal;
+          if (pPagu > 0) existingProg.pagu = pPagu;
+          if (pReal > 0) existingProg.realisasi = pReal;
         } else {
           newBreakdowns[targetId].programs.push({
             id: `IMP-P-${targetId}-${idx}`,
@@ -532,22 +725,22 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
       }
 
       // If kegiatan row is provided
-      const kegName = row['Nama_Kegiatan'] || row['Kegiatan'] || row['NAMA KEGIATAN'];
+      const kegName = row['Nama Kegiatan'] || row['Nama_Kegiatan'] || row['Kegiatan'] || row['NAMA KEGIATAN'];
       if (kegName) {
-        const kCode = row['Kode_Kegiatan'] || row['KODE KEGIATAN'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.01.2.0${(newBreakdowns[targetId].kegiatans.length + 1)}`;
-        const kPagu = parseNumeric(row['Pagu_Kegiatan'] || row['PAGU KEGIATAN'] || pagu * 0.20 || 2000000000);
-        const kReal = parseNumeric(row['Realisasi_Kegiatan'] || row['REALISASI KEGIATAN'] || realisasi * 0.20 || 1600000000);
+        const kCode = row['Kode Kegiatan'] || row['Kode_Kegiatan'] || row['KODE KEGIATAN'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.01.2.0${(newBreakdowns[targetId].kegiatans.length + 1)}`;
+        const kPagu = parseNumeric(row['Alokasi Anggaran'] || row['Pagu_Kegiatan'] || row['PAGU KEGIATAN'] || pagu * 0.20 || 2000000000);
+        const kReal = parseNumeric(row['Realisasi Anggaran'] || row['Realisasi_Kegiatan'] || row['REALISASI KEGIATAN'] || realisasi * 0.20 || 1600000000);
 
         const existingKeg = newBreakdowns[targetId].kegiatans.find((k: any) => k.kodeKegiatan === kCode || k.namaKegiatan.toLowerCase() === String(kegName).toLowerCase());
         if (existingKeg) {
-          existingKeg.pagu = kPagu;
-          existingKeg.realisasi = kReal;
+          if (kPagu > 0) existingKeg.pagu = kPagu;
+          if (kReal > 0) existingKeg.realisasi = kReal;
         } else {
           newBreakdowns[targetId].kegiatans.push({
             id: `IMP-K-${targetId}-${idx}`,
             opdId: targetId,
             namaOPD: targetOpdObj.namaOPD,
-            kodeProgram: row['Kode_Program'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.01`,
+            kodeProgram: row['Kode Program'] || row['Kode_Program'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.01`,
             kodeKegiatan: kCode,
             namaKegiatan: String(kegName),
             pagu: kPagu,
@@ -557,23 +750,23 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
       }
 
       // If sub kegiatan row is provided
-      const subName = row['Nama_Sub_Kegiatan'] || row['Sub_Kegiatan'] || row['NAMA SUB KEGIATAN'];
+      const subName = row['Nama Sub Kegiatan'] || row['Nama_Sub_Kegiatan'] || row['Sub_Kegiatan'] || row['NAMA SUB KEGIATAN'];
       if (subName) {
-        const sCode = row['Kode_Sub_Kegiatan'] || row['KODE SUB KEGIATAN'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.01.2.01.0${(newBreakdowns[targetId].subKegiatans.length + 1)}`;
-        const sPagu = parseNumeric(row['Pagu_Sub_Kegiatan'] || row['PAGU SUB KEGIATAN'] || pagu * 0.15 || 1000000000);
-        const sReal = parseNumeric(row['Realisasi_Sub_Kegiatan'] || row['REALISASI SUB KEGIATAN'] || realisasi * 0.15 || 800000000);
+        const sCode = row['Kode Sub Kegiatan'] || row['Kode_Sub_Kegiatan'] || row['KODE SUB KEGIATAN'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.01.2.01.0${(newBreakdowns[targetId].subKegiatans.length + 1)}`;
+        const sPagu = parseNumeric(row['Alokasi Anggaran'] || row['Pagu_Sub_Kegiatan'] || row['PAGU SUB KEGIATAN'] || pagu * 0.15 || 1000000000);
+        const sReal = parseNumeric(row['Realisasi Anggaran'] || row['Realisasi_Sub_Kegiatan'] || row['REALISASI SUB KEGIATAN'] || realisasi * 0.15 || 800000000);
 
         const existingSub = newBreakdowns[targetId].subKegiatans.find((s: any) => s.kodeSub === sCode || s.namaSub.toLowerCase() === String(subName).toLowerCase());
         if (existingSub) {
-          existingSub.pagu = sPagu;
-          existingSub.realisasi = sReal;
+          if (sPagu > 0) existingSub.pagu = sPagu;
+          if (sReal > 0) existingSub.realisasi = sReal;
         } else {
           newBreakdowns[targetId].subKegiatans.push({
             id: `IMP-S-${targetId}-${idx}`,
             opdId: targetId,
             namaOPD: targetOpdObj.namaOPD,
-            kodeProgram: row['Kode_Program'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.01`,
-            kodeKegiatan: row['Kode_Kegiatan'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.01.2.01`,
+            kodeProgram: row['Kode Program'] || row['Kode_Program'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.01`,
+            kodeKegiatan: row['Kode Kegiatan'] || row['Kode_Kegiatan'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.01.2.01`,
             kodeSub: sCode,
             namaSub: String(subName),
             pagu: sPagu,
@@ -583,17 +776,17 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
       }
 
       // If rekening belanja row is provided
-      const belanjaName = row['Nama_Rekening_Belanja'] || row['Nama_Belanja'] || row['Rekening_Belanja'] || row['NAMA REKENING'];
+      const belanjaName = row['Nama Rekening'] || row['Nama_Rekening'] || row['Nama_Rekening_Belanja'] || row['Nama_Belanja'] || row['Rekening_Belanja'] || row['NAMA REKENING'];
       if (belanjaName) {
-        const bCode = row['Kode_Rekening_Belanja'] || row['Kode_Belanja'] || `5.1.0${(newBreakdowns[targetId].belanjaList.length + 1)}.01.0001`;
-        const bPagu = parseNumeric(row['Pagu_Belanja'] || row['PAGU BELANJA'] || pagu * 0.15 || 1000000000);
-        const bReal = parseNumeric(row['Realisasi_Belanja'] || row['REALISASI BELANJA'] || realisasi * 0.15 || 850000000);
+        const bCode = row['Kode Rekening'] || row['Kode_Rekening'] || row['Kode_Rekening_Belanja'] || row['Kode_Belanja'] || `5.1.0${(newBreakdowns[targetId].belanjaList.length + 1)}.01.0001`;
+        const bPagu = parseNumeric(row['Alokasi Anggaran'] || row['Pagu_Belanja'] || row['PAGU BELANJA'] || pagu * 0.15 || 1000000000);
+        const bReal = parseNumeric(row['Realisasi Anggaran'] || row['Realisasi_Belanja'] || row['REALISASI BELANJA'] || realisasi * 0.15 || 850000000);
         const bJenis = row['Jenis_Belanja'] || row['JENIS BELANJA'] || 'Belanja Operasi';
 
         const existingBelanja = newBreakdowns[targetId].belanjaList.find((b: any) => b.kodeBelanja === bCode || b.namaBelanja.toLowerCase() === String(belanjaName).toLowerCase());
         if (existingBelanja) {
-          existingBelanja.pagu = bPagu;
-          existingBelanja.realisasi = bReal;
+          if (bPagu > 0) existingBelanja.pagu = bPagu;
+          if (bReal > 0) existingBelanja.realisasi = bReal;
         } else {
           newBreakdowns[targetId].belanjaList.push({
             id: `IMP-B-${targetId}-${idx}`,
@@ -622,6 +815,163 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
 
     setImportStats({ total: importPreviewData.length, updated: updatedCount, added: addedCount });
     setShowImportModal(false);
+  };
+
+  // Simpan Perubahan Edit pada Menu Pelaporan Konsolidasi
+  const handleSaveEditLaporan = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editLaporanModal) return;
+
+    const { type, opdId, data } = editLaporanModal;
+    const newBreakdowns = { ...customBreakdownMap };
+    const newOpds = [...opdListState];
+
+    if (type === 'opd') {
+      const idx = newOpds.findIndex(o => o.id === opdId);
+      if (idx >= 0) {
+        newOpds[idx] = {
+          ...newOpds[idx],
+          namaOPD: data.namaOPD || newOpds[idx].namaOPD,
+          singkatan: data.singkatan || newOpds[idx].singkatan,
+          kodeOPD: data.kodeOPD || newOpds[idx].kodeOPD,
+          kategori: data.kategori || newOpds[idx].kategori,
+          targetPagu: Number(data.targetPagu) || 0,
+          realisasiSP2D: Number(data.realisasiSP2D) || 0,
+          kepalaBadan: data.kepalaBadan || newOpds[idx].kepalaBadan,
+          nipKepala: data.nipKepala || newOpds[idx].nipKepala
+        };
+        setOpdListState(newOpds);
+        try {
+          localStorage.setItem('bfms_seluruh_opd_data_v1', JSON.stringify(newOpds));
+        } catch (err) {}
+        setLaporanActionSuccessMsg(`Data OPD ${newOpds[idx].singkatan} berhasil diperbarui.`);
+      }
+    } else {
+      const opdObj = newOpds.find(o => o.id === opdId);
+      if (opdObj) {
+        if (!newBreakdowns[opdId]) {
+          newBreakdowns[opdId] = getOPDDetailsBreakdown(opdObj);
+        }
+        const bd = newBreakdowns[opdId];
+
+        if (type === 'program') {
+          const pIdx = bd.programs.findIndex((p: any) => p.id === data.id || p.kodeProgram === data.kodeProgram);
+          if (pIdx >= 0) {
+            bd.programs[pIdx] = {
+              ...bd.programs[pIdx],
+              kodeProgram: data.kodeProgram,
+              namaProgram: data.namaProgram,
+              pagu: Number(data.pagu) || 0,
+              realisasi: Number(data.realisasi) || 0
+            };
+          }
+          // Re-sum OPD targetPagu & realisasiSP2D
+          const totPagu = bd.programs.reduce((s: number, p: any) => s + (Number(p.pagu) || 0), 0);
+          const totReal = bd.programs.reduce((s: number, p: any) => s + (Number(p.realisasi) || 0), 0);
+          const oIdx = newOpds.findIndex(o => o.id === opdId);
+          if (oIdx >= 0 && totPagu > 0) {
+            newOpds[oIdx] = {
+              ...newOpds[oIdx],
+              targetPagu: totPagu,
+              realisasiSP2D: totReal,
+              statusKinerja: (totReal / totPagu) >= 0.8 ? 'Sangat Tinggi' : (totReal / totPagu) >= 0.65 ? 'Tinggi' : 'Sedang'
+            };
+            setOpdListState(newOpds);
+          }
+        } else if (type === 'kegiatan') {
+          const kIdx = bd.kegiatans.findIndex((k: any) => k.id === data.id || k.kodeKegiatan === data.kodeKegiatan);
+          if (kIdx >= 0) {
+            bd.kegiatans[kIdx] = {
+              ...bd.kegiatans[kIdx],
+              kodeKegiatan: data.kodeKegiatan,
+              namaKegiatan: data.namaKegiatan,
+              kodeProgram: data.kodeProgram,
+              pagu: Number(data.pagu) || 0,
+              realisasi: Number(data.realisasi) || 0
+            };
+          }
+        } else if (type === 'subkegiatan') {
+          const sIdx = bd.subKegiatans.findIndex((s: any) => s.id === data.id || s.kodeSub === data.kodeSub);
+          if (sIdx >= 0) {
+            bd.subKegiatans[sIdx] = {
+              ...bd.subKegiatans[sIdx],
+              kodeSub: data.kodeSub,
+              namaSub: data.namaSub,
+              kodeKegiatan: data.kodeKegiatan,
+              pagu: Number(data.pagu) || 0,
+              realisasi: Number(data.realisasi) || 0
+            };
+          }
+        } else if (type === 'belanja') {
+          const bIdx = bd.belanjaList.findIndex((b: any) => b.id === data.id || b.kodeBelanja === data.kodeBelanja);
+          if (bIdx >= 0) {
+            bd.belanjaList[bIdx] = {
+              ...bd.belanjaList[bIdx],
+              kodeBelanja: data.kodeBelanja,
+              namaBelanja: data.namaBelanja,
+              jenisBelanja: data.jenisBelanja || bd.belanjaList[bIdx].jenisBelanja,
+              pagu: Number(data.pagu) || 0,
+              realisasi: Number(data.realisasi) || 0
+            };
+          }
+        }
+
+        setCustomBreakdownMap(newBreakdowns);
+        try {
+          localStorage.setItem('bfms_seluruh_opd_data_v1', JSON.stringify(newOpds));
+          localStorage.setItem('bfms_seluruh_opd_breakdowns_v1', JSON.stringify(newBreakdowns));
+        } catch (err) {}
+        setLaporanActionSuccessMsg(`Data ${type.toUpperCase()} [${data.kodeProgram || data.kodeKegiatan || data.kodeSub || data.kodeBelanja}] berhasil diperbarui.`);
+      }
+    }
+
+    setEditLaporanModal(null);
+  };
+
+  // Konfirmasi & Hapus Item pada Menu Pelaporan Konsolidasi
+  const handleConfirmDeleteLaporan = () => {
+    if (!deleteLaporanModal) return;
+    const { type, opdId, id, kode, nama } = deleteLaporanModal;
+    const newBreakdowns = { ...customBreakdownMap };
+    const newOpds = [...opdListState];
+
+    if (type === 'opd') {
+      const filtered = newOpds.filter(o => o.id !== opdId);
+      setOpdListState(filtered);
+      delete newBreakdowns[opdId];
+      setCustomBreakdownMap(newBreakdowns);
+      try {
+        localStorage.setItem('bfms_seluruh_opd_data_v1', JSON.stringify(filtered));
+        localStorage.setItem('bfms_seluruh_opd_breakdowns_v1', JSON.stringify(newBreakdowns));
+      } catch (err) {}
+      setLaporanActionSuccessMsg(`OPD ${nama} berhasil dihapus dari konsolidasi.`);
+    } else {
+      const opdObj = newOpds.find(o => o.id === opdId);
+      if (opdObj) {
+        if (!newBreakdowns[opdId]) {
+          newBreakdowns[opdId] = getOPDDetailsBreakdown(opdObj);
+        }
+        const bd = newBreakdowns[opdId];
+
+        if (type === 'program') {
+          bd.programs = bd.programs.filter((p: any) => p.id !== id && p.kodeProgram !== kode);
+        } else if (type === 'kegiatan') {
+          bd.kegiatans = bd.kegiatans.filter((k: any) => k.id !== id && k.kodeKegiatan !== kode);
+        } else if (type === 'subkegiatan') {
+          bd.subKegiatans = bd.subKegiatans.filter((s: any) => s.id !== id && s.kodeSub !== kode);
+        } else if (type === 'belanja') {
+          bd.belanjaList = bd.belanjaList.filter((b: any) => b.id !== id && b.kodeBelanja !== kode);
+        }
+
+        setCustomBreakdownMap(newBreakdowns);
+        try {
+          localStorage.setItem('bfms_seluruh_opd_breakdowns_v1', JSON.stringify(newBreakdowns));
+        } catch (err) {}
+        setLaporanActionSuccessMsg(`Item ${type.toUpperCase()} [${kode}] "${nama}" berhasil dihapus.`);
+      }
+    }
+
+    setDeleteLaporanModal(null);
   };
 
   // Master OPD: Daftar Seluruh Rekening Belanja Konsolidasi
@@ -688,168 +1038,59 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
     return list;
   }, [opdListState, customBreakdownMap, masterOpdFilter]);
 
-  // Download Template Excel Master OPD (Anggaran, Realisasi, Kode Rekening)
-  const handleDownloadMasterTemplate = (type: 'all' | 'anggaran' | 'realisasi' | 'rekening') => {
-    const wb = XLSX.utils.book_new();
-
-    if (type === 'anggaran' || type === 'all') {
-      const wsAnggaran = XLSX.utils.json_to_sheet([
-        {
-          'Kode_OPD': '1.02.0.00.0.00.01.0000',
-          'Nama_OPD': 'Dinas Kesehatan Provinsi NTB',
-          'Kode_Program': '1.02.01',
-          'Nama_Program': 'PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH PROVINSI',
-          'Kode_Kegiatan': '1.02.01.2.01',
-          'Nama_Kegiatan': 'Perencanaan, Penganggaran, dan Evaluasi Kinerja SKPD',
-          'Kode_Sub_Kegiatan': '1.02.01.2.01.01',
-          'Nama_Sub_Kegiatan': 'Penyusunan Rencana Kerja & Anggaran SKPD',
-          'Kode_Rekening_Belanja': '5.1.01.01.01.0001',
-          'Uraian_Belanja': 'Belanja Gaji Pokok ASN / PNS Kesehatan',
-          'Pagu_Murni': 15000000000,
-          'Revisi_Pergeseran': 0,
-          'Nilai_SPD': 15000000000,
-          'Sumber_Dana': 'DAU',
-          'Tahun': selectedTahun
-        },
-        {
-          'Kode_OPD': '1.01.0.00.0.00.01.0000',
-          'Nama_OPD': 'Dinas Pendidikan dan Kebudayaan Provinsi NTB',
-          'Kode_Program': '1.01.01',
-          'Nama_Program': 'PROGRAM PENGELOLAAN PENDIDIKAN MENENGAH & KHUSUS',
-          'Kode_Kegiatan': '1.01.01.2.01',
-          'Nama_Kegiatan': 'Pengelolaan Sekolah Menengah Atas, SMK, dan SLB se-NTB',
-          'Kode_Sub_Kegiatan': '1.01.01.2.01.01',
-          'Nama_Sub_Kegiatan': 'Penyediaan Sarana Pembelajaran dan Praktik Vokasi',
-          'Kode_Rekening_Belanja': '5.2.02.08.01.0005',
-          'Uraian_Belanja': 'Belanja Modal Peralatan Komputer dan Server Sekolah',
-          'Pagu_Murni': 60000000000,
-          'Revisi_Pergeseran': 5000000000,
-          'Nilai_SPD': 65000000000,
-          'Sumber_Dana': 'DAK Fisik',
-          'Tahun': selectedTahun
-        },
-        {
-          'Kode_OPD': '5.01.0.00.0.00.01.0000',
-          'Nama_OPD': 'Badan Kesatuan Bangsa dan Politik Dalam Negeri',
-          'Kode_Program': '5.01.02',
-          'Nama_Program': 'PROGRAM BINA IDEOLOGI DAN WAWASAN KEBANGSAAN',
-          'Kode_Kegiatan': '5.01.02.2.01',
-          'Nama_Kegiatan': 'Perumusan Kebijakan Teknis Kebangsaan',
-          'Kode_Sub_Kegiatan': '5.01.02.2.01.01',
-          'Nama_Sub_Kegiatan': 'Penyelenggaraan Pendidikan Karakter Wawasan Kebangsaan',
-          'Kode_Rekening_Belanja': '5.1.02.01.01.0024',
-          'Uraian_Belanja': 'Belanja Alat Tulis Kantor dan Bahan Cetak',
-          'Pagu_Murni': 250000000,
-          'Revisi_Pergeseran': 0,
-          'Nilai_SPD': 250000000,
-          'Sumber_Dana': 'PAD',
-          'Tahun': selectedTahun
-        }
-      ]);
-      XLSX.utils.book_append_sheet(wb, wsAnggaran, 'Pagu_Anggaran');
+  // Download Template Excel Master OPD (Anggaran, Realisasi, Kode Rekening & Format SIPD M6 s.d X)
+  const handleDownloadMasterTemplate = (type: 'all' | 'anggaran' | 'realisasi' | 'rekening' | 'sipd') => {
+    if (type === 'anggaran') {
+      downloadAnggaranExcelTemplate();
+      return;
+    }
+    if (type === 'realisasi') {
+      downloadRealisasiExcelTemplate();
+      return;
+    }
+    if (type === 'sipd') {
+      downloadSIPDColumnMtoXTemplate();
+      return;
+    }
+    if (type === 'all') {
+      downloadOPDExcelTemplate();
+      return;
     }
 
-    if (type === 'realisasi' || type === 'all') {
-      const wsRealisasi = XLSX.utils.json_to_sheet([
-        {
-          'Kode_OPD': '1.02.0.00.0.00.01.0000',
-          'Nama_OPD': 'Dinas Kesehatan Provinsi NTB',
-          'No_SP2D': 'SP2D/00451/LS/DINKES/2026',
-          'No_SPM': 'SPM/00448/DINKES/2026',
-          'Tanggal_SP2D': '2026-03-20',
-          'Kode_Rekening_Belanja': '5.1.01.01.01.0001',
-          'Uraian_Belanja': 'Pembayaran Gaji dan Tunjangan Bulan Maret ASN Dinkes',
-          'Nilai_Realisasi': 1250000000,
-          'Rekanan': 'Bendahara Pengeluaran Dinkes NTB',
-          'Tahun': selectedTahun
-        },
-        {
-          'Kode_OPD': '1.01.0.00.0.00.01.0000',
-          'Nama_OPD': 'Dinas Pendidikan dan Kebudayaan Provinsi NTB',
-          'No_SP2D': 'SP2D/00782/LS/DIKBUD/2026',
-          'No_SPM': 'SPM/00780/DIKBUD/2026',
-          'Tanggal_SP2D': '2026-04-10',
-          'Kode_Rekening_Belanja': '5.2.02.08.01.0005',
-          'Uraian_Belanja': 'Pengadaan Server dan Perangkat Jaringan SMK Negeri',
-          'Nilai_Realisasi': 4500000000,
-          'Rekanan': 'PT. Teknologi Edukasi Nusantara',
-          'Tahun': selectedTahun
-        },
-        {
-          'Kode_OPD': '5.01.0.00.0.00.01.0000',
-          'Nama_OPD': 'Badan Kesatuan Bangsa dan Politik Dalam Negeri',
-          'No_SP2D': 'SP2D/00118/GU/KESBANG/2026',
-          'No_SPM': 'SPM/00115/KESBANG/2026',
-          'Tanggal_SP2D': '2026-04-18',
-          'Kode_Rekening_Belanja': '5.1.02.01.01.0024',
-          'Uraian_Belanja': 'Ganti Uang (GU) Persediaan ATK dan Cetak Modul',
-          'Nilai_Realisasi': 35000000,
-          'Rekanan': 'CV. Graha Media Mandiri',
-          'Tahun': selectedTahun
-        }
-      ]);
-      XLSX.utils.book_append_sheet(wb, wsRealisasi, 'Realisasi_SP2D');
-    }
-
-    if (type === 'rekening' || type === 'all') {
+    if (type === 'rekening') {
+      const wb = XLSX.utils.book_new();
       const wsRekening = XLSX.utils.json_to_sheet([
         {
-          'Kode_Rekening_Belanja': '5.1.01.01.01.0001',
-          'Uraian_Belanja': 'Belanja Gaji Pokok ASN / PNS',
-          'Jenis_Belanja': 'Belanja Pegawai',
-          'Kode_Program': '1.02.01',
-          'Kode_Kegiatan': '1.02.01.2.01',
-          'Kode_Sub_Kegiatan': '1.02.01.2.01.01',
-          'Nama_OPD': 'Dinas Kesehatan Provinsi NTB'
+          'Kode Rekening Belanja': '5.1.01.01.01.0001',
+          'Uraian Belanja': 'Belanja Gaji Pokok ASN / PNS',
+          'Jenis Belanja': 'Belanja Pegawai',
+          'Kode Program': '1.02.01',
+          'Kode Kegiatan': '1.02.01.2.01',
+          'Kode Sub Kegiatan': '1.02.01.2.01.01',
+          'Nama Sub SKPD': 'Dinas Kesehatan Provinsi NTB'
         },
         {
-          'Kode_Rekening_Belanja': '5.1.02.01.01.0024',
-          'Uraian_Belanja': 'Belanja Alat Tulis Kantor (ATK)',
-          'Jenis_Belanja': 'Belanja Barang dan Jasa',
-          'Kode_Program': '5.01.01',
-          'Kode_Kegiatan': '5.01.01.2.02',
-          'Kode_Sub_Kegiatan': '5.01.01.2.02.01',
-          'Nama_OPD': 'Badan Kesatuan Bangsa dan Politik Dalam Negeri'
+          'Kode Rekening Belanja': '5.1.02.01.01.0024',
+          'Uraian Belanja': 'Belanja Alat Tulis Kantor (ATK)',
+          'Jenis Belanja': 'Belanja Barang dan Jasa',
+          'Kode Program': '5.01.01',
+          'Kode Kegiatan': '5.01.01.2.02',
+          'Kode Sub Kegiatan': '5.01.01.2.02.01',
+          'Nama Sub SKPD': 'Badan Kesatuan Bangsa dan Politik Dalam Negeri Provinsi NTB'
         },
         {
-          'Kode_Rekening_Belanja': '5.2.02.08.01.0005',
-          'Uraian_Belanja': 'Belanja Modal Peralatan Komputer dan Server Sekolah',
-          'Jenis_Belanja': 'Belanja Modal',
-          'Kode_Program': '1.01.01',
-          'Kode_Kegiatan': '1.01.01.2.01',
-          'Kode_Sub_Kegiatan': '1.01.01.2.01.01',
-          'Nama_OPD': 'Dinas Pendidikan dan Kebudayaan Provinsi NTB'
-        },
-        {
-          'Kode_Rekening_Belanja': '5.3.01.01.01.0001',
-          'Uraian_Belanja': 'Belanja Tidak Terduga (BTT) Bencana Daerah',
-          'Jenis_Belanja': 'Belanja Tidak Terduga',
-          'Kode_Program': '4.01.01',
-          'Kode_Kegiatan': '4.01.01.2.01',
-          'Kode_Sub_Kegiatan': '4.01.01.2.01.01',
-          'Nama_OPD': 'Badan Penanggulangan Bencana Daerah'
-        },
-        {
-          'Kode_Rekening_Belanja': '5.4.01.01.01.0001',
-          'Uraian_Belanja': 'Belanja Bagi Hasil Pajak Daerah',
-          'Jenis_Belanja': 'Belanja Transfer',
-          'Kode_Program': '4.01.02',
-          'Kode_Kegiatan': '4.01.02.2.01',
-          'Kode_Sub_Kegiatan': '4.01.02.2.01.01',
-          'Nama_OPD': 'Badan Pengelolaan Pendapatan Daerah'
+          'Kode Rekening Belanja': '5.2.02.08.01.0005',
+          'Uraian Belanja': 'Belanja Modal Peralatan Komputer dan Server Sekolah',
+          'Jenis Belanja': 'Belanja Modal',
+          'Kode Program': '1.01.01',
+          'Kode Kegiatan': '1.01.01.2.01',
+          'Kode Sub Kegiatan': '1.01.01.2.01.01',
+          'Nama Sub SKPD': 'Dinas Pendidikan dan Kebudayaan Provinsi NTB'
         }
       ]);
       XLSX.utils.book_append_sheet(wb, wsRekening, 'Master_Kode_Rekening');
+      safeDownloadExcel(wb, `Template_Master_Kode_Rekening_Belanja_NTB_${selectedTahun}.xlsx`);
     }
-
-    const filenameMap = {
-      anggaran: `Template_Import_Pagu_Anggaran_OPD_NTB_${selectedTahun}.xlsx`,
-      realisasi: `Template_Import_Realisasi_SP2D_OPD_NTB_${selectedTahun}.xlsx`,
-      rekening: `Template_Master_Kode_Rekening_Belanja_NTB_${selectedTahun}.xlsx`,
-      all: `Template_Master_Lengkap_Anggaran_Realisasi_Rekening_NTB_${selectedTahun}.xlsx`
-    };
-
-    safeDownloadExcel(wb, filenameMap[type]);
   };
 
   // Upload Excel Khusus Menu Master OPD
@@ -869,133 +1110,129 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
 
         const rows: any[] = [];
         const errs: string[] = [];
+        const parsedRows = parseExcelRowsSmart(wb);
 
-        wb.SheetNames.forEach(sheetName => {
-          const ws = wb.Sheets[sheetName];
-          const sheetJson: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
-          if (!sheetJson || sheetJson.length === 0) return;
-
-          sheetJson.forEach((row: any, rowIdx: number) => {
-            const getVal = (...keys: string[]) => {
-              for (const key of keys) {
-                const matchedKey = Object.keys(row).find(k => {
-                  if (!k) return false;
-                  const cleanK = k.trim().toLowerCase().replace(/[\s_\-()/.:]/g, '');
-                  const cleanKey = key.toLowerCase().replace(/[\s_\-()/.:]/g, '');
-                  return cleanK === cleanKey;
-                });
-                if (matchedKey && row[matchedKey] !== undefined && row[matchedKey] !== null && String(row[matchedKey]).trim() !== '') {
-                  return String(row[matchedKey]).trim();
-                }
+        parsedRows.forEach((row: any, rowIdx: number) => {
+          const sheetName = row._sheetName || 'Sheet1';
+          const getVal = (...keys: string[]) => {
+            for (const key of keys) {
+              const matchedKey = Object.keys(row).find(k => {
+                if (!k) return false;
+                const cleanK = k.trim().toLowerCase().replace(/[\s_\-()/.:]/g, '');
+                const cleanKey = key.toLowerCase().replace(/[\s_\-()/.:]/g, '');
+                return cleanK === cleanKey;
+              });
+              if (matchedKey && row[matchedKey] !== undefined && row[matchedKey] !== null && String(row[matchedKey]).trim() !== '') {
+                return String(row[matchedKey]).trim();
               }
-              for (const key of keys) {
-                const matchedKey = Object.keys(row).find(k => {
-                  if (!k) return false;
-                  const cleanK = k.trim().toLowerCase().replace(/[\s_\-()/.:]/g, '');
-                  const cleanKey = key.toLowerCase().replace(/[\s_\-()/.:]/g, '');
-                  return cleanK.includes(cleanKey);
-                });
-                if (matchedKey && row[matchedKey] !== undefined && row[matchedKey] !== null && String(row[matchedKey]).trim() !== '') {
-                  return String(row[matchedKey]).trim();
-                }
+            }
+            for (const key of keys) {
+              const matchedKey = Object.keys(row).find(k => {
+                if (!k) return false;
+                const cleanK = k.trim().toLowerCase().replace(/[\s_\-()/.:]/g, '');
+                const cleanKey = key.toLowerCase().replace(/[\s_\-()/.:]/g, '');
+                return cleanK.includes(cleanKey);
+              });
+              if (matchedKey && row[matchedKey] !== undefined && row[matchedKey] !== null && String(row[matchedKey]).trim() !== '') {
+                return String(row[matchedKey]).trim();
               }
-              return '';
-            };
-
-            const namaOpd = getVal('namaopd', 'nama_opd', 'opd', 'skpd', 'namaskpd');
-            const kodeOpd = getVal('kodeopd', 'kode_opd', 'kodeskpd');
-            const singkatan = getVal('singkatan');
-
-            let matchedOpd = opdListState.find(o => 
-              (kodeOpd && o.kodeOPD.trim() === kodeOpd.trim()) ||
-              (singkatan && o.singkatan.toLowerCase() === singkatan.toLowerCase()) ||
-              (namaOpd && (o.namaOPD.toLowerCase().includes(namaOpd.toLowerCase()) || namaOpd.toLowerCase().includes(o.namaOPD.toLowerCase())))
-            );
-
-            if (!matchedOpd && masterImportTargetOpd !== 'ALL') {
-              matchedOpd = opdListState.find(o => o.id === masterImportTargetOpd);
             }
+            return '';
+          };
 
-            const kodeRek = getVal('koderekeningbelanja', 'koderekening', 'kodebelanja', 'rekening', 'kodeakun', 'akun', 'koderek');
-            const uraianRek = getVal('uraianbelanja', 'namarekeningbelanja', 'namabelanja', 'uraianrekening', 'uraian', 'namarekening', 'nama');
-            let jenisBelanja = getVal('jenisbelanja', 'jenis', 'klasifikasi');
-            if (!jenisBelanja && kodeRek) {
-              if (kodeRek.startsWith('5.1.01')) jenisBelanja = 'Belanja Pegawai';
-              else if (kodeRek.startsWith('5.1.02')) jenisBelanja = 'Belanja Barang dan Jasa';
-              else if (kodeRek.startsWith('5.2')) jenisBelanja = 'Belanja Modal';
-              else if (kodeRek.startsWith('5.3')) jenisBelanja = 'Belanja Tidak Terduga';
-              else if (kodeRek.startsWith('5.4')) jenisBelanja = 'Belanja Transfer';
-              else jenisBelanja = 'Belanja Operasi';
-            }
+          const namaOpd = getVal('namasubskpd', 'nama_sub_skpd', 'namaopd', 'nama_opd', 'opd', 'skpd', 'namaskpd');
+          const kodeOpd = getVal('kodesubskpd', 'kode_sub_skpd', 'kodeopd', 'kode_opd', 'kodeskpd');
+          const singkatan = getVal('singkatan');
 
-            const paguMurni = parseNumeric(getVal('pagumurni', 'nilaipagumurni', 'pagu', 'anggaran', 'targetpagu', 'paguanggaran'));
-            const revisi = parseNumeric(getVal('revisipergeseran', 'revisi', 'pergeseran', 'perubahan'));
-            const nilaiSPD = parseNumeric(getVal('nilaispd', 'spd', 'paguspd')) || (paguMurni + revisi);
-            const sumberDana = getVal('sumberdana', 'sumber', 'sd') || 'DAU';
+          let matchedOpd = opdListState.find(o => 
+            (kodeOpd && o.kodeOPD.trim() === kodeOpd.trim()) ||
+            (singkatan && o.singkatan.toLowerCase() === singkatan.toLowerCase()) ||
+            (namaOpd && (o.namaOPD.toLowerCase().includes(namaOpd.toLowerCase()) || namaOpd.toLowerCase().includes(o.namaOPD.toLowerCase())))
+          );
 
-            const realisasi = parseNumeric(getVal('nilairealisasi', 'realisasisp2d', 'realisasi', 'sp2d', 'nilaisp2d', 'cair', 'nilai'));
-            const noSP2D = getVal('nosp2d', 'nomorsp2d', 'sp2d');
-            const noSPM = getVal('nospm', 'nomorspm', 'spm');
-            const tanggal = getVal('tanggalsp2d', 'tanggal', 'tglsp2d', 'tgl') || new Date().toISOString().split('T')[0];
-            const rekanan = getVal('rekanan', 'penerima', 'pihakketiga') || (matchedOpd ? `Bendahara ${matchedOpd.singkatan}` : 'Pihak Ketiga');
+          if (!matchedOpd && masterImportTargetOpd !== 'ALL') {
+            matchedOpd = opdListState.find(o => o.id === masterImportTargetOpd);
+          }
 
-            const kodeProg = getVal('kodeprogram', 'kodeprog', 'program');
-            const namaProg = getVal('namaprogram', 'namaprog');
-            const kodeKeg = getVal('kodekegiatan', 'kodekeg', 'kegiatan');
-            const namaKeg = getVal('namakegiatan', 'namakeg');
-            const kodeSub = getVal('kodesubkegiatan', 'kodesub', 'subkegiatan');
-            const namaSub = getVal('namasubkegiatan', 'namasub');
+          const kodeRek = getVal('koderekening', 'koderekeningbelanja', 'kodebelanja', 'rekening', 'kodeakun', 'akun', 'koderek');
+          const uraianRek = getVal('namarekening', 'uraianbelanja', 'namarekeningbelanja', 'namabelanja', 'uraianrekening', 'uraian');
+          let jenisBelanja = getVal('jenisbelanja', 'jenis', 'klasifikasi');
+          if (!jenisBelanja && kodeRek) {
+            if (kodeRek.startsWith('5.1.01')) jenisBelanja = 'Belanja Pegawai';
+            else if (kodeRek.startsWith('5.1.02')) jenisBelanja = 'Belanja Barang dan Jasa';
+            else if (kodeRek.startsWith('5.2')) jenisBelanja = 'Belanja Modal';
+            else if (kodeRek.startsWith('5.3')) jenisBelanja = 'Belanja Tidak Terduga';
+            else if (kodeRek.startsWith('5.4')) jenisBelanja = 'Belanja Transfer';
+            else jenisBelanja = 'Belanja Operasi';
+          }
 
-            // Deteksi jenis baris data
-            let rowType: 'anggaran' | 'realisasi' | 'rekening' = 'rekening';
-            if (sheetName.toLowerCase().includes('anggaran') || paguMurni > 0 || revisi !== 0) {
-              rowType = 'anggaran';
-            } else if (sheetName.toLowerCase().includes('realisasi') || realisasi > 0 || noSP2D) {
-              rowType = 'realisasi';
-            } else if (kodeRek) {
-              rowType = 'rekening';
-            }
+          const paguMurni = parseNumeric(getVal('alokasianggaran', 'alokasi', 'pagumurni', 'nilaipagumurni', 'pagu', 'anggaran', 'targetpagu', 'paguanggaran'));
+          const revisi = parseNumeric(getVal('revisipergeseran', 'revisi', 'pergeseran', 'perubahan'));
+          const nilaiSPD = parseNumeric(getVal('nilaispd', 'spd', 'paguspd')) || (paguMurni + revisi);
+          const sumberDana = getVal('sumberdana', 'sumber', 'sd') || 'DAU';
 
-            if (masterImportCategory !== 'all' && masterImportCategory !== rowType) {
-              return;
-            }
+          const realisasi = parseNumeric(getVal('realisasianggaran', 'realisasi', 'nilairealisasi', 'realisasisp2d', 'sp2d', 'nilaisp2d', 'cair', 'nilai'));
+          const noSP2D = getVal('nosp2d', 'nomorsp2d', 'sp2d');
+          const noSPM = getVal('nospm', 'nomorspm', 'spm');
+          const tanggal = getVal('tanggalsp2d', 'tanggal', 'tglsp2d', 'tgl') || new Date().toISOString().split('T')[0];
+          const rekanan = getVal('rekanan', 'penerima', 'pihakketiga') || (matchedOpd ? `Bendahara ${matchedOpd.singkatan}` : 'Pihak Ketiga');
 
-            if (!kodeRek && !paguMurni && !realisasi && !namaOpd && !kodeOpd) {
-              return;
-            }
+          const kodeProg = getVal('kodeprogram', 'kodeprog', 'program');
+          const namaProg = getVal('namaprogram', 'namaprog');
+          const kodeKeg = getVal('kodekegiatan', 'kodekeg', 'kegiatan');
+          const namaKeg = getVal('namakegiatan', 'namakeg');
+          const kodeSub = getVal('kodesubkegiatan', 'kodesub', 'subkegiatan');
+          const namaSub = getVal('namasubkegiatan', 'namasub');
 
-            let validationErr = '';
-            if (!matchedOpd) {
-              validationErr = 'OPD tidak dikenali dari nama atau kode di file Excel.';
-              errs.push(`Baris ${rowIdx + 2} (${sheetName}): ${validationErr}`);
-            }
+          // Deteksi jenis baris data
+          let rowType: 'anggaran' | 'realisasi' | 'rekening' = 'rekening';
+          if (sheetName.toLowerCase().includes('anggaran') || paguMurni > 0 || revisi !== 0 || String(row['Alokasi Anggaran'] || '') !== '') {
+            rowType = 'anggaran';
+          } else if (sheetName.toLowerCase().includes('realisasi') || realisasi > 0 || noSP2D || String(row['Realisasi Anggaran'] || '') !== '') {
+            rowType = 'realisasi';
+          } else if (kodeRek) {
+            rowType = 'rekening';
+          }
 
-            rows.push({
-              rowNum: rows.length + 1,
-              sheetName,
-              rowType,
-              opd: matchedOpd || { id: 'UNKNOWN', namaOPD: namaOpd || 'Tidak Diketahui', singkatan: singkatan || 'UNK', kodeOPD: kodeOpd || '-' },
-              kodeRekening: kodeRek || (rowType === 'rekening' ? '5.1.02.01.01.0001' : '-'),
-              namaRekening: uraianRek || (kodeRek ? `Belanja Rekening ${kodeRek}` : (rowType === 'anggaran' ? 'Pagu Anggaran OPD' : 'Realisasi Kasda')),
-              jenisBelanja: jenisBelanja || 'Belanja Operasi',
-              pagu: paguMurni,
-              revisi,
-              nilaiSPD,
-              sumberDana,
-              realisasi,
-              noSP2D,
-              noSPM,
-              tanggal,
-              rekanan,
-              kodeProgram: kodeProg,
-              namaProgram: namaProg,
-              kodeKegiatan: kodeKeg,
-              namaKegiatan: namaKeg,
-              kodeSub,
-              namaSub,
-              isValid: !validationErr,
-              validationError: validationErr
-            });
+          if (masterImportCategory !== 'all' && masterImportCategory !== rowType) {
+            return;
+          }
+
+          if (!kodeRek && !paguMurni && !realisasi && !namaOpd && !kodeOpd) {
+            return;
+          }
+
+          let validationErr = '';
+          if (!matchedOpd) {
+            validationErr = 'OPD tidak dikenali dari nama atau kode di file Excel.';
+            errs.push(`Baris ${rowIdx + 1} (${sheetName}): ${validationErr}`);
+          }
+
+          rows.push({
+            rowNum: rows.length + 1,
+            sheetName,
+            rowType,
+            opd: matchedOpd || { id: 'UNKNOWN', namaOPD: namaOpd || 'Tidak Diketahui', singkatan: singkatan || 'UNK', kodeOPD: kodeOpd || '-' },
+            kodeRekening: kodeRek || (rowType === 'rekening' ? '5.1.02.01.01.0001' : '-'),
+            namaRekening: uraianRek || (kodeRek ? `Belanja Rekening ${kodeRek}` : (rowType === 'anggaran' ? 'Pagu Anggaran OPD' : 'Realisasi Kasda')),
+            jenisBelanja: jenisBelanja || 'Belanja Operasi',
+            pagu: paguMurni,
+            revisi,
+            nilaiSPD,
+            sumberDana,
+            realisasi,
+            noSP2D,
+            noSPM,
+            tanggal,
+            rekanan,
+            kodeProgram: kodeProg,
+            namaProgram: namaProg,
+            kodeKegiatan: kodeKeg,
+            namaKegiatan: namaKeg,
+            kodeSub,
+            namaSub,
+            isValid: !validationErr,
+            validationError: validationErr
           });
         });
 
@@ -2451,6 +2688,26 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
       {/* TAB 4: PELAPORAN KEUANGAN KONSOLIDASI & REALISASI MULTI-OPD */}
       {activeTab === 'laporan' && (
         <div className="space-y-6">
+          {/* Laporan Action Notification Banner */}
+          {laporanActionSuccessMsg && (
+            <div className="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-emerald-950/90 border border-emerald-500/60 text-emerald-200 text-xs shadow-lg animate-fadeIn">
+              <div className="flex items-center gap-2.5">
+                <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+                <div>
+                  <span className="font-bold text-white">Sukses Pelaporan: </span>
+                  <span className="text-[11.5px] text-emerald-200">{laporanActionSuccessMsg}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLaporanActionSuccessMsg(null)}
+                className="p-1 rounded-md text-emerald-400 hover:text-white hover:bg-emerald-900/50 transition"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
           {/* 1. Bar Pemilih OPD untuk Laporan */}
           <div className="rounded-2xl border border-cyan-500/30 bg-gradient-to-r from-slate-900 via-cyan-950/40 to-slate-900 p-4 md:p-5 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -2583,6 +2840,35 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                 <UploadCloud className="h-3.5 w-3.5" />
                 <span>Import Excel OPD</span>
               </button>
+
+              {/* Template Download Shortcuts */}
+              <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-xl border border-slate-800">
+                <button
+                  type="button"
+                  onClick={downloadAnggaranExcelTemplate}
+                  className="px-2 py-1 text-[10.5px] font-semibold text-cyan-300 hover:text-white rounded-lg hover:bg-slate-800 transition"
+                  title="Unduh Format Excel Template Anggaran Seluruh OPD (Sesuai Kolom M6 s.d X)"
+                >
+                  Template Anggaran
+                </button>
+                <button
+                  type="button"
+                  onClick={downloadRealisasiExcelTemplate}
+                  className="px-2 py-1 text-[10.5px] font-semibold text-emerald-300 hover:text-white rounded-lg hover:bg-slate-800 transition"
+                  title="Unduh Format Excel Template Realisasi Seluruh OPD (Sesuai Kolom M6 s.d X)"
+                >
+                  Template Realisasi
+                </button>
+                <button
+                  type="button"
+                  onClick={downloadSIPDColumnMtoXTemplate}
+                  className="px-2 py-1 text-[10.5px] font-semibold text-amber-300 hover:text-white rounded-lg hover:bg-slate-800 transition hidden sm:inline"
+                  title="Unduh Format SIPD Kolom A s.d X Dimulai dari Baris M6"
+                >
+                  SIPD (M6..X)
+                </button>
+              </div>
+
               <button
                 type="button"
                 onClick={handlePrint}
@@ -2646,6 +2932,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                       <th className="p-3 text-right">Sisa Pagu (Rp)</th>
                       <th className="p-3 text-center">% Realisasi</th>
                       <th className="p-3 text-center">Status</th>
+                      <th className="p-3 text-center print:hidden">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800 font-sans">
@@ -2677,6 +2964,45 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                               {serapan >= 80 ? 'Sangat Tinggi' : serapan >= 65 ? 'Tinggi' : 'Sedang'}
                             </span>
                           </td>
+                          <td className="p-3 text-center print:hidden whitespace-nowrap">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setEditLaporanModal({
+                                  type: 'program',
+                                  opdId: prog.opdId || laporanOpdId,
+                                  namaOPD: prog.namaOPD || targetLaporanOpd?.namaOPD,
+                                  data: {
+                                    id: prog.id,
+                                    kodeProgram: prog.kodeProgram,
+                                    namaProgram: prog.namaProgram,
+                                    pagu: prog.pagu,
+                                    realisasi: prog.realisasi
+                                  }
+                                })}
+                                className="p-1.5 rounded-lg bg-cyan-950/80 hover:bg-cyan-800 text-cyan-300 hover:text-white border border-cyan-700/60 transition shadow-sm"
+                                title="Edit Program"
+                              >
+                                <Edit3 className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDeleteLaporanModal({
+                                  type: 'program',
+                                  opdId: prog.opdId || laporanOpdId,
+                                  namaOPD: prog.namaOPD || targetLaporanOpd?.namaOPD,
+                                  id: prog.id,
+                                  kode: prog.kodeProgram,
+                                  nama: prog.namaProgram,
+                                  nominal: prog.pagu
+                                })}
+                                className="p-1.5 rounded-lg bg-rose-950/80 hover:bg-rose-800 text-rose-300 hover:text-white border border-rose-700/60 transition shadow-sm"
+                                title="Hapus Program"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       );
                     })}
@@ -2703,6 +3029,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                         })()}
                       </td>
                       <td className="p-3.5" />
+                      <td className="p-3.5 print:hidden" />
                     </tr>
                   </tfoot>
                 </table>
@@ -2725,6 +3052,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                       <th className="p-3 text-right">Sisa Pagu (Rp)</th>
                       <th className="p-3 text-center">% Realisasi</th>
                       <th className="p-3 text-center">Status</th>
+                      <th className="p-3 text-center print:hidden">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800 font-sans">
@@ -2757,6 +3085,46 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                               {serapan >= 80 ? 'Sangat Tinggi' : serapan >= 65 ? 'Tinggi' : 'Sedang'}
                             </span>
                           </td>
+                          <td className="p-3 text-center print:hidden whitespace-nowrap">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setEditLaporanModal({
+                                  type: 'kegiatan',
+                                  opdId: keg.opdId || laporanOpdId,
+                                  namaOPD: keg.namaOPD || targetLaporanOpd?.namaOPD,
+                                  data: {
+                                    id: keg.id,
+                                    kodeKegiatan: keg.kodeKegiatan,
+                                    namaKegiatan: keg.namaKegiatan,
+                                    kodeProgram: keg.kodeProgram,
+                                    pagu: keg.pagu,
+                                    realisasi: keg.realisasi
+                                  }
+                                })}
+                                className="p-1.5 rounded-lg bg-cyan-950/80 hover:bg-cyan-800 text-cyan-300 hover:text-white border border-cyan-700/60 transition shadow-sm"
+                                title="Edit Kegiatan"
+                              >
+                                <Edit3 className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDeleteLaporanModal({
+                                  type: 'kegiatan',
+                                  opdId: keg.opdId || laporanOpdId,
+                                  namaOPD: keg.namaOPD || targetLaporanOpd?.namaOPD,
+                                  id: keg.id,
+                                  kode: keg.kodeKegiatan,
+                                  nama: keg.namaKegiatan,
+                                  nominal: keg.pagu
+                                })}
+                                className="p-1.5 rounded-lg bg-rose-950/80 hover:bg-rose-800 text-rose-300 hover:text-white border border-rose-700/60 transition shadow-sm"
+                                title="Hapus Kegiatan"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       );
                     })}
@@ -2783,6 +3151,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                         })()}
                       </td>
                       <td className="p-3.5" />
+                      <td className="p-3.5 print:hidden" />
                     </tr>
                   </tfoot>
                 </table>
@@ -2805,6 +3174,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                       <th className="p-3 text-right">Sisa Pagu (Rp)</th>
                       <th className="p-3 text-center">% Realisasi</th>
                       <th className="p-3 text-center">Status</th>
+                      <th className="p-3 text-center print:hidden">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800 font-sans">
@@ -2837,6 +3207,46 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                               {serapan >= 80 ? 'Sangat Tinggi' : serapan >= 65 ? 'Tinggi' : 'Sedang'}
                             </span>
                           </td>
+                          <td className="p-3 text-center print:hidden whitespace-nowrap">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setEditLaporanModal({
+                                  type: 'subkegiatan',
+                                  opdId: sub.opdId || laporanOpdId,
+                                  namaOPD: sub.namaOPD || targetLaporanOpd?.namaOPD,
+                                  data: {
+                                    id: sub.id,
+                                    kodeSub: sub.kodeSub,
+                                    namaSub: sub.namaSub,
+                                    kodeKegiatan: sub.kodeKegiatan,
+                                    pagu: sub.pagu,
+                                    realisasi: sub.realisasi
+                                  }
+                                })}
+                                className="p-1.5 rounded-lg bg-cyan-950/80 hover:bg-cyan-800 text-cyan-300 hover:text-white border border-cyan-700/60 transition shadow-sm"
+                                title="Edit Sub Kegiatan"
+                              >
+                                <Edit3 className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDeleteLaporanModal({
+                                  type: 'subkegiatan',
+                                  opdId: sub.opdId || laporanOpdId,
+                                  namaOPD: sub.namaOPD || targetLaporanOpd?.namaOPD,
+                                  id: sub.id,
+                                  kode: sub.kodeSub,
+                                  nama: sub.namaSub,
+                                  nominal: sub.pagu
+                                })}
+                                className="p-1.5 rounded-lg bg-rose-950/80 hover:bg-rose-800 text-rose-300 hover:text-white border border-rose-700/60 transition shadow-sm"
+                                title="Hapus Sub Kegiatan"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       );
                     })}
@@ -2863,6 +3273,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                         })()}
                       </td>
                       <td className="p-3.5" />
+                      <td className="p-3.5 print:hidden" />
                     </tr>
                   </tfoot>
                 </table>
@@ -2885,6 +3296,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                       <th className="p-3 text-right">Sisa Pagu (Rp)</th>
                       <th className="p-3 text-center">% Realisasi</th>
                       <th className="p-3 text-center">Status</th>
+                      <th className="p-3 text-center print:hidden">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800 font-sans">
@@ -2921,6 +3333,46 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                               {serapan >= 80 ? 'Sangat Tinggi' : serapan >= 65 ? 'Tinggi' : 'Sedang'}
                             </span>
                           </td>
+                          <td className="p-3 text-center print:hidden whitespace-nowrap">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setEditLaporanModal({
+                                  type: 'belanja',
+                                  opdId: bel.opdId || laporanOpdId,
+                                  namaOPD: bel.namaOPD || targetLaporanOpd?.namaOPD,
+                                  data: {
+                                    id: bel.id,
+                                    kodeBelanja: bel.kodeBelanja,
+                                    namaBelanja: bel.namaBelanja,
+                                    jenisBelanja: bel.jenisBelanja,
+                                    pagu: bel.pagu,
+                                    realisasi: bel.realisasi
+                                  }
+                                })}
+                                className="p-1.5 rounded-lg bg-cyan-950/80 hover:bg-cyan-800 text-cyan-300 hover:text-white border border-cyan-700/60 transition shadow-sm"
+                                title="Edit Rekening Belanja"
+                              >
+                                <Edit3 className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDeleteLaporanModal({
+                                  type: 'belanja',
+                                  opdId: bel.opdId || laporanOpdId,
+                                  namaOPD: bel.namaOPD || targetLaporanOpd?.namaOPD,
+                                  id: bel.id,
+                                  kode: bel.kodeBelanja,
+                                  nama: bel.namaBelanja,
+                                  nominal: bel.pagu
+                                })}
+                                className="p-1.5 rounded-lg bg-rose-950/80 hover:bg-rose-800 text-rose-300 hover:text-white border border-rose-700/60 transition shadow-sm"
+                                title="Hapus Rekening Belanja"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       );
                     })}
@@ -2947,6 +3399,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                         })()}
                       </td>
                       <td className="p-3.5" />
+                      <td className="p-3.5 print:hidden" />
                     </tr>
                   </tfoot>
                 </table>
@@ -3049,6 +3502,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                       <th className="p-3 text-right">Sisa Anggaran (Rp)</th>
                       <th className="p-3 text-center">% Realisasi</th>
                       <th className="p-3 text-center">Status</th>
+                      <th className="p-3 text-center print:hidden">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800 font-sans">
@@ -3072,6 +3526,48 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                               {opd.statusKinerja}
                             </span>
                           </td>
+                          <td className="p-3 text-center print:hidden whitespace-nowrap">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setEditLaporanModal({
+                                  type: 'opd',
+                                  opdId: opd.id,
+                                  namaOPD: opd.namaOPD,
+                                  data: {
+                                    namaOPD: opd.namaOPD,
+                                    singkatan: opd.singkatan,
+                                    kodeOPD: opd.kodeOPD,
+                                    kategori: opd.kategori,
+                                    targetPagu: opd.targetPagu,
+                                    realisasiSP2D: opd.realisasiSP2D,
+                                    kepalaBadan: opd.kepalaBadan,
+                                    nipKepala: opd.nipKepala
+                                  }
+                                })}
+                                className="p-1.5 rounded-lg bg-cyan-950/80 hover:bg-cyan-800 text-cyan-300 hover:text-white border border-cyan-700/60 transition shadow-sm"
+                                title="Edit Data OPD"
+                              >
+                                <Edit3 className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDeleteLaporanModal({
+                                  type: 'opd',
+                                  opdId: opd.id,
+                                  namaOPD: opd.namaOPD,
+                                  id: opd.id,
+                                  kode: opd.kodeOPD,
+                                  nama: `${opd.namaOPD} (${opd.singkatan})`,
+                                  nominal: opd.targetPagu
+                                })}
+                                className="p-1.5 rounded-lg bg-rose-950/80 hover:bg-rose-800 text-rose-300 hover:text-white border border-rose-700/60 transition shadow-sm"
+                                title="Hapus OPD dari Konsolidasi"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       );
                     })}
@@ -3086,6 +3582,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                       <td className="p-3.5 text-right font-mono text-amber-400">{formatRupiah(totalSilpaDisplay)}</td>
                       <td className="p-3.5 text-center font-mono text-cyan-400">{persentaseSerapanDisplay.toFixed(2)}%</td>
                       <td className="p-3.5" />
+                      <td className="p-3.5 print:hidden" />
                     </tr>
                   </tfoot>
                 </table>
@@ -4064,6 +4561,536 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                   </span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EDIT DATA PELAPORAN KONSOLIDASI */}
+      {editLaporanModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-800 bg-slate-950/80 px-6 py-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-950 border border-cyan-800 text-cyan-300">
+                  <Edit3 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wide">
+                    {editLaporanModal.type === 'opd' && 'Edit Data OPD / Satuan Kerja'}
+                    {editLaporanModal.type === 'program' && 'Edit Nomenklatur Program'}
+                    {editLaporanModal.type === 'kegiatan' && 'Edit Nomenklatur Kegiatan'}
+                    {editLaporanModal.type === 'subkegiatan' && 'Edit Nomenklatur Sub Kegiatan'}
+                    {editLaporanModal.type === 'belanja' && 'Edit Rekening Belanja'}
+                  </h3>
+                  <p className="text-xs text-cyan-400 font-semibold truncate max-w-xs">
+                    {editLaporanModal.namaOPD || 'Pemerintah Provinsi NTB'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditLaporanModal(null)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Body Form */}
+            <form onSubmit={handleSaveEditLaporan} className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+              {/* FORM OPD */}
+              {editLaporanModal.type === 'opd' && (
+                <>
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Nama Satuan Kerja (OPD)</label>
+                    <input
+                      type="text"
+                      value={editLaporanModal.data.namaOPD || ''}
+                      onChange={(e) => setEditLaporanModal({
+                        ...editLaporanModal,
+                        data: { ...editLaporanModal.data, namaOPD: e.target.value }
+                      })}
+                      className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-white focus:border-cyan-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">Singkatan OPD</label>
+                      <input
+                        type="text"
+                        value={editLaporanModal.data.singkatan || ''}
+                        onChange={(e) => setEditLaporanModal({
+                          ...editLaporanModal,
+                          data: { ...editLaporanModal.data, singkatan: e.target.value }
+                        })}
+                        className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-white focus:border-cyan-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">Kode Sub SKPD</label>
+                      <input
+                        type="text"
+                        value={editLaporanModal.data.kodeOPD || ''}
+                        onChange={(e) => setEditLaporanModal({
+                          ...editLaporanModal,
+                          data: { ...editLaporanModal.data, kodeOPD: e.target.value }
+                        })}
+                        className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-cyan-300 font-mono focus:border-cyan-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Kategori Organisasi</label>
+                    <select
+                      value={editLaporanModal.data.kategori || 'Dinas'}
+                      onChange={(e) => setEditLaporanModal({
+                        ...editLaporanModal,
+                        data: { ...editLaporanModal.data, kategori: e.target.value }
+                      })}
+                      className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-white focus:border-cyan-500 focus:outline-none"
+                    >
+                      <option value="Dinas">Dinas Daerah</option>
+                      <option value="Badan">Badan Daerah</option>
+                      <option value="Sekretariat">Sekretariat Daerah / Dewan</option>
+                      <option value="RSUD">Rumah Sakit Umum Daerah (RSUD)</option>
+                      <option value="Biro">Biro Setda</option>
+                      <option value="Inspektorat">Inspektorat</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">Target Pagu Anggaran (Rp)</label>
+                      <input
+                        type="number"
+                        value={editLaporanModal.data.targetPagu ?? 0}
+                        onChange={(e) => setEditLaporanModal({
+                          ...editLaporanModal,
+                          data: { ...editLaporanModal.data, targetPagu: Number(e.target.value) }
+                        })}
+                        className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-white font-mono focus:border-cyan-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">Realisasi SP2D Kasda (Rp)</label>
+                      <input
+                        type="number"
+                        value={editLaporanModal.data.realisasiSP2D ?? 0}
+                        onChange={(e) => setEditLaporanModal({
+                          ...editLaporanModal,
+                          data: { ...editLaporanModal.data, realisasiSP2D: Number(e.target.value) }
+                        })}
+                        className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-emerald-400 font-mono font-bold focus:border-cyan-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">Nama Kepala OPD</label>
+                      <input
+                        type="text"
+                        value={editLaporanModal.data.kepalaBadan || ''}
+                        onChange={(e) => setEditLaporanModal({
+                          ...editLaporanModal,
+                          data: { ...editLaporanModal.data, kepalaBadan: e.target.value }
+                        })}
+                        className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-white focus:border-cyan-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">NIP Kepala OPD</label>
+                      <input
+                        type="text"
+                        value={editLaporanModal.data.nipKepala || ''}
+                        onChange={(e) => setEditLaporanModal({
+                          ...editLaporanModal,
+                          data: { ...editLaporanModal.data, nipKepala: e.target.value }
+                        })}
+                        className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-slate-300 font-mono focus:border-cyan-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* FORM PROGRAM */}
+              {editLaporanModal.type === 'program' && (
+                <>
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Kode Program</label>
+                    <input
+                      type="text"
+                      value={editLaporanModal.data.kodeProgram || ''}
+                      onChange={(e) => setEditLaporanModal({
+                        ...editLaporanModal,
+                        data: { ...editLaporanModal.data, kodeProgram: e.target.value }
+                      })}
+                      className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-cyan-300 font-mono focus:border-cyan-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Nama Nomenklatur Program</label>
+                    <textarea
+                      rows={2}
+                      value={editLaporanModal.data.namaProgram || ''}
+                      onChange={(e) => setEditLaporanModal({
+                        ...editLaporanModal,
+                        data: { ...editLaporanModal.data, namaProgram: e.target.value }
+                      })}
+                      className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-white focus:border-cyan-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">Pagu Anggaran (Rp)</label>
+                      <input
+                        type="number"
+                        value={editLaporanModal.data.pagu ?? 0}
+                        onChange={(e) => setEditLaporanModal({
+                          ...editLaporanModal,
+                          data: { ...editLaporanModal.data, pagu: Number(e.target.value) }
+                        })}
+                        className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-white font-mono focus:border-cyan-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">Realisasi SP2D (Rp)</label>
+                      <input
+                        type="number"
+                        value={editLaporanModal.data.realisasi ?? 0}
+                        onChange={(e) => setEditLaporanModal({
+                          ...editLaporanModal,
+                          data: { ...editLaporanModal.data, realisasi: Number(e.target.value) }
+                        })}
+                        className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-emerald-400 font-mono font-bold focus:border-cyan-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* FORM KEGIATAN */}
+              {editLaporanModal.type === 'kegiatan' && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">Kode Kegiatan</label>
+                      <input
+                        type="text"
+                        value={editLaporanModal.data.kodeKegiatan || ''}
+                        onChange={(e) => setEditLaporanModal({
+                          ...editLaporanModal,
+                          data: { ...editLaporanModal.data, kodeKegiatan: e.target.value }
+                        })}
+                        className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-cyan-300 font-mono focus:border-cyan-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">Kode Program Induk</label>
+                      <input
+                        type="text"
+                        value={editLaporanModal.data.kodeProgram || ''}
+                        onChange={(e) => setEditLaporanModal({
+                          ...editLaporanModal,
+                          data: { ...editLaporanModal.data, kodeProgram: e.target.value }
+                        })}
+                        className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-slate-300 font-mono focus:border-cyan-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Nama Kegiatan</label>
+                    <textarea
+                      rows={2}
+                      value={editLaporanModal.data.namaKegiatan || ''}
+                      onChange={(e) => setEditLaporanModal({
+                        ...editLaporanModal,
+                        data: { ...editLaporanModal.data, namaKegiatan: e.target.value }
+                      })}
+                      className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-white focus:border-cyan-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">Pagu Kegiatan (Rp)</label>
+                      <input
+                        type="number"
+                        value={editLaporanModal.data.pagu ?? 0}
+                        onChange={(e) => setEditLaporanModal({
+                          ...editLaporanModal,
+                          data: { ...editLaporanModal.data, pagu: Number(e.target.value) }
+                        })}
+                        className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-white font-mono focus:border-cyan-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">Realisasi SP2D (Rp)</label>
+                      <input
+                        type="number"
+                        value={editLaporanModal.data.realisasi ?? 0}
+                        onChange={(e) => setEditLaporanModal({
+                          ...editLaporanModal,
+                          data: { ...editLaporanModal.data, realisasi: Number(e.target.value) }
+                        })}
+                        className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-emerald-400 font-mono font-bold focus:border-cyan-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* FORM SUB KEGIATAN */}
+              {editLaporanModal.type === 'subkegiatan' && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">Kode Sub Kegiatan</label>
+                      <input
+                        type="text"
+                        value={editLaporanModal.data.kodeSub || ''}
+                        onChange={(e) => setEditLaporanModal({
+                          ...editLaporanModal,
+                          data: { ...editLaporanModal.data, kodeSub: e.target.value }
+                        })}
+                        className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-cyan-300 font-mono focus:border-cyan-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">Kode Kegiatan Induk</label>
+                      <input
+                        type="text"
+                        value={editLaporanModal.data.kodeKegiatan || ''}
+                        onChange={(e) => setEditLaporanModal({
+                          ...editLaporanModal,
+                          data: { ...editLaporanModal.data, kodeKegiatan: e.target.value }
+                        })}
+                        className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-slate-300 font-mono focus:border-cyan-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Nama Sub Kegiatan</label>
+                    <textarea
+                      rows={2}
+                      value={editLaporanModal.data.namaSub || ''}
+                      onChange={(e) => setEditLaporanModal({
+                        ...editLaporanModal,
+                        data: { ...editLaporanModal.data, namaSub: e.target.value }
+                      })}
+                      className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-white focus:border-cyan-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">Pagu Sub Kegiatan (Rp)</label>
+                      <input
+                        type="number"
+                        value={editLaporanModal.data.pagu ?? 0}
+                        onChange={(e) => setEditLaporanModal({
+                          ...editLaporanModal,
+                          data: { ...editLaporanModal.data, pagu: Number(e.target.value) }
+                        })}
+                        className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-white font-mono focus:border-cyan-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">Realisasi SP2D (Rp)</label>
+                      <input
+                        type="number"
+                        value={editLaporanModal.data.realisasi ?? 0}
+                        onChange={(e) => setEditLaporanModal({
+                          ...editLaporanModal,
+                          data: { ...editLaporanModal.data, realisasi: Number(e.target.value) }
+                        })}
+                        className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-emerald-400 font-mono font-bold focus:border-cyan-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* FORM REKENING BELANJA */}
+              {editLaporanModal.type === 'belanja' && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">Kode Rekening Belanja</label>
+                      <input
+                        type="text"
+                        value={editLaporanModal.data.kodeBelanja || ''}
+                        onChange={(e) => setEditLaporanModal({
+                          ...editLaporanModal,
+                          data: { ...editLaporanModal.data, kodeBelanja: e.target.value }
+                        })}
+                        className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-cyan-300 font-mono focus:border-cyan-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">Kelompok Belanja</label>
+                      <select
+                        value={editLaporanModal.data.jenisBelanja || 'Belanja Operasi'}
+                        onChange={(e) => setEditLaporanModal({
+                          ...editLaporanModal,
+                          data: { ...editLaporanModal.data, jenisBelanja: e.target.value }
+                        })}
+                        className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-white focus:border-cyan-500 focus:outline-none"
+                      >
+                        <option value="Belanja Operasi">Belanja Operasi</option>
+                        <option value="Belanja Pegawai">Belanja Pegawai</option>
+                        <option value="Belanja Barang dan Jasa">Belanja Barang dan Jasa</option>
+                        <option value="Belanja Modal">Belanja Modal</option>
+                        <option value="Belanja Tidak Terduga">Belanja Tidak Terduga</option>
+                        <option value="Belanja Transfer">Belanja Transfer</option>
+                        <option value="Belanja Hibah">Belanja Hibah</option>
+                        <option value="Bantuan Sosial">Bantuan Sosial</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Nama Uraian Rekening Belanja</label>
+                    <textarea
+                      rows={2}
+                      value={editLaporanModal.data.namaBelanja || ''}
+                      onChange={(e) => setEditLaporanModal({
+                        ...editLaporanModal,
+                        data: { ...editLaporanModal.data, namaBelanja: e.target.value }
+                      })}
+                      className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-white focus:border-cyan-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">Pagu Belanja (Rp)</label>
+                      <input
+                        type="number"
+                        value={editLaporanModal.data.pagu ?? 0}
+                        onChange={(e) => setEditLaporanModal({
+                          ...editLaporanModal,
+                          data: { ...editLaporanModal.data, pagu: Number(e.target.value) }
+                        })}
+                        className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-white font-mono focus:border-cyan-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-300 mb-1">Realisasi SP2D (Rp)</label>
+                      <input
+                        type="number"
+                        value={editLaporanModal.data.realisasi ?? 0}
+                        onChange={(e) => setEditLaporanModal({
+                          ...editLaporanModal,
+                          data: { ...editLaporanModal.data, realisasi: Number(e.target.value) }
+                        })}
+                        className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-emerald-400 font-mono font-bold focus:border-cyan-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Modal Footer Controls */}
+              <div className="pt-4 border-t border-slate-800 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setEditLaporanModal(null)}
+                  className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                >
+                  Batalkan
+                </button>
+                <button
+                  type="submit"
+                  className="flex items-center gap-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-cyan-950 transition active:scale-95"
+                >
+                  <Save className="h-4 w-4" />
+                  <span>Simpan Perubahan</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL KONFIRMASI HAPUS DATA PELAPORAN KONSOLIDASI */}
+      {deleteLaporanModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-2xl border border-rose-900/80 bg-slate-900 p-6 shadow-2xl text-center space-y-4">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-950/80 border border-rose-800 text-rose-400 shadow-inner">
+              <Trash2 className="h-7 w-7" />
+            </div>
+
+            <div>
+              <h3 className="text-base font-extrabold text-white">
+                Hapus Data {deleteLaporanModal.type.toUpperCase()}?
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Apakah Anda yakin ingin menghapus data item ini dari konsolidasi pelaporan?
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-slate-950 p-3.5 border border-slate-800 text-left space-y-1.5 text-xs">
+              <div className="flex justify-between items-center text-slate-400">
+                <span>Kode:</span>
+                <span className="font-mono text-cyan-300 font-bold">{deleteLaporanModal.kode || '-'}</span>
+              </div>
+              <div className="text-white font-semibold line-clamp-2">
+                {deleteLaporanModal.nama}
+              </div>
+              {deleteLaporanModal.namaOPD && (
+                <div className="text-[11px] text-cyan-400">
+                  {deleteLaporanModal.namaOPD}
+                </div>
+              )}
+              {deleteLaporanModal.nominal !== undefined && (
+                <div className="flex justify-between items-center pt-1.5 border-t border-slate-800/80">
+                  <span className="text-slate-400">Pagu Tercatat:</span>
+                  <span className="font-mono text-amber-300 font-bold">{formatRupiah(deleteLaporanModal.nominal)}</span>
+                </div>
+              )}
+            </div>
+
+            <p className="text-[11px] text-rose-400/90 italic">
+              Data yang dihapus akan otomatis diperhitungkan ulang pada rekapitulasi realisasi konsolidasi.
+            </p>
+
+            <div className="flex items-center justify-center gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteLaporanModal(null)}
+                className="flex-1 rounded-xl px-4 py-2.5 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 transition"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteLaporan}
+                className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-rose-950 transition active:scale-95"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Ya, Hapus Data</span>
+              </button>
             </div>
           </div>
         </div>
