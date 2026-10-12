@@ -4,7 +4,7 @@ import { isCodeEqual, isHibahAccount } from '../../utils/codeUtils';
 import { NTBLogo } from '../common/NTBLogo';
 import * as XLSX from 'xlsx';
 import { safeDownloadExcel } from '../../utils/downloadHelper';
-import { Realisasi, Belanja, SubKegiatan } from '../../types';
+import { Realisasi, Belanja, SubKegiatan, Anggaran } from '../../types';
 import {
   FileText,
   Printer,
@@ -590,6 +590,314 @@ const RealisasiDetailModal: React.FC<RealisasiDetailModalProps> = ({
   );
 };
 
+interface SPDDetailFilter {
+  title: string;
+  subtitle?: string;
+  kodeSub?: string;
+  kodeBelanja?: string;
+  kodeKegiatan?: string;
+  kodeProgram?: string;
+}
+
+interface SPDDetailModalProps {
+  filter: SPDDetailFilter;
+  onClose: () => void;
+  currentAnggaran: Anggaran[];
+  belanjaList: Belanja[];
+  subKegiatanList: SubKegiatan[];
+  selectedTahun: number;
+}
+
+const SPDDetailModal: React.FC<SPDDetailModalProps> = ({
+  filter,
+  onClose,
+  currentAnggaran,
+  belanjaList,
+  subKegiatanList,
+  selectedTahun
+}) => {
+  const [modalSearch, setModalSearch] = useState('');
+  const [filterJenisBelanja, setFilterJenisBelanja] = useState<string>('ALL');
+
+  const matchingAnggaran = currentAnggaran.filter(a => {
+    if (filter.kodeSub && !isCodeEqual(a.kodeSub, filter.kodeSub)) return false;
+    if (filter.kodeBelanja && !isCodeEqual(a.kodeBelanja, filter.kodeBelanja)) return false;
+    if (filter.kodeKegiatan && !isCodeEqual(a.kodeKegiatan, filter.kodeKegiatan)) return false;
+    if (filter.kodeProgram && !isCodeEqual(a.kodeProgram, filter.kodeProgram)) return false;
+    return true;
+  });
+
+  const searchedAnggaran = matchingAnggaran.filter(a => {
+    const bObj = belanjaList.find(b => isCodeEqual(b.kodeBelanja, a.kodeBelanja));
+    const namaBel = a.namaBelanja || bObj?.namaBelanja || '';
+    const jenisBel = bObj?.jenisBelanja || 'Belanja Operasi';
+
+    if (filterJenisBelanja !== 'ALL' && jenisBel !== filterJenisBelanja) {
+      return false;
+    }
+
+    if (!modalSearch.trim()) return true;
+    const q = modalSearch.toLowerCase();
+    const sObj = subKegiatanList.find(s => isCodeEqual(s.kodeSub, a.kodeSub));
+    const namaSub = sObj?.namaSub || '';
+    return (
+      a.kodeBelanja.toLowerCase().includes(q) ||
+      namaBel.toLowerCase().includes(q) ||
+      jenisBel.toLowerCase().includes(q) ||
+      a.kodeSub.toLowerCase().includes(q) ||
+      namaSub.toLowerCase().includes(q) ||
+      (a.sumberDana && a.sumberDana.toLowerCase().includes(q))
+    );
+  });
+
+  const totalPaguMurni = searchedAnggaran.reduce((s, a) => s + (Number(a.pagu) || 0), 0);
+  const totalRevisi = searchedAnggaran.reduce((s, a) => s + (Number(a.revisi) || 0), 0);
+  const totalPaguAkhir = searchedAnggaran.reduce((s, a) => s + (Number(a.paguAkhir) || 0), 0);
+  const totalSPD = searchedAnggaran.reduce(
+    (s, a) => s + (a.nilaiSPD !== undefined ? Number(a.nilaiSPD) : Number(a.paguAkhir)),
+    0
+  );
+
+  const exportModalExcel = () => {
+    const rows = searchedAnggaran.map((a, idx) => {
+      const bObj = belanjaList.find(b => isCodeEqual(b.kodeBelanja, a.kodeBelanja));
+      const sObj = subKegiatanList.find(s => isCodeEqual(s.kodeSub, a.kodeSub));
+      const nilaiSpdItem = a.nilaiSPD !== undefined ? a.nilaiSPD : a.paguAkhir;
+      return {
+        'No': idx + 1,
+        'Kode Rekening Belanja': a.kodeBelanja,
+        'Nama Uraian Rekening Belanja': a.namaBelanja || bObj?.namaBelanja || `Belanja ${a.kodeBelanja}`,
+        'Kelompok / Jenis Belanja': bObj?.jenisBelanja || 'Belanja Operasi',
+        'Kode Sub Kegiatan': a.kodeSub,
+        'Nama Sub Kegiatan': sObj?.namaSub || a.kodeSub,
+        'Kode Kegiatan': a.kodeKegiatan,
+        'Kode Program': a.kodeProgram,
+        'Pagu Murni (Rp)': a.pagu,
+        'Pergeseran / Revisi (Rp)': a.revisi,
+        'Nilai Anggaran Akhir (Rp)': a.paguAkhir,
+        'Nilai SPD (Rp)': nilaiSpdItem,
+        'Sumber Dana': a.sumberDana || 'DAU / APBD'
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Rincian_SPD_Anggaran');
+    safeDownloadExcel(wb, `Rincian_SPD_Anggaran_Rekening_${selectedTahun}.xlsx`);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col rounded-3xl border border-blue-500/30 bg-slate-900 shadow-2xl overflow-hidden text-slate-100">
+        {/* Header */}
+        <div className="flex items-start justify-between border-b border-slate-800 p-5 bg-slate-950">
+          <div className="space-y-1 pr-6">
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-blue-500/20 px-2.5 py-0.5 text-[10px] font-bold text-blue-400 border border-blue-500/30 flex items-center gap-1">
+                <DollarSign className="h-3 w-3" />
+                Rincian Surat Penyediaan Dana (SPD) & Anggaran
+              </span>
+              <span className="text-xs font-semibold text-slate-400">TA {selectedTahun}</span>
+            </div>
+            <h2 className="text-lg font-bold text-white leading-tight">
+              {filter.title}
+            </h2>
+            {filter.subtitle && (
+              <p className="text-xs text-cyan-400 font-semibold">
+                {filter.subtitle}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Search & Stat Summary Bar */}
+        <div className="flex flex-col gap-3 p-4 bg-slate-900/90 border-b border-slate-800">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Stat Card 1: Jumlah Rekening */}
+            <div className="flex items-center gap-3 rounded-2xl bg-slate-950 p-3 border border-blue-500/30">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/20 text-blue-400">
+                <BookOpen className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Jumlah Rekening</span>
+                <div className="text-base sm:text-lg font-black font-mono text-blue-400">
+                  {searchedAnggaran.length} <span className="text-xs font-normal text-slate-300">Rekening</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Stat Card 2: Total Nilai SPD */}
+            <div className="flex items-center gap-3 rounded-2xl bg-slate-950 p-3 border border-blue-500/30">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600/20 text-cyan-300">
+                <DollarSign className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-300">Total Nilai SPD</span>
+                <div className="text-base sm:text-lg font-black font-mono text-cyan-300 truncate">
+                  Rp {totalSPD.toLocaleString('id-ID')}
+                </div>
+              </div>
+            </div>
+
+            {/* Stat Card 3: Total Nilai Anggaran (Pagu Akhir) */}
+            <div className="flex items-center gap-3 rounded-2xl bg-slate-950 p-3 border border-slate-700">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-slate-300">
+                <Layers className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Nilai Anggaran (Pagu)</span>
+                <div className="text-base sm:text-lg font-black font-mono text-white truncate">
+                  Rp {totalPaguAkhir.toLocaleString('id-ID')}
+                </div>
+              </div>
+            </div>
+
+            {/* Search Input & Export Button */}
+            <div className="flex items-center gap-2">
+              <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={modalSearch}
+                  onChange={e => setModalSearch(e.target.value)}
+                  placeholder="Cari kode rekening, belanja..."
+                  className="w-full bg-slate-950 text-white rounded-xl pl-9 pr-8 py-2.5 text-xs border border-slate-700 focus:outline-none focus:border-blue-500 placeholder:text-slate-500"
+                />
+                {modalSearch && (
+                  <button
+                    onClick={() => setModalSearch('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={exportModalExcel}
+                disabled={searchedAnggaran.length === 0}
+                className="flex items-center gap-1.5 shrink-0 rounded-xl bg-blue-950 hover:bg-blue-900 px-3 py-2 text-xs font-bold text-blue-300 border border-blue-700 disabled:opacity-50 transition-colors"
+                title="Ekspor rincian SPD & Anggaran ke Excel"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Excel</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Content Table */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin">
+          {searchedAnggaran.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 space-y-2">
+              <BookOpen className="h-10 w-10 text-slate-600 mx-auto" />
+              <p className="font-semibold text-sm">Tidak ada data rekening anggaran yang ditemukan.</p>
+              <p className="text-xs text-slate-500">Coba gunakan kata kunci pencarian yang berbeda.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-slate-900 text-slate-300 font-bold uppercase border-b border-slate-800">
+                  <tr>
+                    <th className="p-3 text-center w-12">No</th>
+                    <th className="p-3 min-w-[130px]">Kode Rekening</th>
+                    <th className="p-3 min-w-[260px]">Uraian Belanja</th>
+                    <th className="p-3 min-w-[180px]">Sub Kegiatan</th>
+                    <th className="p-3 text-right min-w-[130px]">Pagu Murni (Rp)</th>
+                    <th className="p-3 text-right min-w-[110px]">Pergeseran</th>
+                    <th className="p-3 text-right min-w-[140px]">Nilai Anggaran (Rp)</th>
+                    <th className="p-3 text-right min-w-[140px]">Nilai SPD (Rp)</th>
+                    <th className="p-3 text-center min-w-[100px]">Sumber Dana</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 font-sans">
+                  {searchedAnggaran.map((item, idx) => {
+                    const bObj = belanjaList.find(b => isCodeEqual(b.kodeBelanja, item.kodeBelanja));
+                    const sObj = subKegiatanList.find(s => isCodeEqual(s.kodeSub, item.kodeSub));
+                    const nilaiSpdItem = item.nilaiSPD !== undefined ? item.nilaiSPD : item.paguAkhir;
+                    return (
+                      <tr key={item.id || idx} className="hover:bg-slate-900/80 transition-colors">
+                        <td className="p-3 text-center text-slate-500 font-mono font-bold">{idx + 1}</td>
+                        <td className="p-3">
+                          <span className="font-mono font-bold text-cyan-300 text-[11px] bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-800/60">
+                            {item.kodeBelanja}
+                          </span>
+                        </td>
+                        <td className="p-3 space-y-1">
+                          <div className="font-bold text-white leading-snug">
+                            {item.namaBelanja || bObj?.namaBelanja || `Belanja ${item.kodeBelanja}`}
+                          </div>
+                          {bObj?.jenisBelanja && (
+                            <span className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                              {bObj.jenisBelanja}
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3 space-y-1">
+                          <div className="text-[11px] font-semibold text-slate-200">
+                            {sObj?.namaSub || item.kodeSub}
+                          </div>
+                          <div className="font-mono text-[10px] text-slate-400">{item.kodeSub}</div>
+                        </td>
+                        <td className="p-3 text-right font-mono text-slate-300">
+                          Rp {item.pagu.toLocaleString('id-ID')}
+                        </td>
+                        <td className="p-3 text-right font-mono text-amber-400/80">
+                          {item.revisi !== 0 ? `Rp ${item.revisi.toLocaleString('id-ID')}` : '-'}
+                        </td>
+                        <td className="p-3 text-right font-mono font-bold text-white bg-slate-900/50">
+                          Rp {item.paguAkhir.toLocaleString('id-ID')}
+                        </td>
+                        <td className="p-3 text-right font-mono font-bold text-cyan-300 text-sm whitespace-nowrap bg-blue-950/20">
+                          Rp {nilaiSpdItem.toLocaleString('id-ID')}
+                        </td>
+                        <td className="p-3 text-center">
+                          <span className="rounded bg-slate-800/80 px-2 py-0.5 text-[10px] text-slate-300 font-medium border border-slate-700">
+                            {item.sumberDana || 'DAU / APBD'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-slate-800 p-4 bg-slate-950 text-xs">
+          <div className="flex items-center gap-2 text-slate-300 font-semibold">
+            <span className="rounded-lg bg-blue-950 border border-blue-700/60 px-2.5 py-1 text-blue-300 font-mono">
+              Total {searchedAnggaran.length} Rekening Belanja
+            </span>
+            <span className="text-slate-400">Rincian Nilai SPD & Anggaran</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
+              <span className="text-slate-400 font-semibold">Total Nilai Anggaran:</span>
+              <span className="font-black font-mono text-white text-sm">
+                Rp {totalPaguAkhir.toLocaleString('id-ID')}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 border-l border-slate-800 pl-4">
+              <span className="text-cyan-400 font-semibold">Total Nilai SPD:</span>
+              <span className="text-base sm:text-lg font-black font-mono text-cyan-300">
+                Rp {totalSPD.toLocaleString('id-ID')}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 interface PelaporanViewProps {
   initialReportType?: string;
 }
@@ -611,6 +919,7 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
 
   const [activeTab, setActiveTab] = useState<string>(initialReportType);
   const [selectedRealisasiFilter, setSelectedRealisasiFilter] = useState<RealisasiDetailFilter | null>(null);
+  const [selectedSPDFilter, setSelectedSPDFilter] = useState<SPDDetailFilter | null>(null);
 
   React.useEffect(() => {
     if (initialReportType) {
@@ -1630,7 +1939,20 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                       <td className="p-3 font-semibold text-white print:text-slate-900">{r.nama}</td>
                       <td className="p-3 text-right font-mono text-slate-300 print:text-slate-800">Rp {r.paguMurni.toLocaleString('id-ID')}</td>
                       <td className="p-3 text-right font-mono text-amber-400/80 print:text-slate-800">Rp {r.revisi.toLocaleString('id-ID')}</td>
-                      <td className="p-3 text-right font-mono text-blue-300 print:text-slate-800">Rp {r.nilaiSPD.toLocaleString('id-ID')}</td>
+                      <td
+                        onClick={() => setSelectedSPDFilter({
+                          title: `Rincian SPD & Anggaran Belanja Program`,
+                          subtitle: `${r.kode} - ${r.nama}`,
+                          kodeProgram: r.kode
+                        })}
+                        className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer print:text-slate-800 font-bold transition-colors group"
+                        title="Klik untuk melihat data kode rekening, belanja, dan nilai anggaran"
+                      >
+                        <span className="inline-flex items-center gap-1 justify-end">
+                          <span>Rp {r.nilaiSPD.toLocaleString('id-ID')}</span>
+                          <Eye className="h-3.5 w-3.5 text-blue-400/80 group-hover:text-blue-200 print:hidden" />
+                        </span>
+                      </td>
                       <td className="p-3 text-right font-mono font-bold text-white print:text-slate-900">Rp {r.paguAkhir.toLocaleString('id-ID')}</td>
                       <td
                         onClick={() => setSelectedRealisasiFilter({
@@ -1669,7 +1991,16 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                         <td colSpan={2} className="p-3 text-right uppercase">TOTAL KESELURUHAN PROGRAM:</td>
                         <td className="p-3 text-right font-mono">Rp {totalMurni.toLocaleString('id-ID')}</td>
                         <td className="p-3 text-right font-mono text-amber-300">Rp {totalRev.toLocaleString('id-ID')}</td>
-                        <td className="p-3 text-right font-mono text-blue-300">Rp {totalSPD.toLocaleString('id-ID')}</td>
+                        <td
+                          onClick={() => setSelectedSPDFilter({
+                            title: `Rincian Seluruh SPD & Anggaran Belanja (Semua Program)`,
+                            subtitle: `Tahun Anggaran ${selectedTahun}`
+                          })}
+                          className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer font-bold"
+                          title="Klik untuk melihat seluruh rincian kode rekening, belanja, dan nilai anggaran"
+                        >
+                          Rp {totalSPD.toLocaleString('id-ID')}
+                        </td>
                         <td className="p-3 text-right font-mono text-emerald-400">Rp {totalAkhir.toLocaleString('id-ID')}</td>
                         <td className="p-3 text-right font-mono text-emerald-300">Rp {totalReal.toLocaleString('id-ID')}</td>
                         <td className="p-3 text-right font-mono text-amber-300">Rp {totalSisa.toLocaleString('id-ID')}</td>
@@ -1711,7 +2042,20 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                       <td className="p-3 font-semibold text-white print:text-slate-900">{r.namaKeg}</td>
                       <td className="p-3 text-right font-mono text-slate-300 print:text-slate-800">Rp {r.paguMurni.toLocaleString('id-ID')}</td>
                       <td className="p-3 text-right font-mono text-amber-400/80 print:text-slate-800">Rp {r.revisi.toLocaleString('id-ID')}</td>
-                      <td className="p-3 text-right font-mono text-blue-300 print:text-slate-800">Rp {r.nilaiSPD.toLocaleString('id-ID')}</td>
+                      <td
+                        onClick={() => setSelectedSPDFilter({
+                          title: `Rincian SPD & Anggaran Belanja Kegiatan`,
+                          subtitle: `${r.kodeKeg} - ${r.namaKeg}`,
+                          kodeKegiatan: r.kodeKeg
+                        })}
+                        className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer print:text-slate-800 font-bold transition-colors group"
+                        title="Klik untuk melihat data kode rekening, belanja, dan nilai anggaran"
+                      >
+                        <span className="inline-flex items-center gap-1 justify-end">
+                          <span>Rp {r.nilaiSPD.toLocaleString('id-ID')}</span>
+                          <Eye className="h-3.5 w-3.5 text-blue-400/80 group-hover:text-blue-200 print:hidden" />
+                        </span>
+                      </td>
                       <td className="p-3 text-right font-mono font-bold text-white print:text-slate-900">Rp {r.paguAkhir.toLocaleString('id-ID')}</td>
                       <td
                         onClick={() => setSelectedRealisasiFilter({
@@ -1750,7 +2094,16 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                         <td colSpan={2} className="p-3 text-right uppercase">TOTAL KESELURUHAN KEGIATAN:</td>
                         <td className="p-3 text-right font-mono">Rp {totalMurni.toLocaleString('id-ID')}</td>
                         <td className="p-3 text-right font-mono text-amber-300">Rp {totalRev.toLocaleString('id-ID')}</td>
-                        <td className="p-3 text-right font-mono text-blue-300">Rp {totalSPD.toLocaleString('id-ID')}</td>
+                        <td
+                          onClick={() => setSelectedSPDFilter({
+                            title: `Rincian Seluruh SPD & Anggaran Belanja (Semua Kegiatan)`,
+                            subtitle: `Tahun Anggaran ${selectedTahun}`
+                          })}
+                          className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer font-bold"
+                          title="Klik untuk melihat seluruh rincian kode rekening, belanja, dan nilai anggaran"
+                        >
+                          Rp {totalSPD.toLocaleString('id-ID')}
+                        </td>
                         <td className="p-3 text-right font-mono text-emerald-400">Rp {totalAkhir.toLocaleString('id-ID')}</td>
                         <td className="p-3 text-right font-mono text-emerald-300">Rp {totalReal.toLocaleString('id-ID')}</td>
                         <td className="p-3 text-right font-mono text-amber-300">Rp {totalSisa.toLocaleString('id-ID')}</td>
@@ -1830,7 +2183,23 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                         <td className="p-3 font-semibold text-white print:text-slate-900">{r.namaSub}</td>
                         <td className="p-3 text-right font-mono text-slate-300 print:text-slate-800">Rp {r.paguMurni.toLocaleString('id-ID')}</td>
                         <td className="p-3 text-right font-mono text-amber-400/80 print:text-slate-800">Rp {r.revisi.toLocaleString('id-ID')}</td>
-                        <td className="p-3 text-right font-mono text-blue-300 print:text-slate-800">Rp {r.nilaiSPD.toLocaleString('id-ID')}</td>
+                        <td
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedSPDFilter({
+                              title: `Rincian SPD & Anggaran Belanja Sub-Kegiatan`,
+                              subtitle: `${r.kodeSub} - ${r.namaSub}`,
+                              kodeSub: r.kodeSub
+                            });
+                          }}
+                          className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer print:text-slate-800 font-bold transition-colors group"
+                          title="Klik untuk melihat data kode rekening, belanja, dan nilai anggaran"
+                        >
+                          <span className="inline-flex items-center gap-1 justify-end">
+                            <span>Rp {r.nilaiSPD.toLocaleString('id-ID')}</span>
+                            <Eye className="h-3.5 w-3.5 text-blue-400/80 group-hover:text-blue-200 print:hidden" />
+                          </span>
+                        </td>
                         <td className="p-3 text-right font-mono font-bold text-white print:text-slate-900">Rp {r.paguAkhir.toLocaleString('id-ID')}</td>
                         <td
                           onClick={(e) => {
@@ -1872,7 +2241,16 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                           <td colSpan={2} className="p-3 text-right uppercase">TOTAL KESELURUHAN SUB-KEGIATAN:</td>
                           <td className="p-3 text-right font-mono">Rp {totalMurni.toLocaleString('id-ID')}</td>
                           <td className="p-3 text-right font-mono text-amber-300">Rp {totalRev.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-right font-mono text-blue-300">Rp {totalSPD.toLocaleString('id-ID')}</td>
+                          <td
+                            onClick={() => setSelectedSPDFilter({
+                              title: `Rincian Seluruh SPD & Anggaran Belanja (Semua Sub-Kegiatan)`,
+                              subtitle: `Tahun Anggaran ${selectedTahun}`
+                            })}
+                            className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer font-bold"
+                            title="Klik untuk melihat seluruh rincian kode rekening, belanja, dan nilai anggaran"
+                          >
+                            Rp {totalSPD.toLocaleString('id-ID')}
+                          </td>
                           <td className="p-3 text-right font-mono text-emerald-400">Rp {totalAkhir.toLocaleString('id-ID')}</td>
                           <td className="p-3 text-right font-mono text-emerald-300">Rp {totalReal.toLocaleString('id-ID')}</td>
                           <td className="p-3 text-right font-mono text-amber-300">Rp {totalSisa.toLocaleString('id-ID')}</td>
@@ -1915,7 +2293,21 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                           <td className="p-3 text-slate-300 print:text-slate-700">{r.jenisBelanja}</td>
                           <td className="p-3 text-right font-mono text-slate-300 print:text-slate-800">Rp {r.paguMurni.toLocaleString('id-ID')}</td>
                           <td className="p-3 text-right font-mono text-amber-400/80 print:text-slate-800">Rp {r.revisi.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-right font-mono text-blue-300 print:text-slate-800">Rp {r.nilaiSPD.toLocaleString('id-ID')}</td>
+                          <td
+                            onClick={() => setSelectedSPDFilter({
+                              title: `Rincian SPD & Anggaran Rekening Belanja`,
+                              subtitle: `Sub Kegiatan: ${selectedSubDetail?.namaSub || filterSelectedSub} (${filterSelectedSub}) | Rekening: ${r.namaBelanja} (${r.kodeBelanja})`,
+                              kodeSub: filterSelectedSub,
+                              kodeBelanja: r.kodeBelanja
+                            })}
+                            className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer print:text-slate-800 font-bold transition-colors group"
+                            title="Klik untuk melihat data kode rekening, belanja, dan nilai anggaran"
+                          >
+                            <span className="inline-flex items-center gap-1 justify-end">
+                              <span>Rp {r.nilaiSPD.toLocaleString('id-ID')}</span>
+                              <Eye className="h-3.5 w-3.5 text-blue-400/80 group-hover:text-blue-200 print:hidden" />
+                            </span>
+                          </td>
                           <td className="p-3 text-right font-mono font-bold text-white print:text-slate-900">Rp {r.paguAkhir.toLocaleString('id-ID')}</td>
                           <td
                             onClick={() => {
@@ -1958,7 +2350,17 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                           <td colSpan={3} className="p-3 text-right uppercase">TOTAL SUB-KEGIATAN INI:</td>
                           <td className="p-3 text-right font-mono">Rp {totalMurni.toLocaleString('id-ID')}</td>
                           <td className="p-3 text-right font-mono text-amber-300">Rp {totalRev.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-right font-mono text-blue-300">Rp {totalSPD.toLocaleString('id-ID')}</td>
+                          <td
+                            onClick={() => setSelectedSPDFilter({
+                              title: `Rincian SPD & Anggaran Belanja Sub-Kegiatan`,
+                              subtitle: `${selectedSubDetail?.namaSub || filterSelectedSub} (${filterSelectedSub})`,
+                              kodeSub: filterSelectedSub
+                            })}
+                            className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer font-bold"
+                            title="Klik untuk melihat rincian kode rekening, belanja, dan nilai anggaran"
+                          >
+                            Rp {totalSPD.toLocaleString('id-ID')}
+                          </td>
                           <td className="p-3 text-right font-mono text-emerald-400">Rp {totalAkhir.toLocaleString('id-ID')}</td>
                           <td className="p-3 text-right font-mono text-emerald-300">Rp {totalReal.toLocaleString('id-ID')}</td>
                           <td className="p-3 text-right font-mono text-amber-300">Rp {totalSisa.toLocaleString('id-ID')}</td>
@@ -2039,7 +2441,23 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                         <td className="p-3 text-slate-300 print:text-slate-700">{r.jenis}</td>
                         <td className="p-3 text-right font-mono text-slate-300 print:text-slate-800">Rp {r.paguMurni.toLocaleString('id-ID')}</td>
                         <td className="p-3 text-right font-mono text-amber-400/80 print:text-slate-800">Rp {r.revisi.toLocaleString('id-ID')}</td>
-                        <td className="p-3 text-right font-mono text-blue-300 print:text-slate-800">Rp {r.nilaiSPD.toLocaleString('id-ID')}</td>
+                        <td
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedSPDFilter({
+                              title: `Rincian SPD & Anggaran Rekening Belanja`,
+                              subtitle: `${r.kode} - ${r.nama}`,
+                              kodeBelanja: r.kode
+                            });
+                          }}
+                          className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer print:text-slate-800 font-bold transition-colors group"
+                          title="Klik untuk melihat data kode rekening, belanja, dan nilai anggaran"
+                        >
+                          <span className="inline-flex items-center gap-1 justify-end">
+                            <span>Rp {r.nilaiSPD.toLocaleString('id-ID')}</span>
+                            <Eye className="h-3.5 w-3.5 text-blue-400/80 group-hover:text-blue-200 print:hidden" />
+                          </span>
+                        </td>
                         <td className="p-3 text-right font-mono font-bold text-white print:text-slate-900">Rp {r.paguAkhir.toLocaleString('id-ID')}</td>
                         <td
                           onClick={(e) => {
@@ -2081,7 +2499,16 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                           <td colSpan={3} className="p-3 text-right uppercase">TOTAL KESELURUHAN BELANJA:</td>
                           <td className="p-3 text-right font-mono">Rp {totalMurni.toLocaleString('id-ID')}</td>
                           <td className="p-3 text-right font-mono text-amber-300">Rp {totalRev.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-right font-mono text-blue-300">Rp {totalSPD.toLocaleString('id-ID')}</td>
+                          <td
+                            onClick={() => setSelectedSPDFilter({
+                              title: `Rincian Seluruh SPD & Anggaran Belanja (Semua Rekening Belanja)`,
+                              subtitle: `Tahun Anggaran ${selectedTahun}`
+                            })}
+                            className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer font-bold"
+                            title="Klik untuk melihat seluruh rincian kode rekening, belanja, dan nilai anggaran"
+                          >
+                            Rp {totalSPD.toLocaleString('id-ID')}
+                          </td>
                           <td className="p-3 text-right font-mono text-emerald-400">Rp {totalAkhir.toLocaleString('id-ID')}</td>
                           <td className="p-3 text-right font-mono text-emerald-300">Rp {totalReal.toLocaleString('id-ID')}</td>
                           <td className="p-3 text-right font-mono text-amber-300">Rp {totalSisa.toLocaleString('id-ID')}</td>
@@ -2122,7 +2549,21 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                           <td className="p-3 font-semibold text-white print:text-slate-900">{r.namaSub}</td>
                           <td className="p-3 text-right font-mono text-slate-300 print:text-slate-800">Rp {r.paguMurni.toLocaleString('id-ID')}</td>
                           <td className="p-3 text-right font-mono text-amber-400/80 print:text-slate-800">Rp {r.revisi.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-right font-mono text-blue-300 print:text-slate-800">Rp {r.nilaiSPD.toLocaleString('id-ID')}</td>
+                          <td
+                            onClick={() => setSelectedSPDFilter({
+                              title: `Rincian SPD & Anggaran Belanja Sub-Kegiatan`,
+                              subtitle: `Rekening: ${selectedBelanjaDetail?.namaBelanja || filterSelectedBelanja} (${filterSelectedBelanja}) | Sub Kegiatan: ${r.namaSub} (${r.kodeSub})`,
+                              kodeBelanja: filterSelectedBelanja,
+                              kodeSub: r.kodeSub
+                            })}
+                            className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer print:text-slate-800 font-bold transition-colors group"
+                            title="Klik untuk melihat data kode rekening, belanja, dan nilai anggaran"
+                          >
+                            <span className="inline-flex items-center gap-1 justify-end">
+                              <span>Rp {r.nilaiSPD.toLocaleString('id-ID')}</span>
+                              <Eye className="h-3.5 w-3.5 text-blue-400/80 group-hover:text-blue-200 print:hidden" />
+                            </span>
+                          </td>
                           <td className="p-3 text-right font-mono font-bold text-white print:text-slate-900">Rp {r.paguAkhir.toLocaleString('id-ID')}</td>
                           <td
                             onClick={() => {
@@ -2165,7 +2606,17 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                           <td colSpan={2} className="p-3 text-right uppercase">TOTAL REKENING BELANJA INI:</td>
                           <td className="p-3 text-right font-mono">Rp {totalMurni.toLocaleString('id-ID')}</td>
                           <td className="p-3 text-right font-mono text-amber-300">Rp {totalRev.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-right font-mono text-blue-300">Rp {totalSPD.toLocaleString('id-ID')}</td>
+                          <td
+                            onClick={() => setSelectedSPDFilter({
+                              title: `Rincian SPD & Anggaran Rekening Belanja`,
+                              subtitle: `${selectedBelanjaDetail?.namaBelanja || filterSelectedBelanja} (${filterSelectedBelanja})`,
+                              kodeBelanja: filterSelectedBelanja
+                            })}
+                            className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer font-bold"
+                            title="Klik untuk melihat rincian kode rekening, belanja, dan nilai anggaran"
+                          >
+                            Rp {totalSPD.toLocaleString('id-ID')}
+                          </td>
                           <td className="p-3 text-right font-mono text-emerald-400">Rp {totalAkhir.toLocaleString('id-ID')}</td>
                           <td className="p-3 text-right font-mono text-emerald-300">Rp {totalReal.toLocaleString('id-ID')}</td>
                           <td className="p-3 text-right font-mono text-amber-300">Rp {totalSisa.toLocaleString('id-ID')}</td>
@@ -3362,6 +3813,18 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
           filter={selectedRealisasiFilter}
           onClose={() => setSelectedRealisasiFilter(null)}
           currentRealisasi={currentRealisasi}
+          belanjaList={belanjaList}
+          subKegiatanList={subKegiatanList}
+          selectedTahun={selectedTahun}
+        />
+      )}
+
+      {/* MODAL BREAKDOWN DETAIL SPD: KODE REKENING, BELANJA & NILAI ANGGARAN */}
+      {selectedSPDFilter && (
+        <SPDDetailModal
+          filter={selectedSPDFilter}
+          onClose={() => setSelectedSPDFilter(null)}
+          currentAnggaran={currentAnggaran}
           belanjaList={belanjaList}
           subKegiatanList={subKegiatanList}
           selectedTahun={selectedTahun}

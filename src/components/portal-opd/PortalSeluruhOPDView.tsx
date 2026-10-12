@@ -66,7 +66,8 @@ import {
   FileCode,
   Edit3,
   Trash2,
-  Save
+  Save,
+  BookOpen
 } from 'lucide-react';
 
 interface PortalSeluruhOPDViewProps {
@@ -127,6 +128,22 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
     nama: string;
     nominal: number;
   } | null>(null);
+
+  // States khusus Modal Rincian Nilai SPD & Anggaran (Kode Rekening, Belanja, dan Nilai Anggaran)
+  const [spdDetailModal, setSpdDetailModal] = useState<{
+    title: string;
+    subtitle: string;
+    namaOPD?: string;
+    items: Array<{
+      kodeRekening: string;
+      namaBelanja: string;
+      jenisBelanja: string;
+      pagu: number;
+      realisasi?: number;
+      namaOPD?: string;
+    }>;
+  } | null>(null);
+  const [spdModalSearch, setSpdModalSearch] = useState('');
 
   const [laporanActionSuccessMsg, setLaporanActionSuccessMsg] = useState<string | null>(null);
   const [customBreakdownMap, setCustomBreakdownMap] = useState<Record<string, any>>(() => {
@@ -420,112 +437,11 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
     }
   };
 
-  // Helper normalisasi nama OPD untuk pencocokan cerdas
-  const cleanOpdKeywords = (str: string): string => {
-    if (!str) return '';
-    return str.toLowerCase()
-      .replace(/pemerintah\s+provinsi\s+nusa\s+tenggara\s+barat/g, '')
-      .replace(/provinsi\s+nusa\s+tenggara\s+barat/g, '')
-      .replace(/pemerintah\s+provinsi\s+ntb/g, '')
-      .replace(/provinsi\s+ntb/g, '')
-      .replace(/prov\.\s*ntb/g, '')
-      .replace(/provinsi/g, '')
-      .replace(/ntb/g, '')
-      .replace(/dinas\s+daerah/g, '')
-      .replace(/badan\s+daerah/g, '')
-      .replace(/[^a-z0-9\s]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-  };
-
-  // Helper pencocokan OPD yang sangat fleksibel (Kode, Singkatan, Nama Lengkap & Kata Kunci)
-  const findMatchingOpdIndex = (kode: string, nama: string, singkatan: string, list: NTBOPDItem[]): number => {
-    const cleanKode = (kode || '').trim().replace(/[^0-9]/g, '');
-    const cleanNama = cleanOpdKeywords(nama);
-    const cleanSingk = (singkatan || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-
-    // 1. Cocokkan Kode OPD (baik dengan titik maupun tanpa titik)
-    if (cleanKode.length >= 3) {
-      const idx = list.findIndex(o => {
-        const oKodeClean = o.kodeOPD.replace(/[^0-9]/g, '');
-        if (cleanKode === oKodeClean) return true;
-        if (cleanKode.length >= 4 && oKodeClean.length >= 4 && cleanKode.slice(0, 4) === oKodeClean.slice(0, 4)) return true;
-        return false;
-      });
-      if (idx >= 0) return idx;
-    }
-
-    // 2. Cocokkan Singkatan OPD (misal: DINKES, BPKAD, BAPPEDA, DISDIKBUD)
-    if (cleanSingk.length >= 3) {
-      const idx = list.findIndex(o => {
-        const oSingkClean = o.singkatan.toLowerCase().replace(/[^a-z0-9]/g, '');
-        return oSingkClean.includes(cleanSingk) || cleanSingk.includes(oSingkClean);
-      });
-      if (idx >= 0) return idx;
-    }
-
-    // 3. Cocokkan Nama OPD yang telah dibersihkan
-    if (cleanNama.length >= 3) {
-      // Direct string inclusion
-      let idx = list.findIndex(o => {
-        const oClean = cleanOpdKeywords(o.namaOPD);
-        return oClean.includes(cleanNama) || cleanNama.includes(oClean);
-      });
-      if (idx >= 0) return idx;
-
-      // Word-by-word token inclusion
-      const inputWords = cleanNama.split(' ').filter(w => w.length > 3 && !['dinas', 'badan', 'biro', 'dan', 'yang', 'untuk', 'pada'].includes(w));
-      if (inputWords.length > 0) {
-        idx = list.findIndex(o => {
-          const oClean = cleanOpdKeywords(o.namaOPD);
-          return inputWords.every(w => oClean.includes(w));
-        });
-        if (idx >= 0) return idx;
-
-        idx = list.findIndex(o => {
-          const oClean = cleanOpdKeywords(o.namaOPD);
-          return inputWords.some(w => oClean.includes(w));
-        });
-        if (idx >= 0) return idx;
-      }
-    }
-
-    return -1;
-  };
-
-  // Clean numerical amounts from Excel (handles Indonesian period/comma formats and text symbols)
+  // Clean numerical amounts from Excel (handles string formatted with currency or commas)
   const parseNumeric = (val: any): number => {
     if (typeof val === 'number') return isNaN(val) ? 0 : val;
     if (!val) return 0;
-    let str = String(val).trim();
-    // Hilangkan prefix mata uang seperti Rp, IDR
-    str = str.replace(/^(rp|idr)\.?\s*/i, '').trim();
-
-    // Penanganan pemisah ribuan & desimal format Indonesia vs Inggris
-    if (str.includes('.') && str.includes(',')) {
-      if (str.lastIndexOf(',') > str.lastIndexOf('.')) {
-        // Format Indonesia: 15.000.000.000,00 -> titik ribuan, koma desimal
-        str = str.replace(/\./g, '').replace(',', '.');
-      } else {
-        // Format Inggris: 15,000,000.00 -> koma ribuan, titik desimal
-        str = str.replace(/,/g, '');
-      }
-    } else if (str.includes('.')) {
-      const parts = str.split('.');
-      // Jika memiliki lebih dari 1 titik (15.000.000.000) atau bagian setelah titik 3 digit -> ribuan
-      if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
-        str = str.replace(/\./g, '');
-      }
-    } else if (str.includes(',')) {
-      const parts = str.split(',');
-      if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
-        str = str.replace(/,/g, '');
-      } else {
-        str = str.replace(',', '.');
-      }
-    }
-
-    str = str.replace(/[^0-9.-]+/g, '');
+    const str = String(val).replace(/[^0-9.-]+/g, '');
     const num = parseFloat(str);
     return isNaN(num) ? 0 : num;
   };
@@ -557,46 +473,46 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
           if (!cellVal) return;
           const cStr = String(cellVal).trim().toLowerCase().replace(/[\s_\-()/.:]/g, '');
 
-          if (cStr.includes('kodesubskpd') || cStr === 'kodesub' || cStr.includes('subskpd') || (cStr.includes('kode') && cStr.includes('skpd')) || cStr === 'kodeopd' || (cStr.includes('kode') && cStr.includes('opd'))) {
+          if (cStr.includes('kodesubskpd') || cStr === 'kodesub' || cStr.includes('subskpd') || (cStr.includes('kode') && cStr.includes('skpd'))) {
             tempColMap['kodeSubSKPD'] = cIdx;
             matchCount++;
-          } else if (cStr.includes('namasubskpd') || (cStr.includes('nama') && cStr.includes('skpd')) || cStr === 'namasub' || cStr.includes('namaopd') || (cStr.includes('nama') && cStr.includes('opd')) || cStr === 'opd' || cStr === 'skpd') {
+          } else if (cStr.includes('namasubskpd') || (cStr.includes('nama') && cStr.includes('skpd')) || cStr === 'namasub' || cStr.includes('namaopd')) {
             tempColMap['namaSubSKPD'] = cIdx;
             matchCount++;
           } else if (cStr.includes('kodeprogram') || cStr === 'kodeprog') {
             tempColMap['kodeProgram'] = cIdx;
             matchCount++;
-          } else if (cStr.includes('namaprogram') || cStr === 'namaprog' || cStr === 'program') {
+          } else if (cStr.includes('namaprogram') || cStr === 'namaprog') {
             tempColMap['namaProgram'] = cIdx;
             matchCount++;
           } else if (cStr.includes('kodekegiatan') || cStr === 'kodekeg') {
             tempColMap['kodeKegiatan'] = cIdx;
             matchCount++;
-          } else if (cStr.includes('namakegiatan') || cStr === 'namakeg' || cStr === 'kegiatan') {
+          } else if (cStr.includes('namakegiatan') || cStr === 'namakeg') {
             tempColMap['namaKegiatan'] = cIdx;
             matchCount++;
           } else if (cStr.includes('kodesubkegiatan') || cStr === 'kodesubkeg') {
             tempColMap['kodeSubKegiatan'] = cIdx;
             matchCount++;
-          } else if (cStr.includes('namasubkegiatan') || cStr === 'namasubkeg' || cStr === 'subkegiatan') {
+          } else if (cStr.includes('namasubkegiatan') || cStr === 'namasubkeg') {
             tempColMap['namaSubKegiatan'] = cIdx;
             matchCount++;
           } else if (cStr.includes('koderekening') || cStr === 'koderek' || cStr.includes('kodebelanja') || cStr === 'kodeakun') {
             tempColMap['kodeRekening'] = cIdx;
             matchCount++;
-          } else if (cStr.includes('namarekening') || cStr.includes('uraianbelanja') || cStr.includes('uraianrekening') || cStr.includes('namabelanja') || cStr.includes('uraian')) {
+          } else if (cStr.includes('namarekening') || cStr.includes('uraianbelanja') || cStr.includes('uraianrekening') || cStr.includes('namabelanja')) {
             tempColMap['namaRekening'] = cIdx;
             matchCount++;
-          } else if (cStr.includes('alokasi') || cStr.includes('pagu') || cStr.includes('anggaran') || cStr.includes('targetpagu')) {
+          } else if (cStr.includes('alokasianggaran') || cStr.includes('paguanggaran') || cStr === 'alokasi' || cStr === 'pagumurni' || cStr === 'pagu' || cStr === 'anggaran') {
             tempColMap['alokasiAnggaran'] = cIdx;
             matchCount++;
-          } else if (cStr.includes('realisasi') || cStr.includes('sp2d') || cStr.includes('serapan') || cStr.includes('cair')) {
+          } else if (cStr.includes('realisasianggaran') || cStr.includes('realisasisp2d') || cStr === 'realisasi' || cStr === 'nilairealisasi') {
             tempColMap['realisasiAnggaran'] = cIdx;
             matchCount++;
           }
         });
 
-        if (matchCount >= 2) {
+        if (matchCount >= 3) {
           foundHeaderRowIdx = r;
           colMap = tempColMap;
           break;
@@ -732,7 +648,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
     e.target.value = '';
   };
 
-  // Apply Imported Excel Data to OPD List and Sub-data (Mendukung Multi-Baris Per OPD & Format Kolom M6 s.d X)
+  // Apply Imported Excel Data to OPD List and Sub-data
   const handleApplyExcelImport = () => {
     if (importPreviewData.length === 0) return;
 
@@ -740,26 +656,6 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
     let addedCount = 0;
     const newOpds = [...opdListState];
     const newBreakdowns: Record<string, any> = { ...customBreakdownMap };
-
-    // Kelompokkan baris import berdasarkan OPD untuk agregasi Pagu & Realisasi yang akurat
-    interface OpdImportCluster {
-      kode: string;
-      nama: string;
-      singkatan: string;
-      kategori: string;
-      kepala: string;
-      nip: string;
-      alamat: string;
-      rows: any[];
-      paguValues: number[];
-      realisasiValues: number[];
-      distinctPrograms: Map<string, any>;
-      distinctKegiatans: Map<string, any>;
-      distinctSubKegiatans: Map<string, any>;
-      distinctBelanja: Map<string, any>;
-    }
-
-    const clustersMap = new Map<string, OpdImportCluster>();
 
     importPreviewData.forEach((row, idx) => {
       const nama = String(row['Nama Sub SKPD'] || row['Nama_Sub_SKPD'] || row['Nama_OPD'] || row['nama_opd'] || row['OPD'] || row['Nama OPD'] || row['SKPD'] || row['Nama SKPD'] || '').trim();
@@ -772,259 +668,161 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
       const nip = String(row['NIP_Kepala'] || row['NIP'] || row['NIP Kepala'] || '').trim();
       const alamat = String(row['Alamat'] || row['alamat'] || '').trim();
 
-      if (!nama && !kode && !singkatan && pagu === 0 && realisasi === 0) return;
+      if (!nama && !kode && !singkatan) return;
 
-      // Kunci cluster unik per OPD
-      const cleanK = kode ? kode.replace(/[^0-9]/g, '') : '';
-      const cleanN = cleanOpdKeywords(nama);
-      const clusterKey = cleanK.length >= 4 ? cleanK : (cleanN || singkatan || `row-${idx}`);
-
-      if (!clustersMap.has(clusterKey)) {
-        clustersMap.set(clusterKey, {
-          kode,
-          nama,
-          singkatan,
-          kategori,
-          kepala,
-          nip,
-          alamat,
-          rows: [],
-          paguValues: [],
-          realisasiValues: [],
-          distinctPrograms: new Map(),
-          distinctKegiatans: new Map(),
-          distinctSubKegiatans: new Map(),
-          distinctBelanja: new Map()
-        });
-      }
-
-      const cluster = clustersMap.get(clusterKey)!;
-      if (nama && (!cluster.nama || cluster.nama.length < nama.length)) cluster.nama = nama;
-      if (kode && !cluster.kode) cluster.kode = kode;
-      if (singkatan && !cluster.singkatan) cluster.singkatan = singkatan;
-      if (kepala && !cluster.kepala) cluster.kepala = kepala;
-      if (nip && !cluster.nip) cluster.nip = nip;
-      if (alamat && !cluster.alamat) cluster.alamat = alamat;
-
-      cluster.rows.push(row);
-      if (pagu > 0) cluster.paguValues.push(pagu);
-      if (realisasi > 0) cluster.realisasiValues.push(realisasi);
-
-      // Catat Program
-      const pName = row['Nama Program'] || row['Nama_Program'] || row['Program'] || row['NAMA PROGRAM'];
-      const pCode = row['Kode Program'] || row['Kode_Program'] || row['KODE PROGRAM'] || (pName ? `P-${cluster.distinctPrograms.size + 1}` : '');
-      if (pName) {
-        const progKey = String(pCode || pName).trim().toLowerCase();
-        if (!cluster.distinctPrograms.has(progKey)) {
-          cluster.distinctPrograms.set(progKey, {
-            kodeProgram: pCode,
-            namaProgram: String(pName).toUpperCase(),
-            pagu: pagu > 0 ? pagu : 0,
-            realisasi: realisasi > 0 ? realisasi : 0
-          });
-        } else {
-          const ep = cluster.distinctPrograms.get(progKey)!;
-          if (pagu > 0) ep.pagu += pagu;
-          if (realisasi > 0) ep.realisasi += realisasi;
-        }
-      }
-
-      // Catat Kegiatan
-      const kName = row['Nama Kegiatan'] || row['Nama_Kegiatan'] || row['Kegiatan'] || row['NAMA KEGIATAN'];
-      const kCode = row['Kode Kegiatan'] || row['Kode_Kegiatan'] || row['KODE KEGIATAN'] || (kName ? `K-${cluster.distinctKegiatans.size + 1}` : '');
-      if (kName) {
-        const kegKey = String(kCode || kName).trim().toLowerCase();
-        if (!cluster.distinctKegiatans.has(kegKey)) {
-          cluster.distinctKegiatans.set(kegKey, {
-            kodeProgram: pCode || '',
-            kodeKegiatan: kCode,
-            namaKegiatan: String(kName),
-            pagu: pagu > 0 ? pagu : 0,
-            realisasi: realisasi > 0 ? realisasi : 0
-          });
-        } else {
-          const ek = cluster.distinctKegiatans.get(kegKey)!;
-          if (pagu > 0) ek.pagu += pagu;
-          if (realisasi > 0) ek.realisasi += realisasi;
-        }
-      }
-
-      // Catat Sub Kegiatan
-      const sName = row['Nama Sub Kegiatan'] || row['Nama_Sub_Kegiatan'] || row['Sub_Kegiatan'] || row['NAMA SUB KEGIATAN'];
-      const sCode = row['Kode Sub Kegiatan'] || row['Kode_Sub_Kegiatan'] || row['KODE SUB KEGIATAN'] || (sName ? `S-${cluster.distinctSubKegiatans.size + 1}` : '');
-      if (sName) {
-        const subKey = String(sCode || sName).trim().toLowerCase();
-        if (!cluster.distinctSubKegiatans.has(subKey)) {
-          cluster.distinctSubKegiatans.set(subKey, {
-            kodeProgram: pCode || '',
-            kodeKegiatan: kCode || '',
-            kodeSub: sCode,
-            namaSub: String(sName),
-            pagu: pagu > 0 ? pagu : 0,
-            realisasi: realisasi > 0 ? realisasi : 0
-          });
-        } else {
-          const es = cluster.distinctSubKegiatans.get(subKey)!;
-          if (pagu > 0) es.pagu += pagu;
-          if (realisasi > 0) es.realisasi += realisasi;
-        }
-      }
-
-      // Catat Rekening Belanja
-      const bName = row['Nama Rekening'] || row['Nama_Rekening'] || row['Nama_Rekening_Belanja'] || row['Nama_Belanja'] || row['Rekening_Belanja'] || row['NAMA REKENING'];
-      const bCode = row['Kode Rekening'] || row['Kode_Rekening'] || row['Kode_Rekening_Belanja'] || row['Kode_Belanja'] || (bName ? `B-${cluster.distinctBelanja.size + 1}` : '');
-      if (bName || bCode) {
-        const belKey = String(bCode || bName).trim().toLowerCase();
-        if (!cluster.distinctBelanja.has(belKey)) {
-          cluster.distinctBelanja.set(belKey, {
-            kodeBelanja: bCode || '5.1.02.01.01.0001',
-            namaBelanja: String(bName || `Belanja ${bCode}`),
-            jenisBelanja: row['Jenis_Belanja'] || row['JENIS BELANJA'] || (bCode?.startsWith('5.1.01') ? 'Belanja Pegawai' : bCode?.startsWith('5.2') ? 'Belanja Modal' : 'Belanja Operasi'),
-            pagu: pagu > 0 ? pagu : 0,
-            realisasi: realisasi > 0 ? realisasi : 0
-          });
-        } else {
-          const eb = cluster.distinctBelanja.get(belKey)!;
-          if (pagu > 0) eb.pagu += pagu;
-          if (realisasi > 0) eb.realisasi += realisasi;
-        }
-      }
-    });
-
-    // Proses dan terapkan setiap Cluster OPD ke state aplikasi
-    clustersMap.forEach(cluster => {
-      // Hitung akumulasi pagu dan realisasi yang benar
-      let totalPagu = 0;
-      let totalReal = 0;
-
-      if (cluster.distinctBelanja.size > 0) {
-        cluster.distinctBelanja.forEach(b => {
-          totalPagu += b.pagu;
-          totalReal += b.realisasi;
-        });
-      } else if (cluster.distinctSubKegiatans.size > 0) {
-        cluster.distinctSubKegiatans.forEach(s => {
-          totalPagu += s.pagu;
-          totalReal += s.realisasi;
-        });
-      } else if (cluster.distinctPrograms.size > 0) {
-        cluster.distinctPrograms.forEach(p => {
-          totalPagu += p.pagu;
-          totalReal += p.realisasi;
-        });
-      } else {
-        totalPagu = cluster.paguValues.reduce((a, b) => a + b, 0);
-        totalReal = cluster.realisasiValues.reduce((a, b) => a + b, 0);
-      }
-
-      // Cocokkan OPD dengan database 40 OPD NTB
-      const matchedIdx = findMatchingOpdIndex(cluster.kode, cluster.nama, cluster.singkatan, newOpds);
+      const existingIndex = newOpds.findIndex(o => 
+        (kode && o.kodeOPD.trim() === kode) ||
+        (singkatan && o.singkatan.toLowerCase() === singkatan.toLowerCase()) ||
+        (nama && (o.namaOPD.toLowerCase().includes(nama.toLowerCase()) || nama.toLowerCase().includes(o.namaOPD.toLowerCase())))
+      );
 
       let targetId = '';
-      if (matchedIdx >= 0) {
-        const cur = newOpds[matchedIdx];
-        targetId = cur.id;
-
-        newOpds[matchedIdx] = {
-          ...cur,
-          namaOPD: cluster.nama || cur.namaOPD, // Update Nama OPD sesuai file Excel!
-          kodeOPD: cluster.kode || cur.kodeOPD, // Update Kode Sub SKPD sesuai file Excel!
-          singkatan: cluster.singkatan || cur.singkatan,
-          targetPagu: totalPagu > 0 ? totalPagu : cur.targetPagu, // Update Nilai Pagu Anggaran!
-          realisasiSP2D: totalReal > 0 ? totalReal : cur.realisasiSP2D, // Update Nilai Realisasi Kasda!
-          kepalaBadan: cluster.kepala || cur.kepalaBadan,
-          nipKepala: cluster.nip || cur.nipKepala,
-          alamat: cluster.alamat || cur.alamat,
-          statusKinerja: totalPagu > 0 
-            ? ((totalReal / totalPagu) >= 0.8 ? 'Sangat Tinggi' : (totalReal / totalPagu) >= 0.65 ? 'Tinggi' : 'Sedang') 
-            : cur.statusKinerja
+      if (existingIndex >= 0) {
+        targetId = newOpds[existingIndex].id;
+        const currentTarget = newOpds[existingIndex];
+        newOpds[existingIndex] = {
+          ...currentTarget,
+          targetPagu: pagu > 0 ? pagu : currentTarget.targetPagu,
+          realisasiSP2D: realisasi > 0 ? realisasi : currentTarget.realisasiSP2D,
+          kepalaBadan: kepala || currentTarget.kepalaBadan,
+          nipKepala: nip || currentTarget.nipKepala,
+          alamat: alamat || currentTarget.alamat,
+          statusKinerja: pagu > 0 ? ((realisasi/pagu) >= 0.8 ? 'Sangat Tinggi' : (realisasi/pagu) >= 0.65 ? 'Tinggi' : 'Sedang') : currentTarget.statusKinerja
         };
         updatedCount++;
       } else {
-        // Buat entitas OPD baru jika tidak cocok dengan 40 SKPD bawaan
         targetId = `OPD-${String(newOpds.length + 1).padStart(3, '0')}`;
         newOpds.push({
           id: targetId,
-          kodeOPD: cluster.kode || `1.01.0.00.0.00.${String(newOpds.length + 1).padStart(2, '0')}.0000`,
-          namaOPD: cluster.nama || `OPD ${cluster.singkatan || targetId}`,
-          singkatan: cluster.singkatan || (cluster.nama ? cluster.nama.substring(0, 10).toUpperCase() : `OPD ${newOpds.length + 1}`),
-          kategori: (cluster.kategori as any) || 'Dinas Daerah',
-          kepalaBadan: cluster.kepala || 'Belum Ditetapkan',
-          nipKepala: cluster.nip || '-',
-          alamat: cluster.alamat || 'Kota Mataram, NTB',
-          targetPagu: totalPagu > 0 ? totalPagu : 25000000000,
-          realisasiSP2D: totalReal > 0 ? totalReal : 18500000000,
-          jumlahProgram: Math.max(cluster.distinctPrograms.size, 4),
-          jumlahKegiatan: Math.max(cluster.distinctKegiatans.size, 12),
-          jumlahTransaksi: 25,
-          statusKinerja: totalPagu > 0 
-            ? ((totalReal / totalPagu) >= 0.8 ? 'Sangat Tinggi' : (totalReal / totalPagu) >= 0.65 ? 'Tinggi' : 'Sedang') 
-            : 'Sedang'
+          kodeOPD: kode || `1.01.0.00.0.00.${String(newOpds.length + 1).padStart(2, '0')}.0000`,
+          namaOPD: nama || `OPD ${singkatan}`,
+          singkatan: singkatan || (nama ? nama.substring(0, 10).toUpperCase() : `OPD ${newOpds.length + 1}`),
+          kategori: kategori,
+          kepalaBadan: kepala || 'Belum Ditetapkan',
+          nipKepala: nip || '-',
+          alamat: alamat || 'Kota Mataram, NTB',
+          targetPagu: pagu > 0 ? pagu : 25000000000,
+          realisasiSP2D: realisasi > 0 ? realisasi : 18500000000,
+          jumlahProgram: 4,
+          jumlahKegiatan: 12,
+          jumlahTransaksi: 15,
+          statusKinerja: pagu > 0 ? ((realisasi/pagu) >= 0.8 ? 'Sangat Tinggi' : (realisasi/pagu) >= 0.65 ? 'Tinggi' : 'Sedang') : 'Sedang'
         });
         addedCount++;
       }
 
-      // Perbarui rincian breakdown (Program, Kegiatan, Sub Kegiatan, Belanja) untuk OPD ini
-      const targetOpd = newOpds.find(o => o.id === targetId)!;
+      // Initialize breakdown for this OPD if not exists
+      const targetOpdObj = newOpds.find(o => o.id === targetId) || newOpds[0];
       if (!newBreakdowns[targetId]) {
-        newBreakdowns[targetId] = getOPDDetailsBreakdown(targetOpd);
+        newBreakdowns[targetId] = getOPDDetailsBreakdown(targetOpdObj);
       }
-      const bd = newBreakdowns[targetId];
 
-      if (cluster.distinctPrograms.size > 0) {
-        bd.programs = Array.from(cluster.distinctPrograms.values()).map((p, pIdx) => ({
-          id: `IMP-P-${targetId}-${pIdx + 1}`,
-          opdId: targetId,
-          namaOPD: targetOpd.namaOPD,
-          kodeProgram: p.kodeProgram,
-          namaProgram: p.namaProgram,
-          pagu: p.pagu,
-          realisasi: p.realisasi
-        }));
+      // If program row is provided
+      const progName = row['Nama Program'] || row['Nama_Program'] || row['Program'] || row['NAMA PROGRAM'];
+      if (progName) {
+        const pCode = row['Kode Program'] || row['Kode_Program'] || row['KODE PROGRAM'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.0${(newBreakdowns[targetId].programs.length + 1)}`;
+        const pPagu = parseNumeric(row['Alokasi Anggaran'] || row['Pagu_Program'] || row['PAGU PROGRAM'] || pagu * 0.35 || 5000000000);
+        const pReal = parseNumeric(row['Realisasi Anggaran'] || row['Realisasi_Program'] || row['REALISASI PROGRAM'] || realisasi * 0.35 || 3800000000);
+
+        const existingProg = newBreakdowns[targetId].programs.find((p: any) => p.kodeProgram === pCode || p.namaProgram.toLowerCase() === String(progName).toLowerCase());
+        if (existingProg) {
+          if (pPagu > 0) existingProg.pagu = pPagu;
+          if (pReal > 0) existingProg.realisasi = pReal;
+        } else {
+          newBreakdowns[targetId].programs.push({
+            id: `IMP-P-${targetId}-${idx}`,
+            opdId: targetId,
+            namaOPD: targetOpdObj.namaOPD,
+            kodeProgram: pCode,
+            namaProgram: String(progName).toUpperCase(),
+            pagu: pPagu,
+            realisasi: pReal
+          });
+        }
       }
-      if (cluster.distinctKegiatans.size > 0) {
-        bd.kegiatans = Array.from(cluster.distinctKegiatans.values()).map((k, kIdx) => ({
-          id: `IMP-K-${targetId}-${kIdx + 1}`,
-          opdId: targetId,
-          namaOPD: targetOpd.namaOPD,
-          kodeProgram: k.kodeProgram,
-          kodeKegiatan: k.kodeKegiatan,
-          namaKegiatan: k.namaKegiatan,
-          pagu: k.pagu,
-          realisasi: k.realisasi
-        }));
+
+      // If kegiatan row is provided
+      const kegName = row['Nama Kegiatan'] || row['Nama_Kegiatan'] || row['Kegiatan'] || row['NAMA KEGIATAN'];
+      if (kegName) {
+        const kCode = row['Kode Kegiatan'] || row['Kode_Kegiatan'] || row['KODE KEGIATAN'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.01.2.0${(newBreakdowns[targetId].kegiatans.length + 1)}`;
+        const kPagu = parseNumeric(row['Alokasi Anggaran'] || row['Pagu_Kegiatan'] || row['PAGU KEGIATAN'] || pagu * 0.20 || 2000000000);
+        const kReal = parseNumeric(row['Realisasi Anggaran'] || row['Realisasi_Kegiatan'] || row['REALISASI KEGIATAN'] || realisasi * 0.20 || 1600000000);
+
+        const existingKeg = newBreakdowns[targetId].kegiatans.find((k: any) => k.kodeKegiatan === kCode || k.namaKegiatan.toLowerCase() === String(kegName).toLowerCase());
+        if (existingKeg) {
+          if (kPagu > 0) existingKeg.pagu = kPagu;
+          if (kReal > 0) existingKeg.realisasi = kReal;
+        } else {
+          newBreakdowns[targetId].kegiatans.push({
+            id: `IMP-K-${targetId}-${idx}`,
+            opdId: targetId,
+            namaOPD: targetOpdObj.namaOPD,
+            kodeProgram: row['Kode Program'] || row['Kode_Program'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.01`,
+            kodeKegiatan: kCode,
+            namaKegiatan: String(kegName),
+            pagu: kPagu,
+            realisasi: kReal
+          });
+        }
       }
-      if (cluster.distinctSubKegiatans.size > 0) {
-        bd.subKegiatans = Array.from(cluster.distinctSubKegiatans.values()).map((s, sIdx) => ({
-          id: `IMP-S-${targetId}-${sIdx + 1}`,
-          opdId: targetId,
-          namaOPD: targetOpd.namaOPD,
-          kodeProgram: s.kodeProgram,
-          kodeKegiatan: s.kodeKegiatan,
-          kodeSub: s.kodeSub,
-          namaSub: s.namaSub,
-          pagu: s.pagu,
-          realisasi: s.realisasi
-        }));
+
+      // If sub kegiatan row is provided
+      const subName = row['Nama Sub Kegiatan'] || row['Nama_Sub_Kegiatan'] || row['Sub_Kegiatan'] || row['NAMA SUB KEGIATAN'];
+      if (subName) {
+        const sCode = row['Kode Sub Kegiatan'] || row['Kode_Sub_Kegiatan'] || row['KODE SUB KEGIATAN'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.01.2.01.0${(newBreakdowns[targetId].subKegiatans.length + 1)}`;
+        const sPagu = parseNumeric(row['Alokasi Anggaran'] || row['Pagu_Sub_Kegiatan'] || row['PAGU SUB KEGIATAN'] || pagu * 0.15 || 1000000000);
+        const sReal = parseNumeric(row['Realisasi Anggaran'] || row['Realisasi_Sub_Kegiatan'] || row['REALISASI SUB KEGIATAN'] || realisasi * 0.15 || 800000000);
+
+        const existingSub = newBreakdowns[targetId].subKegiatans.find((s: any) => s.kodeSub === sCode || s.namaSub.toLowerCase() === String(subName).toLowerCase());
+        if (existingSub) {
+          if (sPagu > 0) existingSub.pagu = sPagu;
+          if (sReal > 0) existingSub.realisasi = sReal;
+        } else {
+          newBreakdowns[targetId].subKegiatans.push({
+            id: `IMP-S-${targetId}-${idx}`,
+            opdId: targetId,
+            namaOPD: targetOpdObj.namaOPD,
+            kodeProgram: row['Kode Program'] || row['Kode_Program'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.01`,
+            kodeKegiatan: row['Kode Kegiatan'] || row['Kode_Kegiatan'] || `${targetOpdObj.kodeOPD.split('.').slice(0, 2).join('.')}.01.2.01`,
+            kodeSub: sCode,
+            namaSub: String(subName),
+            pagu: sPagu,
+            realisasi: sReal
+          });
+        }
       }
-      if (cluster.distinctBelanja.size > 0) {
-        bd.belanjaList = Array.from(cluster.distinctBelanja.values()).map((b, bIdx) => ({
-          id: `IMP-B-${targetId}-${bIdx + 1}`,
-          opdId: targetId,
-          namaOPD: targetOpd.namaOPD,
-          kodeBelanja: b.kodeBelanja,
-          namaBelanja: b.namaBelanja,
-          jenisBelanja: b.jenisBelanja,
-          pagu: b.pagu,
-          realisasi: b.realisasi
-        }));
+
+      // If rekening belanja row is provided
+      const belanjaName = row['Nama Rekening'] || row['Nama_Rekening'] || row['Nama_Rekening_Belanja'] || row['Nama_Belanja'] || row['Rekening_Belanja'] || row['NAMA REKENING'];
+      if (belanjaName) {
+        const bCode = row['Kode Rekening'] || row['Kode_Rekening'] || row['Kode_Rekening_Belanja'] || row['Kode_Belanja'] || `5.1.0${(newBreakdowns[targetId].belanjaList.length + 1)}.01.0001`;
+        const bPagu = parseNumeric(row['Alokasi Anggaran'] || row['Pagu_Belanja'] || row['PAGU BELANJA'] || pagu * 0.15 || 1000000000);
+        const bReal = parseNumeric(row['Realisasi Anggaran'] || row['Realisasi_Belanja'] || row['REALISASI BELANJA'] || realisasi * 0.15 || 850000000);
+        const bJenis = row['Jenis_Belanja'] || row['JENIS BELANJA'] || 'Belanja Operasi';
+
+        const existingBelanja = newBreakdowns[targetId].belanjaList.find((b: any) => b.kodeBelanja === bCode || b.namaBelanja.toLowerCase() === String(belanjaName).toLowerCase());
+        if (existingBelanja) {
+          if (bPagu > 0) existingBelanja.pagu = bPagu;
+          if (bReal > 0) existingBelanja.realisasi = bReal;
+        } else {
+          newBreakdowns[targetId].belanjaList.push({
+            id: `IMP-B-${targetId}-${idx}`,
+            opdId: targetId,
+            namaOPD: targetOpdObj.namaOPD,
+            kodeBelanja: bCode,
+            namaBelanja: String(belanjaName),
+            jenisBelanja: bJenis,
+            pagu: bPagu,
+            realisasi: bReal
+          });
+        }
       }
     });
 
     setOpdListState(newOpds);
     setCustomBreakdownMap(newBreakdowns);
 
-    // Simpan permanen ke localStorage
+    // Save to localStorage for persistence across reloads
     try {
       localStorage.setItem('bfms_seluruh_opd_data_v1', JSON.stringify(newOpds));
       localStorage.setItem('bfms_seluruh_opd_breakdowns_v1', JSON.stringify(newBreakdowns));
@@ -1033,7 +831,6 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
     }
 
     setImportStats({ total: importPreviewData.length, updated: updatedCount, added: addedCount });
-    setLaporanActionSuccessMsg(`Berhasil menerapkan import data untuk ${clustersMap.size} OPD (${updatedCount} diperbarui, ${addedCount} OPD baru). Nama OPD dan Anggaran telah disinkronkan.`);
     setShowImportModal(false);
   };
 
@@ -3147,6 +2944,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                       <th className="p-3">Kode Program</th>
                       <th className="p-3">Nama Nomenklatur Program</th>
                       {laporanOpdId === 'ALL' && <th className="p-3">OPD Pengampu</th>}
+                      <th className="p-3 text-right">Nilai SPD (Rp)</th>
                       <th className="p-3 text-right">Pagu Anggaran (Rp)</th>
                       <th className="p-3 text-right">Realisasi SP2D (Rp)</th>
                       <th className="p-3 text-right">Sisa Pagu (Rp)</th>
@@ -3167,6 +2965,40 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                           {laporanOpdId === 'ALL' && (
                             <td className="p-3 font-semibold text-cyan-400">{prog.namaOPD}</td>
                           )}
+                          <td
+                            onClick={() => {
+                              const relBelanja = activeReportBelanja.filter((b: any) =>
+                                b.kodeProgram === prog.kodeProgram && (laporanOpdId === 'ALL' ? b.namaOPD === prog.namaOPD : true)
+                              );
+                              setSpdDetailModal({
+                                title: `Rincian SPD & Anggaran Belanja Program`,
+                                subtitle: `${prog.kodeProgram} - ${prog.namaProgram}`,
+                                namaOPD: prog.namaOPD || targetLaporanOpd?.namaOPD,
+                                items: relBelanja.length > 0 ? relBelanja.map((b: any) => ({
+                                  kodeRekening: b.kodeBelanja,
+                                  namaBelanja: b.namaBelanja,
+                                  jenisBelanja: b.jenisBelanja || 'Belanja Operasi',
+                                  pagu: b.pagu,
+                                  realisasi: b.realisasi,
+                                  namaOPD: b.namaOPD
+                                })) : [{
+                                  kodeRekening: `${prog.kodeProgram}.5.1`,
+                                  namaBelanja: `Alokasi Belanja ${prog.namaProgram}`,
+                                  jenisBelanja: 'Belanja Operasi',
+                                  pagu: prog.pagu,
+                                  realisasi: prog.realisasi,
+                                  namaOPD: prog.namaOPD
+                                }]
+                              });
+                            }}
+                            className="p-3 text-right font-mono text-cyan-300 hover:text-cyan-100 hover:underline cursor-pointer font-bold transition-colors group"
+                            title="Klik untuk melihat data kode rekening, belanja dan nilai anggaran"
+                          >
+                            <span className="inline-flex items-center gap-1 justify-end">
+                              <span>{formatRupiah(prog.pagu)}</span>
+                              <Eye className="h-3.5 w-3.5 text-cyan-400/80 group-hover:text-cyan-200 print:hidden" />
+                            </span>
+                          </td>
                           <td className="p-3 text-right font-mono text-slate-200">{formatRupiah(prog.pagu)}</td>
                           <td className="p-3 text-right font-mono text-emerald-400 font-bold">{formatRupiah(prog.realisasi)}</td>
                           <td className="p-3 text-right font-mono text-amber-300">{formatRupiah(sisa)}</td>
@@ -3232,6 +3064,30 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                       <td colSpan={laporanOpdId === 'ALL' ? 4 : 3} className="p-3.5 text-right uppercase text-slate-300">
                         TOTAL KESELURUHAN PROGRAM:
                       </td>
+                      <td
+                        onClick={() => {
+                          setSpdDetailModal({
+                            title: `Rincian Seluruh SPD & Anggaran Belanja Program`,
+                            subtitle: `Konsolidasi Semua Program`,
+                            namaOPD: targetLaporanOpd ? targetLaporanOpd.namaOPD : 'Seluruh OPD',
+                            items: activeReportBelanja.map((b: any) => ({
+                              kodeRekening: b.kodeBelanja,
+                              namaBelanja: b.namaBelanja,
+                              jenisBelanja: b.jenisBelanja || 'Belanja Operasi',
+                              pagu: b.pagu,
+                              realisasi: b.realisasi,
+                              namaOPD: b.namaOPD
+                            }))
+                          });
+                        }}
+                        className="p-3.5 text-right font-mono text-cyan-300 hover:text-cyan-100 hover:underline cursor-pointer font-bold transition-colors group"
+                        title="Klik untuk melihat data kode rekening, belanja dan nilai anggaran"
+                      >
+                        <span className="inline-flex items-center gap-1 justify-end">
+                          <span>{formatRupiah(activeReportPrograms.reduce((s: number, p: any) => s + p.pagu, 0))}</span>
+                          <Eye className="h-3.5 w-3.5 text-cyan-400/80 group-hover:text-cyan-200 print:hidden" />
+                        </span>
+                      </td>
                       <td className="p-3.5 text-right font-mono text-white">
                         {formatRupiah(activeReportPrograms.reduce((s: number, p: any) => s + p.pagu, 0))}
                       </td>
@@ -3267,6 +3123,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                       <th className="p-3">Nama Kegiatan</th>
                       <th className="p-3">Kode Program Induk</th>
                       {laporanOpdId === 'ALL' && <th className="p-3">OPD</th>}
+                      <th className="p-3 text-right">Nilai SPD (Rp)</th>
                       <th className="p-3 text-right">Pagu Kegiatan (Rp)</th>
                       <th className="p-3 text-right">Realisasi SP2D (Rp)</th>
                       <th className="p-3 text-right">Sisa Pagu (Rp)</th>
@@ -3288,6 +3145,41 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                           {laporanOpdId === 'ALL' && (
                             <td className="p-3 font-semibold text-cyan-400">{keg.namaOPD}</td>
                           )}
+                          <td
+                            onClick={() => {
+                              const relBelanja = activeReportBelanja.filter((b: any) =>
+                                (b.kodeKegiatan === keg.kodeKegiatan || b.kodeBelanja?.startsWith(keg.kodeKegiatan)) &&
+                                (laporanOpdId === 'ALL' ? b.namaOPD === keg.namaOPD : true)
+                              );
+                              setSpdDetailModal({
+                                title: `Rincian SPD & Anggaran Belanja Kegiatan`,
+                                subtitle: `${keg.kodeKegiatan} - ${keg.namaKegiatan}`,
+                                namaOPD: keg.namaOPD || targetLaporanOpd?.namaOPD,
+                                items: relBelanja.length > 0 ? relBelanja.map((b: any) => ({
+                                  kodeRekening: b.kodeBelanja,
+                                  namaBelanja: b.namaBelanja,
+                                  jenisBelanja: b.jenisBelanja || 'Belanja Operasi',
+                                  pagu: b.pagu,
+                                  realisasi: b.realisasi,
+                                  namaOPD: b.namaOPD
+                                })) : [{
+                                  kodeRekening: `${keg.kodeKegiatan}.5.1`,
+                                  namaBelanja: `Alokasi Belanja ${keg.namaKegiatan}`,
+                                  jenisBelanja: 'Belanja Operasi',
+                                  pagu: keg.pagu,
+                                  realisasi: keg.realisasi,
+                                  namaOPD: keg.namaOPD
+                                }]
+                              });
+                            }}
+                            className="p-3 text-right font-mono text-cyan-300 hover:text-cyan-100 hover:underline cursor-pointer font-bold transition-colors group"
+                            title="Klik untuk melihat data kode rekening, belanja dan nilai anggaran"
+                          >
+                            <span className="inline-flex items-center gap-1 justify-end">
+                              <span>{formatRupiah(keg.pagu)}</span>
+                              <Eye className="h-3.5 w-3.5 text-cyan-400/80 group-hover:text-cyan-200 print:hidden" />
+                            </span>
+                          </td>
                           <td className="p-3 text-right font-mono text-slate-200">{formatRupiah(keg.pagu)}</td>
                           <td className="p-3 text-right font-mono text-emerald-400 font-bold">{formatRupiah(keg.realisasi)}</td>
                           <td className="p-3 text-right font-mono text-amber-300">{formatRupiah(sisa)}</td>
@@ -3354,6 +3246,30 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                       <td colSpan={laporanOpdId === 'ALL' ? 5 : 4} className="p-3.5 text-right uppercase text-slate-300">
                         TOTAL KESELURUHAN KEGIATAN:
                       </td>
+                      <td
+                        onClick={() => {
+                          setSpdDetailModal({
+                            title: `Rincian Seluruh SPD & Anggaran Belanja Kegiatan`,
+                            subtitle: `Konsolidasi Semua Kegiatan`,
+                            namaOPD: targetLaporanOpd ? targetLaporanOpd.namaOPD : 'Seluruh OPD',
+                            items: activeReportBelanja.map((b: any) => ({
+                              kodeRekening: b.kodeBelanja,
+                              namaBelanja: b.namaBelanja,
+                              jenisBelanja: b.jenisBelanja || 'Belanja Operasi',
+                              pagu: b.pagu,
+                              realisasi: b.realisasi,
+                              namaOPD: b.namaOPD
+                            }))
+                          });
+                        }}
+                        className="p-3.5 text-right font-mono text-cyan-300 hover:text-cyan-100 hover:underline cursor-pointer font-bold transition-colors group"
+                        title="Klik untuk melihat data kode rekening, belanja dan nilai anggaran"
+                      >
+                        <span className="inline-flex items-center gap-1 justify-end">
+                          <span>{formatRupiah(activeReportKegiatans.reduce((s: number, k: any) => s + k.pagu, 0))}</span>
+                          <Eye className="h-3.5 w-3.5 text-cyan-400/80 group-hover:text-cyan-200 print:hidden" />
+                        </span>
+                      </td>
                       <td className="p-3.5 text-right font-mono text-white">
                         {formatRupiah(activeReportKegiatans.reduce((s: number, k: any) => s + k.pagu, 0))}
                       </td>
@@ -3389,6 +3305,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                       <th className="p-3">Nama Sub Kegiatan</th>
                       <th className="p-3">Kode Kegiatan Induk</th>
                       {laporanOpdId === 'ALL' && <th className="p-3">OPD</th>}
+                      <th className="p-3 text-right">Nilai SPD (Rp)</th>
                       <th className="p-3 text-right">Pagu Sub Kegiatan (Rp)</th>
                       <th className="p-3 text-right">Realisasi SP2D (Rp)</th>
                       <th className="p-3 text-right">Sisa Pagu (Rp)</th>
@@ -3410,6 +3327,41 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                           {laporanOpdId === 'ALL' && (
                             <td className="p-3 font-semibold text-cyan-400">{sub.namaOPD}</td>
                           )}
+                          <td
+                            onClick={() => {
+                              const relBelanja = activeReportBelanja.filter((b: any) =>
+                                (b.kodeSub === sub.kodeSub || b.kodeBelanja?.startsWith(sub.kodeSub)) &&
+                                (laporanOpdId === 'ALL' ? b.namaOPD === sub.namaOPD : true)
+                              );
+                              setSpdDetailModal({
+                                title: `Rincian SPD & Anggaran Belanja Sub-Kegiatan`,
+                                subtitle: `${sub.kodeSub} - ${sub.namaSub}`,
+                                namaOPD: sub.namaOPD || targetLaporanOpd?.namaOPD,
+                                items: relBelanja.length > 0 ? relBelanja.map((b: any) => ({
+                                  kodeRekening: b.kodeBelanja,
+                                  namaBelanja: b.namaBelanja,
+                                  jenisBelanja: b.jenisBelanja || 'Belanja Operasi',
+                                  pagu: b.pagu,
+                                  realisasi: b.realisasi,
+                                  namaOPD: b.namaOPD
+                                })) : [{
+                                  kodeRekening: `${sub.kodeSub}.5.1`,
+                                  namaBelanja: `Alokasi Belanja ${sub.namaSub}`,
+                                  jenisBelanja: 'Belanja Operasi',
+                                  pagu: sub.pagu,
+                                  realisasi: sub.realisasi,
+                                  namaOPD: sub.namaOPD
+                                }]
+                              });
+                            }}
+                            className="p-3 text-right font-mono text-cyan-300 hover:text-cyan-100 hover:underline cursor-pointer font-bold transition-colors group"
+                            title="Klik untuk melihat data kode rekening, belanja dan nilai anggaran"
+                          >
+                            <span className="inline-flex items-center gap-1 justify-end">
+                              <span>{formatRupiah(sub.pagu)}</span>
+                              <Eye className="h-3.5 w-3.5 text-cyan-400/80 group-hover:text-cyan-200 print:hidden" />
+                            </span>
+                          </td>
                           <td className="p-3 text-right font-mono text-slate-200">{formatRupiah(sub.pagu)}</td>
                           <td className="p-3 text-right font-mono text-emerald-400 font-bold">{formatRupiah(sub.realisasi)}</td>
                           <td className="p-3 text-right font-mono text-amber-300">{formatRupiah(sisa)}</td>
@@ -3476,6 +3428,30 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                       <td colSpan={laporanOpdId === 'ALL' ? 5 : 4} className="p-3.5 text-right uppercase text-slate-300">
                         TOTAL KESELURUHAN SUB KEGIATAN:
                       </td>
+                      <td
+                        onClick={() => {
+                          setSpdDetailModal({
+                            title: `Rincian Seluruh SPD & Anggaran Belanja Sub-Kegiatan`,
+                            subtitle: `Konsolidasi Semua Sub-Kegiatan`,
+                            namaOPD: targetLaporanOpd ? targetLaporanOpd.namaOPD : 'Seluruh OPD',
+                            items: activeReportBelanja.map((b: any) => ({
+                              kodeRekening: b.kodeBelanja,
+                              namaBelanja: b.namaBelanja,
+                              jenisBelanja: b.jenisBelanja || 'Belanja Operasi',
+                              pagu: b.pagu,
+                              realisasi: b.realisasi,
+                              namaOPD: b.namaOPD
+                            }))
+                          });
+                        }}
+                        className="p-3.5 text-right font-mono text-cyan-300 hover:text-cyan-100 hover:underline cursor-pointer font-bold transition-colors group"
+                        title="Klik untuk melihat data kode rekening, belanja dan nilai anggaran"
+                      >
+                        <span className="inline-flex items-center gap-1 justify-end">
+                          <span>{formatRupiah(activeReportSubKegiatans.reduce((s: number, sub: any) => s + sub.pagu, 0))}</span>
+                          <Eye className="h-3.5 w-3.5 text-cyan-400/80 group-hover:text-cyan-200 print:hidden" />
+                        </span>
+                      </td>
                       <td className="p-3.5 text-right font-mono text-white">
                         {formatRupiah(activeReportSubKegiatans.reduce((s: number, sub: any) => s + sub.pagu, 0))}
                       </td>
@@ -3511,6 +3487,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                       <th className="p-3">Nama Uraian Rekening Belanja</th>
                       <th className="p-3">Kelompok / Jenis Belanja</th>
                       {laporanOpdId === 'ALL' && <th className="p-3">OPD</th>}
+                      <th className="p-3 text-right">Nilai SPD (Rp)</th>
                       <th className="p-3 text-right">Pagu Belanja (Rp)</th>
                       <th className="p-3 text-right">Realisasi SP2D (Rp)</th>
                       <th className="p-3 text-right">Sisa Pagu (Rp)</th>
@@ -3536,6 +3513,30 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                           {laporanOpdId === 'ALL' && (
                             <td className="p-3 font-semibold text-cyan-400">{bel.namaOPD}</td>
                           )}
+                          <td
+                            onClick={() => {
+                              setSpdDetailModal({
+                                title: `Rincian SPD & Anggaran Rekening Belanja`,
+                                subtitle: `${bel.kodeBelanja} - ${bel.namaBelanja}`,
+                                namaOPD: bel.namaOPD || targetLaporanOpd?.namaOPD,
+                                items: [{
+                                  kodeRekening: bel.kodeBelanja,
+                                  namaBelanja: bel.namaBelanja,
+                                  jenisBelanja: bel.jenisBelanja || 'Belanja Operasi',
+                                  pagu: bel.pagu,
+                                  realisasi: bel.realisasi,
+                                  namaOPD: bel.namaOPD
+                                }]
+                              });
+                            }}
+                            className="p-3 text-right font-mono text-cyan-300 hover:text-cyan-100 hover:underline cursor-pointer font-bold transition-colors group"
+                            title="Klik untuk melihat data kode rekening, belanja dan nilai anggaran"
+                          >
+                            <span className="inline-flex items-center gap-1 justify-end">
+                              <span>{formatRupiah(bel.pagu)}</span>
+                              <Eye className="h-3.5 w-3.5 text-cyan-400/80 group-hover:text-cyan-200 print:hidden" />
+                            </span>
+                          </td>
                           <td className="p-3 text-right font-mono text-slate-200">{formatRupiah(bel.pagu)}</td>
                           <td className="p-3 text-right font-mono text-emerald-400 font-bold">{formatRupiah(bel.realisasi)}</td>
                           <td className="p-3 text-right font-mono text-amber-300">{formatRupiah(sisa)}</td>
@@ -3601,6 +3602,30 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                     <tr>
                       <td colSpan={laporanOpdId === 'ALL' ? 5 : 4} className="p-3.5 text-right uppercase text-slate-300">
                         TOTAL KESELURUHAN REKENING BELANJA:
+                      </td>
+                      <td
+                        onClick={() => {
+                          setSpdDetailModal({
+                            title: `Rincian Seluruh SPD & Anggaran Belanja`,
+                            subtitle: `Konsolidasi Semua Rekening Belanja`,
+                            namaOPD: targetLaporanOpd ? targetLaporanOpd.namaOPD : 'Seluruh OPD',
+                            items: activeReportBelanja.map((b: any) => ({
+                              kodeRekening: b.kodeBelanja,
+                              namaBelanja: b.namaBelanja,
+                              jenisBelanja: b.jenisBelanja || 'Belanja Operasi',
+                              pagu: b.pagu,
+                              realisasi: b.realisasi,
+                              namaOPD: b.namaOPD
+                            }))
+                          });
+                        }}
+                        className="p-3.5 text-right font-mono text-cyan-300 hover:text-cyan-100 hover:underline cursor-pointer font-bold transition-colors group"
+                        title="Klik untuk melihat data kode rekening, belanja dan nilai anggaran"
+                      >
+                        <span className="inline-flex items-center gap-1 justify-end">
+                          <span>{formatRupiah(activeReportBelanja.reduce((s: number, b: any) => s + b.pagu, 0))}</span>
+                          <Eye className="h-3.5 w-3.5 text-cyan-400/80 group-hover:text-cyan-200 print:hidden" />
+                        </span>
                       </td>
                       <td className="p-3.5 text-right font-mono text-white">
                         {formatRupiah(activeReportBelanja.reduce((s: number, b: any) => s + b.pagu, 0))}
@@ -3717,6 +3742,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                       <th className="p-3">Kode SKPD</th>
                       <th className="p-3">Nama Satuan Kerja (OPD)</th>
                       <th className="p-3">Kategori</th>
+                      <th className="p-3 text-right">Nilai SPD (Rp)</th>
                       <th className="p-3 text-right">Target Pagu (Rp)</th>
                       <th className="p-3 text-right">Realisasi (Rp)</th>
                       <th className="p-3 text-right">Sisa Anggaran (Rp)</th>
@@ -3737,6 +3763,48 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                             <div className="text-[10px] text-cyan-400">{opd.singkatan}</div>
                           </td>
                           <td className="p-3 text-slate-400">{opd.kategori}</td>
+                          <td
+                            onClick={() => {
+                              const relBelanja = activeReportBelanja.filter((b: any) => b.opdId === opd.id || b.namaOPD === opd.singkatan);
+                              setSpdDetailModal({
+                                title: `Rincian SPD & Anggaran Belanja OPD`,
+                                subtitle: `${opd.singkatan} - ${opd.namaOPD}`,
+                                namaOPD: opd.namaOPD,
+                                items: relBelanja.length > 0 ? relBelanja.map((b: any) => ({
+                                  kodeRekening: b.kodeBelanja,
+                                  namaBelanja: b.namaBelanja,
+                                  jenisBelanja: b.jenisBelanja || 'Belanja Operasi',
+                                  pagu: b.pagu,
+                                  realisasi: b.realisasi,
+                                  namaOPD: opd.namaOPD
+                                })) : [
+                                  {
+                                    kodeRekening: `${opd.kodeOPD}.5.1`,
+                                    namaBelanja: `Belanja Operasi & Pegawai ${opd.singkatan}`,
+                                    jenisBelanja: 'Belanja Operasi',
+                                    pagu: Math.round(opd.targetPagu * 0.7),
+                                    realisasi: Math.round(opd.realisasiSP2D * 0.7),
+                                    namaOPD: opd.namaOPD
+                                  },
+                                  {
+                                    kodeRekening: `${opd.kodeOPD}.5.2`,
+                                    namaBelanja: `Belanja Modal & Barang/Jasa ${opd.singkatan}`,
+                                    jenisBelanja: 'Belanja Modal',
+                                    pagu: Math.round(opd.targetPagu * 0.3),
+                                    realisasi: Math.round(opd.realisasiSP2D * 0.3),
+                                    namaOPD: opd.namaOPD
+                                  }
+                                ]
+                              });
+                            }}
+                            className="p-3 text-right font-mono text-cyan-300 hover:text-cyan-100 hover:underline cursor-pointer font-bold transition-colors group"
+                            title="Klik untuk melihat data kode rekening, belanja dan nilai anggaran"
+                          >
+                            <span className="inline-flex items-center gap-1 justify-end">
+                              <span>{formatRupiah(opd.targetPagu)}</span>
+                              <Eye className="h-3.5 w-3.5 text-cyan-400/80 group-hover:text-cyan-200 print:hidden" />
+                            </span>
+                          </td>
                           <td className="p-3 text-right font-mono">{formatRupiah(opd.targetPagu)}</td>
                           <td className="p-3 text-right font-mono text-emerald-400 font-bold">{formatRupiah(opd.realisasiSP2D)}</td>
                           <td className="p-3 text-right font-mono text-amber-300">{formatRupiah(opd.targetPagu - opd.realisasiSP2D)}</td>
@@ -3796,6 +3864,29 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                     <tr>
                       <td colSpan={4} className="p-3.5 text-right uppercase">
                         JUMLAH TOTAL PEMERINTAH PROVINSI NTB:
+                      </td>
+                      <td
+                        onClick={() => {
+                          setSpdDetailModal({
+                            title: `Rincian Seluruh SPD & Anggaran Konsolidasi 40 OPD`,
+                            subtitle: `Total Konsolidasi Pemerintah Provinsi NTB`,
+                            items: activeReportBelanja.map((b: any) => ({
+                              kodeRekening: b.kodeBelanja,
+                              namaBelanja: b.namaBelanja,
+                              jenisBelanja: b.jenisBelanja || 'Belanja Operasi',
+                              pagu: b.pagu,
+                              realisasi: b.realisasi,
+                              namaOPD: b.namaOPD
+                            }))
+                          });
+                        }}
+                        className="p-3.5 text-right font-mono text-cyan-300 hover:text-cyan-100 hover:underline cursor-pointer font-bold transition-colors group"
+                        title="Klik untuk melihat data kode rekening, belanja dan nilai anggaran"
+                      >
+                        <span className="inline-flex items-center gap-1 justify-end">
+                          <span>{formatRupiah(totalPaguDisplay)}</span>
+                          <Eye className="h-3.5 w-3.5 text-cyan-400/80 group-hover:text-cyan-200 print:hidden" />
+                        </span>
                       </td>
                       <td className="p-3.5 text-right font-mono text-white">{formatRupiah(totalPaguDisplay)}</td>
                       <td className="p-3.5 text-right font-mono text-emerald-400">{formatRupiah(totalRealisasiDisplay)}</td>
@@ -4277,10 +4368,14 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                   <span className="text-[10px] font-bold uppercase text-cyan-400">OPD Cocok (Update):</span>
                   <div className="text-base font-black text-cyan-300 mt-1">
                     {importPreviewData.filter(row => {
-                      const nama = String(row['Nama Sub SKPD'] || row['Nama_Sub_SKPD'] || row['Nama_OPD'] || row['nama_opd'] || row['OPD'] || row['Nama OPD'] || row['SKPD'] || row['Nama SKPD'] || '');
-                      const kode = String(row['Kode Sub SKPD'] || row['Kode_Sub_SKPD'] || row['Kode_OPD'] || row['kode_opd'] || row['Kode SKPD'] || '');
-                      const singk = String(row['Singkatan'] || row['singkatan'] || '');
-                      return findMatchingOpdIndex(kode, nama, singk, opdListState) >= 0;
+                      const nama = String(row['Nama_OPD'] || row['nama_opd'] || row['OPD'] || row['Nama OPD'] || '').toLowerCase();
+                      const kode = String(row['Kode_OPD'] || row['kode_opd'] || '').trim();
+                      const singk = String(row['Singkatan'] || row['singkatan'] || '').toLowerCase();
+                      return opdListState.some(o => 
+                        (kode && o.kodeOPD.trim() === kode) ||
+                        (singk && o.singkatan.toLowerCase() === singk) ||
+                        (nama && o.namaOPD.toLowerCase().includes(nama))
+                      );
                     }).length} OPD
                   </div>
                 </div>
@@ -4288,7 +4383,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                   <span className="text-[10px] font-bold uppercase text-emerald-400">Estimasi Total Pagu:</span>
                   <div className="text-base font-black text-emerald-300 mt-1">
                     {formatRupiahSingkat(
-                      importPreviewData.reduce((acc, r) => acc + parseNumeric(r['Alokasi Anggaran'] || r['Alokasi_Anggaran'] || r['Pagu_Anggaran'] || r['pagu'] || r['Pagu'] || r['Anggaran']), 0)
+                      importPreviewData.reduce((acc, r) => acc + parseNumeric(r['Pagu_Anggaran'] || r['pagu'] || r['Pagu'] || r['Anggaran']), 0)
                     )}
                   </div>
                 </div>
@@ -4296,7 +4391,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                   <span className="text-[10px] font-bold uppercase text-amber-400">Estimasi Realisasi:</span>
                   <div className="text-base font-black text-amber-300 mt-1">
                     {formatRupiahSingkat(
-                      importPreviewData.reduce((acc, r) => acc + parseNumeric(r['Realisasi Anggaran'] || r['Realisasi_Anggaran'] || r['Realisasi_SP2D'] || r['realisasi'] || r['Realisasi'] || r['SP2D']), 0)
+                      importPreviewData.reduce((acc, r) => acc + parseNumeric(r['Realisasi_SP2D'] || r['realisasi'] || r['Realisasi'] || r['SP2D']), 0)
                     )}
                   </div>
                 </div>
@@ -4307,35 +4402,35 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                 <span className="font-bold text-slate-300 mr-2">Kolom Terbaca:</span>
                 <span className="flex items-center gap-1 rounded-md bg-emerald-950/80 px-2 py-0.5 text-[11px] font-semibold text-emerald-300 border border-emerald-800">
                   <Check className="h-3 w-3" />
-                  <span>Nama Sub SKPD / OPD</span>
+                  <span>Nama OPD</span>
                 </span>
                 <span className="flex items-center gap-1 rounded-md bg-emerald-950/80 px-2 py-0.5 text-[11px] font-semibold text-emerald-300 border border-emerald-800">
                   <Check className="h-3 w-3" />
-                  <span>Pagu / Alokasi Anggaran</span>
+                  <span>Pagu Anggaran</span>
                 </span>
                 <span className="flex items-center gap-1 rounded-md bg-emerald-950/80 px-2 py-0.5 text-[11px] font-semibold text-emerald-300 border border-emerald-800">
                   <Check className="h-3 w-3" />
-                  <span>Realisasi Kasda / SP2D</span>
+                  <span>Realisasi SP2D</span>
                 </span>
-                {importPreviewData.some(r => r['Nama Program'] || r['Nama_Program'] || r['Program']) && (
+                {importPreviewData.some(r => r['Nama_Program'] || r['Program']) && (
                   <span className="flex items-center gap-1 rounded-md bg-cyan-950/80 px-2 py-0.5 text-[11px] font-semibold text-cyan-300 border border-cyan-800">
                     <Check className="h-3 w-3" />
-                    <span>Nomenklatur Program</span>
+                    <span>Rincian Program</span>
                   </span>
                 )}
-                {importPreviewData.some(r => r['Nama Kegiatan'] || r['Nama_Kegiatan'] || r['Kegiatan']) && (
+                {importPreviewData.some(r => r['Nama_Kegiatan'] || r['Kegiatan']) && (
                   <span className="flex items-center gap-1 rounded-md bg-cyan-950/80 px-2 py-0.5 text-[11px] font-semibold text-cyan-300 border border-cyan-800">
                     <Check className="h-3 w-3" />
-                    <span>Nomenklatur Kegiatan</span>
+                    <span>Rincian Kegiatan</span>
                   </span>
                 )}
-                {importPreviewData.some(r => r['Nama Sub Kegiatan'] || r['Nama_Sub_Kegiatan'] || r['Sub_Kegiatan']) && (
+                {importPreviewData.some(r => r['Nama_Sub_Kegiatan'] || r['Sub_Kegiatan']) && (
                   <span className="flex items-center gap-1 rounded-md bg-purple-950/80 px-2 py-0.5 text-[11px] font-semibold text-purple-300 border border-purple-800">
                     <Check className="h-3 w-3" />
                     <span>Sub Kegiatan</span>
                   </span>
                 )}
-                {importPreviewData.some(r => r['Nama Rekening'] || r['Nama_Rekening'] || r['Nama_Rekening_Belanja'] || r['Nama_Belanja']) && (
+                {importPreviewData.some(r => r['Nama_Rekening_Belanja'] || r['Rekening_Belanja'] || r['Nama_Belanja']) && (
                   <span className="flex items-center gap-1 rounded-md bg-amber-950/80 px-2 py-0.5 text-[11px] font-semibold text-amber-300 border border-amber-800">
                     <Check className="h-3 w-3" />
                     <span>Rekening Belanja</span>
@@ -4349,24 +4444,28 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                   <thead className="border-b border-slate-800 bg-slate-950 text-[11px] font-bold uppercase text-slate-300">
                     <tr>
                       <th className="p-3 text-center w-10">No</th>
-                      <th className="p-3">Nama Satuan Kerja (Sub SKPD)</th>
-                      <th className="p-3">Kode Sub SKPD / Singkatan</th>
-                      <th className="p-3 text-right">Alokasi Anggaran (Rp)</th>
-                      <th className="p-3 text-right">Realisasi SP2D (Rp)</th>
+                      <th className="p-3">Nama Organisasi (OPD)</th>
+                      <th className="p-3">Kode SKPD / Singkatan</th>
+                      <th className="p-3 text-right">Pagu Anggaran</th>
+                      <th className="p-3 text-right">Realisasi SP2D</th>
                       <th className="p-3 text-center">% Serapan</th>
                       <th className="p-3 text-center">Status Pemetaan</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800 font-sans">
                     {importPreviewData.slice(0, 15).map((row, i) => {
-                      const nama = String(row['Nama Sub SKPD'] || row['Nama_Sub_SKPD'] || row['Nama_OPD'] || row['nama_opd'] || row['OPD'] || row['Nama OPD'] || row['SKPD'] || row['Nama SKPD'] || '-');
-                      const kode = String(row['Kode Sub SKPD'] || row['Kode_Sub_SKPD'] || row['Kode_OPD'] || row['kode_opd'] || row['Kode SKPD'] || '-');
+                      const nama = String(row['Nama_OPD'] || row['nama_opd'] || row['OPD'] || row['Nama OPD'] || row['SKPD'] || '-');
+                      const kode = String(row['Kode_OPD'] || row['kode_opd'] || row['Kode SKPD'] || '-');
                       const singk = String(row['Singkatan'] || row['singkatan'] || '');
-                      const pagu = parseNumeric(row['Alokasi Anggaran'] || row['Alokasi_Anggaran'] || row['Pagu_Anggaran'] || row['pagu'] || row['Pagu'] || row['Anggaran']);
-                      const real = parseNumeric(row['Realisasi Anggaran'] || row['Realisasi_Anggaran'] || row['Realisasi_SP2D'] || row['realisasi'] || row['Realisasi'] || row['SP2D']);
+                      const pagu = parseNumeric(row['Pagu_Anggaran'] || row['pagu'] || row['Pagu'] || row['Anggaran']);
+                      const real = parseNumeric(row['Realisasi_SP2D'] || row['realisasi'] || row['Realisasi'] || row['SP2D']);
                       const pct = pagu > 0 ? (real / pagu) * 100 : 0;
 
-                      const isMatch = findMatchingOpdIndex(kode, nama, singk, opdListState) >= 0;
+                      const isMatch = opdListState.some(o => 
+                        (kode !== '-' && o.kodeOPD.trim() === kode.trim()) ||
+                        (singk && o.singkatan.toLowerCase() === singk.toLowerCase()) ||
+                        (nama !== '-' && o.namaOPD.toLowerCase().includes(nama.toLowerCase()))
+                      );
 
                       return (
                         <tr key={i} className="hover:bg-slate-800/40">
@@ -5304,6 +5403,245 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                 <span>Ya, Hapus Data</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL BREAKDOWN RINCIAN SPD: KODE REKENING, BELANJA & NILAI ANGGARAN */}
+      {spdDetailModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col rounded-3xl border border-cyan-500/30 bg-slate-900 shadow-2xl overflow-hidden text-slate-100">
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-slate-800 p-5 bg-slate-950">
+              <div className="space-y-1 pr-6">
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-cyan-500/20 px-2.5 py-0.5 text-[10px] font-bold text-cyan-400 border border-cyan-500/30 flex items-center gap-1">
+                    <DollarSign className="h-3 w-3" />
+                    Rincian Surat Penyediaan Dana (SPD) & Anggaran
+                  </span>
+                  {spdDetailModal.namaOPD && (
+                    <span className="text-xs font-semibold text-slate-400">{spdDetailModal.namaOPD}</span>
+                  )}
+                </div>
+                <h2 className="text-lg font-bold text-white leading-tight">
+                  {spdDetailModal.title}
+                </h2>
+                {spdDetailModal.subtitle && (
+                  <p className="text-xs text-cyan-300 font-semibold">
+                    {spdDetailModal.subtitle}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSpdDetailModal(null);
+                  setSpdModalSearch('');
+                }}
+                className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Stat Cards & Search Bar */}
+            {(() => {
+              const q = spdModalSearch.toLowerCase().trim();
+              const filteredItems = spdDetailModal.items.filter(it =>
+                !q ||
+                it.kodeRekening.toLowerCase().includes(q) ||
+                it.namaBelanja.toLowerCase().includes(q) ||
+                it.jenisBelanja.toLowerCase().includes(q)
+              );
+              const totalItemsPagu = filteredItems.reduce((s, it) => s + it.pagu, 0);
+
+              const exportSpdModalExcel = () => {
+                const rows = filteredItems.map((it, idx) => ({
+                  'No': idx + 1,
+                  'Kode Rekening Belanja': it.kodeRekening,
+                  'Nama Uraian Rekening Belanja': it.namaBelanja,
+                  'Kelompok / Jenis Belanja': it.jenisBelanja,
+                  'Nilai Anggaran (Rp)': it.pagu,
+                  'Nilai SPD (Rp)': it.pagu,
+                  'Realisasi SP2D (Rp)': it.realisasi || 0,
+                  'Sisa Pagu (Rp)': it.pagu - (it.realisasi || 0),
+                  'OPD': it.namaOPD || spdDetailModal.namaOPD || '-'
+                }));
+                const ws = XLSX.utils.json_to_sheet(rows);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Rincian_SPD_Anggaran');
+                safeDownloadExcel(wb, `Rincian_SPD_Anggaran_${spdDetailModal.title.replace(/[^a-zA-Z0-9]/g, '_')}.xlsx`);
+              };
+
+              return (
+                <>
+                  <div className="flex flex-col gap-3 p-4 bg-slate-900/90 border-b border-slate-800">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                      <div className="flex items-center gap-3 rounded-2xl bg-slate-950 p-3 border border-cyan-500/30">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-500/20 text-cyan-400">
+                          <BookOpen className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Jumlah Rekening</span>
+                          <div className="text-base sm:text-lg font-black font-mono text-cyan-400">
+                            {filteredItems.length} <span className="text-xs font-normal text-slate-300">Rekening</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 rounded-2xl bg-slate-950 p-3 border border-cyan-500/30">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600/20 text-cyan-300">
+                          <DollarSign className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-300">Total Nilai SPD</span>
+                          <div className="text-base sm:text-lg font-black font-mono text-cyan-300 truncate">
+                            {formatRupiah(totalItemsPagu)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 rounded-2xl bg-slate-950 p-3 border border-slate-700">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-slate-300">
+                          <Layers className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Nilai Anggaran (Pagu)</span>
+                          <div className="text-base sm:text-lg font-black font-mono text-white truncate">
+                            {formatRupiah(totalItemsPagu)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="relative w-full">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                          <input
+                            type="text"
+                            value={spdModalSearch}
+                            onChange={e => setSpdModalSearch(e.target.value)}
+                            placeholder="Cari kode rekening, belanja..."
+                            className="w-full bg-slate-950 text-white rounded-xl pl-9 pr-8 py-2.5 text-xs border border-slate-700 focus:outline-none focus:border-cyan-500 placeholder:text-slate-500"
+                          />
+                          {spdModalSearch && (
+                            <button
+                              type="button"
+                              onClick={() => setSpdModalSearch('')}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={exportSpdModalExcel}
+                          disabled={filteredItems.length === 0}
+                          className="flex items-center gap-1.5 shrink-0 rounded-xl bg-cyan-950 hover:bg-cyan-900 px-3 py-2 text-xs font-bold text-cyan-300 border border-cyan-700 disabled:opacity-50 transition-colors"
+                          title="Ekspor rincian SPD & Anggaran ke Excel"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Excel</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Content Table */}
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin">
+                    {filteredItems.length === 0 ? (
+                      <div className="py-12 text-center text-slate-400 space-y-2">
+                        <BookOpen className="h-10 w-10 text-slate-600 mx-auto" />
+                        <p className="font-semibold text-sm">Tidak ada data rekening anggaran yang ditemukan.</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead className="bg-slate-900 text-slate-300 font-bold uppercase border-b border-slate-800">
+                            <tr>
+                              <th className="p-3 text-center w-12">No</th>
+                              <th className="p-3 min-w-[140px]">Kode Rekening</th>
+                              <th className="p-3 min-w-[260px]">Uraian Belanja</th>
+                              <th className="p-3 min-w-[140px]">Kelompok Belanja</th>
+                              <th className="p-3 text-right min-w-[140px]">Nilai Anggaran (Rp)</th>
+                              <th className="p-3 text-right min-w-[140px]">Nilai SPD (Rp)</th>
+                              <th className="p-3 text-right min-w-[140px]">Realisasi SP2D (Rp)</th>
+                              <th className="p-3 text-center min-w-[80px]">% Serapan</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-800/60 font-sans">
+                            {filteredItems.map((it, idx) => {
+                              const srp = it.pagu > 0 ? ((it.realisasi || 0) / it.pagu) * 100 : 0;
+                              return (
+                                <tr key={idx} className="hover:bg-slate-900/80 transition-colors">
+                                  <td className="p-3 text-center text-slate-500 font-mono font-bold">{idx + 1}</td>
+                                  <td className="p-3">
+                                    <span className="font-mono font-bold text-cyan-300 text-[11px] bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-800/60">
+                                      {it.kodeRekening}
+                                    </span>
+                                  </td>
+                                  <td className="p-3 space-y-1">
+                                    <div className="font-bold text-white leading-snug">
+                                      {it.namaBelanja}
+                                    </div>
+                                    {it.namaOPD && (
+                                      <span className="text-[10px] text-cyan-400">
+                                        {it.namaOPD}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="p-3">
+                                    <span className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                                      {it.jenisBelanja}
+                                    </span>
+                                  </td>
+                                  <td className="p-3 text-right font-mono font-bold text-white bg-slate-900/50">
+                                    {formatRupiah(it.pagu)}
+                                  </td>
+                                  <td className="p-3 text-right font-mono font-bold text-cyan-300 text-sm whitespace-nowrap bg-cyan-950/20">
+                                    {formatRupiah(it.pagu)}
+                                  </td>
+                                  <td className="p-3 text-right font-mono text-emerald-400 font-bold">
+                                    {formatRupiah(it.realisasi || 0)}
+                                  </td>
+                                  <td className="p-3 text-center font-bold text-cyan-300 font-mono">
+                                    {srp.toFixed(2)}%
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Footer */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-slate-800 p-4 bg-slate-950 text-xs">
+                    <div className="flex items-center gap-2 text-slate-300 font-semibold">
+                      <span className="rounded-lg bg-cyan-950 border border-cyan-700/60 px-2.5 py-1 text-cyan-300 font-mono">
+                        Total {filteredItems.length} Rekening Belanja
+                      </span>
+                      <span className="text-slate-400">Rincian Data Kode Rekening, Belanja & Nilai Anggaran</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-slate-400 font-semibold">Total Nilai Anggaran:</span>
+                        <span className="font-black font-mono text-white text-sm">
+                          {formatRupiah(totalItemsPagu)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 border-l border-slate-800 pl-4">
+                        <span className="text-cyan-400 font-semibold">Total Nilai SPD:</span>
+                        <span className="text-base sm:text-lg font-black font-mono text-cyan-300">
+                          {formatRupiah(totalItemsPagu)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
