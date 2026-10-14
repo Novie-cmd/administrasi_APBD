@@ -142,7 +142,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
           <div className="flex flex-col">
             <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
-              BFMS NTB MAKMUR
+              NTB MAKMUR MENDUNIA
             </span>
             <span className="text-[10px] text-slate-400 font-medium">
               BANGKIT BERSAMA!
