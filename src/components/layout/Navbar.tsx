@@ -25,7 +25,8 @@ import {
   FileSpreadsheet,
   Trash2,
   Building,
-  Building2
+  Building2,
+  LogOut
 } from 'lucide-react';
 
 export const Navbar: React.FC<{
@@ -37,6 +38,7 @@ export const Navbar: React.FC<{
   const {
     currentUser,
     switchRole,
+    logout,
     selectedTahun,
     setSelectedTahun,
     tahunList,
@@ -448,8 +450,35 @@ export const Navbar: React.FC<{
                   </button>
                 ))}
               </div>
+
+              <div className="pt-2 mt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRoleMenu(false);
+                    logout();
+                  }}
+                  className="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-xs font-bold text-rose-300 hover:text-white bg-rose-950/60 hover:bg-rose-900 border border-rose-800/60 transition shadow-sm"
+                >
+                  <span className="flex items-center gap-2">
+                    <LogOut className="h-3.5 w-3.5 text-rose-400" />
+                    <span>Keluar Akun (Logout)</span>
+                  </span>
+                </button>
+              </div>
             </div>
           )}
+
+          {/* Quick Logout Button */}
+          <button
+            type="button"
+            onClick={logout}
+            className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900/90 hover:bg-rose-950/60 hover:border-rose-700/60 px-2.5 py-2 text-slate-400 hover:text-rose-300 transition shadow-sm"
+            title="Keluar dari Aplikasi (Logout)"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="hidden md:inline text-xs font-bold">Keluar</span>
+          </button>
         </div>
       </div>
 

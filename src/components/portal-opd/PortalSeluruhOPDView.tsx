@@ -67,7 +67,8 @@ import {
   Edit3,
   Trash2,
   Save,
-  BookOpen
+  BookOpen,
+  LogOut
 } from 'lucide-react';
 
 interface PortalSeluruhOPDViewProps {
@@ -77,7 +78,7 @@ interface PortalSeluruhOPDViewProps {
 export type PortalTab = 'dashboard' | 'master' | 'transaksi' | 'laporan' | 'analisis' | 'pengaturan';
 
 export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSwitchToBakesbang }) => {
-  const { selectedTahun, sheetConfig, currentUser } = useApp();
+  const { selectedTahun, sheetConfig, currentUser, logout, clearAnggaranDatabase, clearRealisasiDatabase } = useApp();
   const [activeTab, setActiveTab] = useState<PortalTab>('dashboard');
   const [selectedOpdId, setSelectedOpdId] = useState<string>('ALL'); // 'ALL' = Konsolidasi Seluruh OPD NTB
   const [searchQuery, setSearchQuery] = useState('');
@@ -144,6 +145,13 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
     }>;
   } | null>(null);
   const [spdModalSearch, setSpdModalSearch] = useState('');
+
+  // States khusus Modal Konfirmasi Hapus Database Anggaran / Realisasi
+  const [deleteDbModal, setDeleteDbModal] = useState<{
+    isOpen: boolean;
+    type: 'anggaran' | 'realisasi';
+    targetOpdId: string;
+  } | null>(null);
 
   const [laporanActionSuccessMsg, setLaporanActionSuccessMsg] = useState<string | null>(null);
   const [customBreakdownMap, setCustomBreakdownMap] = useState<Record<string, any>>(() => {
@@ -434,7 +442,139 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
       setOpdListState(DAFTAR_SELURUH_OPD_NTB);
       setCustomBreakdownMap({});
       setImportStats(null);
+      setMasterImportSuccessMsg('Seluruh data berhasil dikembalikan ke standar awal 40 OPD Pemprov NTB.');
     }
+  };
+
+  // Fungsi Hapus Database Anggaran (Mengosongkan Pagu Anggaran menjadi Rp 0)
+  const executeDeleteDatabaseAnggaran = (scope: string) => {
+    const newOpds = opdListState.map(opd => {
+      if (scope === 'ALL' || opd.id === scope) {
+        return {
+          ...opd,
+          targetPagu: 0
+        };
+      }
+      return opd;
+    });
+
+    const newBreakdowns: Record<string, any> = { ...customBreakdownMap };
+    const targetOpds = scope === 'ALL' ? opdListState : opdListState.filter(o => o.id === scope);
+
+    targetOpds.forEach(opd => {
+      const existing = newBreakdowns[opd.id] || getOPDDetailsBreakdown(opd);
+      newBreakdowns[opd.id] = {
+        ...existing,
+        pagu: 0,
+        programs: (existing.programs || []).map((p: any) => ({
+          ...p,
+          pagu: 0,
+          paguMurni: 0,
+          revisi: 0,
+          spd: 0
+        })),
+        kegiatans: (existing.kegiatans || []).map((k: any) => ({
+          ...k,
+          pagu: 0,
+          paguMurni: 0,
+          revisi: 0,
+          spd: 0
+        })),
+        subKegiatans: (existing.subKegiatans || []).map((s: any) => ({
+          ...s,
+          pagu: 0,
+          paguMurni: 0,
+          revisi: 0,
+          spd: 0
+        })),
+        belanjaList: (existing.belanjaList || []).map((b: any) => ({
+          ...b,
+          pagu: 0,
+          paguMurni: 0,
+          revisi: 0
+        }))
+      };
+    });
+
+    setOpdListState(newOpds);
+    setCustomBreakdownMap(newBreakdowns);
+
+    try {
+      localStorage.setItem('bfms_seluruh_opd_data_v1', JSON.stringify(newOpds));
+      localStorage.setItem('bfms_seluruh_opd_breakdowns_v1', JSON.stringify(newBreakdowns));
+    } catch (e) {
+      console.error('Error saving after delete database anggaran:', e);
+    }
+
+    if (scope === 'ALL') {
+      try {
+        clearAnggaranDatabase(selectedTahun);
+      } catch (e) {}
+    }
+
+    const scopeLabel = scope === 'ALL' ? 'Seluruh 40 OPD NTB' : (opdListState.find(o => o.id === scope)?.singkatan || scope);
+    setMasterImportSuccessMsg(`Database Anggaran (${scopeLabel}) berhasil dihapus. Seluruh nilai Pagu Anggaran telah dikosongkan (Rp 0).`);
+    setDeleteDbModal(null);
+  };
+
+  // Fungsi Hapus Database Realisasi (Mengosongkan Realisasi SP2D menjadi Rp 0)
+  const executeDeleteDatabaseRealisasi = (scope: string) => {
+    const newOpds = opdListState.map(opd => {
+      if (scope === 'ALL' || opd.id === scope) {
+        return {
+          ...opd,
+          realisasiSP2D: 0
+        };
+      }
+      return opd;
+    });
+
+    const newBreakdowns: Record<string, any> = { ...customBreakdownMap };
+    const targetOpds = scope === 'ALL' ? opdListState : opdListState.filter(o => o.id === scope);
+
+    targetOpds.forEach(opd => {
+      const existing = newBreakdowns[opd.id] || getOPDDetailsBreakdown(opd);
+      newBreakdowns[opd.id] = {
+        ...existing,
+        realisasi: 0,
+        programs: (existing.programs || []).map((p: any) => ({
+          ...p,
+          realisasi: 0
+        })),
+        kegiatans: (existing.kegiatans || []).map((k: any) => ({
+          ...k,
+          realisasi: 0
+        })),
+        subKegiatans: (existing.subKegiatans || []).map((s: any) => ({
+          ...s,
+          realisasi: 0
+        })),
+        belanjaList: (existing.belanjaList || []).map((b: any) => ({
+          ...b,
+          realisasi: 0
+        }))
+      };
+    });
+
+    setOpdListState(newOpds);
+    setCustomBreakdownMap(newBreakdowns);
+
+    try {
+      localStorage.setItem('bfms_seluruh_opd_data_v1', JSON.stringify(newOpds));
+      localStorage.setItem('bfms_seluruh_opd_breakdowns_v1', JSON.stringify(newBreakdowns));
+    } catch (e) {
+      console.error('Error saving after delete database realisasi:', e);
+    }
+
+    if (scope === 'ALL') {
+      try {
+        clearRealisasiDatabase(selectedTahun);
+      } catch (e) {}
+    }
+
+    const scopeLabel = scope === 'ALL' ? 'Seluruh 40 OPD NTB' : (opdListState.find(o => o.id === scope)?.singkatan || scope);
+    setMasterImportSuccessMsg(`Database Realisasi SP2D (${scopeLabel}) berhasil dihapus. Seluruh transaksi realisasi SP2D telah dikosongkan (Rp 0).`);
+    setDeleteDbModal(null);
   };
 
   // Clean numerical amounts from Excel (handles string formatted with currency or commas)
@@ -1609,6 +1749,27 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
               <Download className="h-3.5 w-3.5" />
               <span>Ekspor Rekap</span>
             </button>
+
+            {/* User Profile Badge & Logout */}
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
+              <div className="hidden sm:flex flex-col text-right">
+                <span className="text-[10.5px] font-bold text-white truncate max-w-[120px]">
+                  {currentUser.nama}
+                </span>
+                <span className="text-[9.5px] font-semibold text-amber-400">
+                  {currentUser.role}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={logout}
+                className="flex items-center gap-1 rounded-lg bg-rose-950/70 hover:bg-rose-900 text-rose-300 hover:text-white px-2.5 py-1.5 text-[11px] font-semibold border border-rose-800/60 transition active:scale-95"
+                title="Keluar / Logout dari Aplikasi"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Keluar</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1670,10 +1831,30 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
             <button
               type="button"
               onClick={handleResetToDefaultOPD}
-              className="rounded-md bg-slate-800/80 hover:bg-rose-900/40 hover:text-rose-200 px-2 py-1 text-[10px] font-semibold text-slate-400 border border-slate-700/60 transition"
+              className="rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-300 px-2 py-1 text-[10px] font-semibold border border-slate-700/60 transition"
               title="Kembalikan seluruh data daftar OPD ke standar awal 40 OPD NTB"
             >
               Reset ke 40 OPD Awal
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setDeleteDbModal({ isOpen: true, type: 'anggaran', targetOpdId: selectedOpdId })}
+              className="flex items-center gap-1 rounded-md bg-rose-950/70 hover:bg-rose-900 text-rose-300 hover:text-white px-2 py-1 text-[10px] font-bold border border-rose-800/70 transition"
+              title="Hapus / Kosongkan Database Pagu Anggaran OPD (Pagu di-reset ke Rp 0)"
+            >
+              <Trash2 className="h-3 w-3 text-rose-400" />
+              <span>Hapus DB Anggaran</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setDeleteDbModal({ isOpen: true, type: 'realisasi', targetOpdId: selectedOpdId })}
+              className="flex items-center gap-1 rounded-md bg-amber-950/70 hover:bg-amber-900 text-amber-300 hover:text-white px-2 py-1 text-[10px] font-bold border border-amber-800/70 transition"
+              title="Hapus / Kosongkan Database Realisasi SP2D OPD (Realisasi di-reset ke Rp 0)"
+            >
+              <Trash2 className="h-3 w-3 text-amber-400" />
+              <span>Hapus DB Realisasi</span>
             </button>
           </div>
 
@@ -2197,6 +2378,26 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
 
               <button
                 type="button"
+                onClick={() => setDeleteDbModal({ isOpen: true, type: 'anggaran', targetOpdId: selectedOpdId })}
+                className="flex items-center gap-1.5 rounded-xl bg-rose-950/80 hover:bg-rose-900 px-3 py-2 text-xs font-bold text-rose-300 border border-rose-800/80 transition active:scale-95 shadow-sm"
+                title="Hapus Database Anggaran (Pagu Murni & Revisi dikosongkan ke Rp 0)"
+              >
+                <Trash2 className="h-3.5 w-3.5 text-rose-400" />
+                <span>Hapus DB Anggaran</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setDeleteDbModal({ isOpen: true, type: 'realisasi', targetOpdId: selectedOpdId })}
+                className="flex items-center gap-1.5 rounded-xl bg-amber-950/80 hover:bg-amber-900 px-3 py-2 text-xs font-bold text-amber-300 border border-amber-800/80 transition active:scale-95 shadow-sm"
+                title="Hapus Database Realisasi SP2D (Realisasi dikosongkan ke Rp 0)"
+              >
+                <Trash2 className="h-3.5 w-3.5 text-amber-400" />
+                <span>Hapus DB Realisasi</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setShowAddOpdModal(true)}
                 className="flex items-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 border border-slate-700 transition active:scale-95"
               >
@@ -2611,14 +2812,36 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={handleExportExcel}
-              className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2.5 text-xs font-bold text-white shadow-md transition active:scale-95 shrink-0"
-            >
-              <Download className="h-4 w-4" />
-              <span>Ekspor Rekap Transaksi</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setDeleteDbModal({ isOpen: true, type: 'anggaran', targetOpdId: selectedOpdId })}
+                className="flex items-center gap-1.5 rounded-xl bg-rose-950/80 hover:bg-rose-900 px-3 py-2 text-xs font-bold text-rose-300 border border-rose-800/80 transition active:scale-95 shadow-sm"
+                title="Hapus Database Anggaran (Pagu Murni & Revisi dikosongkan ke Rp 0)"
+              >
+                <Trash2 className="h-3.5 w-3.5 text-rose-400" />
+                <span>Hapus DB Anggaran</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setDeleteDbModal({ isOpen: true, type: 'realisasi', targetOpdId: selectedOpdId })}
+                className="flex items-center gap-1.5 rounded-xl bg-amber-950/80 hover:bg-amber-900 px-3 py-2 text-xs font-bold text-amber-300 border border-amber-800/80 transition active:scale-95 shadow-sm"
+                title="Hapus Database Realisasi SP2D (Realisasi dikosongkan ke Rp 0)"
+              >
+                <Trash2 className="h-3.5 w-3.5 text-amber-400" />
+                <span>Hapus DB Realisasi</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleExportExcel}
+                className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2.5 text-xs font-bold text-white shadow-md transition active:scale-95 shrink-0"
+              >
+                <Download className="h-4 w-4" />
+                <span>Ekspor Rekap Transaksi</span>
+              </button>
+            </div>
           </div>
 
           {/* Tabel Transaksi per OPD */}
@@ -4105,6 +4328,138 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                 </p>
                 <div className="rounded-lg bg-slate-900 p-2.5 font-mono text-[11px] text-slate-300 break-all border border-slate-800">
                   {sheetConfig.spreadsheetId || '1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Manajemen Database Portal Seluruh OPD */}
+          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-rose-500/10 p-2.5 text-rose-400 border border-rose-500/20">
+                <Database className="h-6 w-6" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-white">Manajemen &amp; Pembersihan Database Portal Seluruh OPD</h2>
+                <p className="text-xs text-slate-400">
+                  Fasilitas pengosongan database pagu anggaran dan database realisasi SP2D konsolidasi 40 SKPD Pemprov NTB
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t border-slate-800">
+              {/* Card 1: Hapus Database Anggaran */}
+              <div className="rounded-xl bg-slate-950 p-5 border border-slate-800 space-y-3 flex flex-col justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-rose-400 flex items-center gap-1.5">
+                      <Trash2 className="h-4 w-4" />
+                      <span>Database Pagu Anggaran</span>
+                    </span>
+                    <span className="text-[10px] bg-rose-950/80 text-rose-300 border border-rose-800 px-2 py-0.5 rounded font-mono">
+                      APBD NTB
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Mengosongkan seluruh target pagu anggaran, revisi, dan breakdown rekening belanja seluruh OPD menjadi Rp 0.
+                  </p>
+                  <div className="rounded-lg bg-slate-900 p-2.5 font-mono text-xs text-white border border-slate-800">
+                    <div className="text-[10px] text-slate-400">Total Pagu Saat Ini:</div>
+                    <div className="font-bold text-cyan-300 mt-0.5">{formatRupiah(totalPaguDisplay)}</div>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setDeleteDbModal({ isOpen: true, type: 'anggaran', targetOpdId: selectedOpdId })}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-500 p-2.5 text-xs font-bold text-white shadow-md shadow-rose-950 transition active:scale-95"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Hapus Database Anggaran</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadMasterTemplate('anggaran')}
+                    className="w-full flex items-center justify-center gap-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 p-2 text-[11px] font-semibold text-slate-300 border border-slate-800 transition"
+                  >
+                    <Download className="h-3 w-3 text-cyan-400" />
+                    <span>Unduh Format Template Anggaran</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Card 2: Hapus Database Realisasi */}
+              <div className="rounded-xl bg-slate-950 p-5 border border-slate-800 space-y-3 flex flex-col justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                      <Trash2 className="h-4 w-4" />
+                      <span>Database Realisasi SP2D</span>
+                    </span>
+                    <span className="text-[10px] bg-amber-950/80 text-amber-300 border border-amber-800 px-2 py-0.5 rounded font-mono">
+                      Kasda NTB
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Mengosongkan seluruh catatan pencairan SP2D (LS, UP, GU, TU) seluruh OPD menjadi Rp 0 (0.00% serapan).
+                  </p>
+                  <div className="rounded-lg bg-slate-900 p-2.5 font-mono text-xs text-white border border-slate-800">
+                    <div className="text-[10px] text-slate-400">Total Realisasi Saat Ini:</div>
+                    <div className="font-bold text-emerald-400 mt-0.5">{formatRupiah(totalRealisasiDisplay)} ({persentaseSerapanDisplay.toFixed(2)}%)</div>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setDeleteDbModal({ isOpen: true, type: 'realisasi', targetOpdId: selectedOpdId })}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-amber-600 hover:bg-amber-500 p-2.5 text-xs font-bold text-white shadow-md shadow-amber-950 transition active:scale-95"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Hapus Database Realisasi</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadMasterTemplate('realisasi')}
+                    className="w-full flex items-center justify-center gap-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 p-2 text-[11px] font-semibold text-slate-300 border border-slate-800 transition"
+                  >
+                    <Download className="h-3 w-3 text-cyan-400" />
+                    <span>Unduh Format Template Realisasi</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Card 3: Reset Master OPD ke Standar Awal */}
+              <div className="rounded-xl bg-slate-950 p-5 border border-slate-800 space-y-3 flex flex-col justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-cyan-400 flex items-center gap-1.5">
+                      <RefreshCw className="h-4 w-4" />
+                      <span>Reset ke Standar Awal</span>
+                    </span>
+                    <span className="text-[10px] bg-cyan-950/80 text-cyan-300 border border-cyan-800 px-2 py-0.5 rounded font-mono">
+                      40 SKPD
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Mengembalikan seluruh konfigurasi, pagu standar, dan transaksi 40 OPD Pemprov NTB ke data awal bawaan sistem.
+                  </p>
+                  <div className="rounded-lg bg-slate-900 p-2.5 font-mono text-xs text-slate-300 border border-slate-800">
+                    <div className="text-[10px] text-slate-400">Total Terdaftar:</div>
+                    <div className="font-bold text-white mt-0.5">{opdListState.length} Satuan Kerja Perangkat Daerah</div>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleResetToDefaultOPD}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-700 p-2.5 text-xs font-bold text-cyan-300 border border-slate-700 transition active:scale-95"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    <span>Reset ke 40 OPD Standar Awal</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -5642,6 +5997,149 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                 </>
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL KONFIRMASI HAPUS DATABASE ANGGARAN / REALISASI */}
+      {deleteDbModal && deleteDbModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-lg rounded-3xl border border-slate-700 bg-slate-900 p-6 sm:p-7 shadow-2xl space-y-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`flex h-12 w-12 items-center justify-center rounded-2xl border shadow-inner ${
+                    deleteDbModal.type === 'anggaran'
+                      ? 'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                      : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                  }`}
+                >
+                  <Trash2 className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-white">
+                    {deleteDbModal.type === 'anggaran'
+                      ? 'Hapus Database Anggaran'
+                      : 'Hapus Database Realisasi SP2D'}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Konfirmasi pembersihan data keuangan portal Seluruh OPD
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteDbModal(null)}
+                className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Warning Box */}
+            <div
+              className={`p-4 rounded-2xl border text-xs space-y-2 ${
+                deleteDbModal.type === 'anggaran'
+                  ? 'bg-rose-950/70 border-rose-700/70 text-rose-200'
+                  : 'bg-amber-950/70 border-amber-700/70 text-amber-200'
+              }`}
+            >
+              <div className="flex items-center gap-2 font-bold text-white text-sm">
+                <AlertCircle className="h-4 w-4 shrink-0 text-inherit" />
+                <span>Peringatan Penghapusan Data:</span>
+              </div>
+              <p className="leading-relaxed">
+                {deleteDbModal.type === 'anggaran' ? (
+                  <>
+                    Tindakan ini akan mengosongkan seluruh nilai <strong>Pagu Anggaran</strong> (Pagu Murni, Revisi/Pergeseran, Nilai SPD) menjadi <strong>Rp 0</strong>.
+                  </>
+                ) : (
+                  <>
+                    Tindakan ini akan mengosongkan seluruh nilai <strong>Realisasi SP2D Kasda</strong> dan transaksi belanja menjadi <strong>Rp 0</strong> (0.00% serapan).
+                  </>
+                )}
+              </p>
+              <p className="text-[11px] text-slate-300">
+                Data dapat diunggah kembali kapan saja melalui menu <em>Import Excel Master</em> atau dikembalikan melalui tombol <em>Reset ke 40 OPD Awal</em>.
+              </p>
+            </div>
+
+            {/* Scope Selection */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-300">
+                Pilih Cakupan Penghapusan:
+              </label>
+              <div className="space-y-2">
+                <label className="flex items-center gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-slate-700 cursor-pointer transition">
+                  <input
+                    type="radio"
+                    name="deleteScope"
+                    checked={deleteDbModal.targetOpdId === 'ALL'}
+                    onChange={() => setDeleteDbModal(prev => prev ? { ...prev, targetOpdId: 'ALL' } : null)}
+                    className="text-rose-500 focus:ring-rose-500 h-4 w-4"
+                  />
+                  <div>
+                    <div className="text-xs font-bold text-white">Seluruh 40 OPD Pemprov NTB</div>
+                    <div className="text-[11px] text-slate-400">
+                      Mengosongkan {deleteDbModal.type === 'anggaran' ? 'pagu anggaran' : 'realisasi'} untuk total konsolidasi seluruh dinas/badan
+                    </div>
+                  </div>
+                </label>
+
+                {selectedOpdId !== 'ALL' && (
+                  <label className="flex items-center gap-3 p-3 rounded-xl border border-slate-800 bg-slate-950 hover:border-slate-700 cursor-pointer transition">
+                    <input
+                      type="radio"
+                      name="deleteScope"
+                      checked={deleteDbModal.targetOpdId === selectedOpdId}
+                      onChange={() => setDeleteDbModal(prev => prev ? { ...prev, targetOpdId: selectedOpdId } : null)}
+                      className="text-rose-500 focus:ring-rose-500 h-4 w-4"
+                    />
+                    <div>
+                      <div className="text-xs font-bold text-white">
+                        Hanya OPD Ini: {currentActiveOpd?.singkatan || selectedOpdId}
+                      </div>
+                      <div className="text-[11px] text-slate-400 truncate max-w-xs">
+                        {currentActiveOpd?.namaOPD}
+                      </div>
+                    </div>
+                  </label>
+                )}
+              </div>
+            </div>
+
+            {/* Confirmation Buttons */}
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setDeleteDbModal(null)}
+                className="rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 px-4 py-2.5 text-xs font-semibold text-slate-200 transition"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (deleteDbModal.type === 'anggaran') {
+                    executeDeleteDatabaseAnggaran(deleteDbModal.targetOpdId);
+                  } else {
+                    executeDeleteDatabaseRealisasi(deleteDbModal.targetOpdId);
+                  }
+                }}
+                className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold text-white shadow-lg transition active:scale-95 ${
+                  deleteDbModal.type === 'anggaran'
+                    ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-950'
+                    : 'bg-amber-600 hover:bg-amber-500 shadow-amber-950'
+                }`}
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>
+                  {deleteDbModal.type === 'anggaran'
+                    ? 'Ya, Hapus Database Anggaran'
+                    : 'Ya, Hapus Database Realisasi'}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       )}

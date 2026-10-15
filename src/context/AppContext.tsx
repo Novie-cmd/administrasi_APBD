@@ -58,6 +58,9 @@ import {
 } from '../data/initialData';
 
 interface AppContextType {
+  isAuthenticated: boolean;
+  login: (username: string, password: string) => { success: boolean; message: string; user?: User };
+  logout: () => void;
   currentUser: User;
   setCurrentUser: (user: User) => void;
   switchRole: (role: UserRole) => void;
@@ -210,6 +213,7 @@ export const STORAGE_KEY = 'BFMS_NTB_STORE_V1';
 export const BACKUP_STORAGE_KEY = 'BFMS_NTB_PERMANENT_BACKUP_V1';
 export const LOCAL_TIMESTAMP_KEY = 'BFMS_NTB_LOCAL_TIMESTAMP_V1';
 export const SELECTED_TAHUN_KEY = 'BFMS_NTB_SELECTED_TAHUN_V1';
+export const AUTH_SESSION_KEY = 'bfms_auth_user_session_v1';
 const LEGACY_STORAGE_KEYS = ['BFMS_STORE_V1', 'BFMS_NTB_SNAPSHOT_V2', 'BFMS_APP_DATA'];
 
 // Fast state fingerprint calculation to detect actual data updates (including amount edits, status changes, etc.)
@@ -351,9 +355,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const storedData = loadStoredData();
 
-  const [currentUser, setCurrentUser] = useState<User>(
-    storedData?.currentUser || INITIAL_USERS[0]
-  );
+  // Authentication state initialized from saved session
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const session = localStorage.getItem(AUTH_SESSION_KEY);
+      if (session) {
+        try {
+          const parsed = JSON.parse(session);
+          if (parsed && (parsed.username || parsed.userId)) return true;
+        } catch {
+          return false;
+        }
+      }
+    }
+    return false;
+  });
+
+  const [currentUser, setCurrentUser] = useState<User>(() => {
+    if (typeof window !== 'undefined') {
+      const session = localStorage.getItem(AUTH_SESSION_KEY);
+      if (session) {
+        try {
+          const parsed = JSON.parse(session);
+          if (parsed && parsed.role) {
+            const matched = INITIAL_USERS.find(u => u.role === parsed.role || u.id === parsed.userId);
+            if (matched) return matched;
+          }
+        } catch {}
+      }
+    }
+    return storedData?.currentUser || INITIAL_USERS[0];
+  });
   const [users, setUsers] = useState<User[]>(
     storedData?.users || INITIAL_USERS
   );
@@ -1100,6 +1132,95 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setCurrentUser(targetUser);
     logActivity(`Beralih peran (Role Switch) ke: ${role}`);
+  };
+
+  // Authentication Login: Kepala Badan (pass: Kaban123) and Admin (pass: Admin123)
+  const login = (usernameInput: string, passwordInput: string): { success: boolean; message: string; user?: User } => {
+    const u = usernameInput.trim();
+    const p = passwordInput.trim();
+
+    if (!u || !p) {
+      return { success: false, message: 'Harap masukkan Username dan Password.' };
+    }
+
+    // Check Kepala Badan (Username: "Kepala Badan", "kaban", case-insensitive; Password: "Kaban123")
+    const isKaban = u.toLowerCase() === 'kepala badan' || u.toLowerCase() === 'kaban';
+    if (isKaban) {
+      if (p === 'Kaban123' || p.toLowerCase() === 'kaban123') {
+        const kabanUser = users.find(user => user.role === 'Kepala Badan') || INITIAL_USERS[3];
+        const updatedUser: User = {
+          ...kabanUser,
+          lastLogin: new Date().toISOString().replace('T', ' ').substring(0, 19)
+        };
+        setCurrentUser(updatedUser);
+        setIsAuthenticated(true);
+        if (typeof window !== 'undefined') {
+          try {
+            const sessionData = JSON.stringify({
+              userId: updatedUser.id,
+              username: 'Kepala Badan',
+              nama: updatedUser.nama,
+              role: updatedUser.role,
+              loginAt: updatedUser.lastLogin
+            });
+            localStorage.setItem(AUTH_SESSION_KEY, sessionData);
+            sessionStorage.setItem(AUTH_SESSION_KEY, sessionData);
+          } catch {}
+        }
+        logActivity(`Pengguna "${updatedUser.nama}" (${updatedUser.role}) berhasil masuk ke sistem (Login)`);
+        return { success: true, message: 'Login berhasil sebagai Kepala Badan', user: updatedUser };
+      } else {
+        return { success: false, message: 'Password untuk Kepala Badan salah! Gunakan password: Kaban123' };
+      }
+    }
+
+    // Check Admin (Username: "Admin", "admin", "administrator", case-insensitive; Password: "Admin123")
+    const isAdmin = u.toLowerCase() === 'admin' || u.toLowerCase() === 'administrator';
+    if (isAdmin) {
+      if (p === 'Admin123' || p.toLowerCase() === 'admin123') {
+        const adminUser = users.find(user => user.role === 'Administrator') || INITIAL_USERS[0];
+        const updatedUser: User = {
+          ...adminUser,
+          lastLogin: new Date().toISOString().replace('T', ' ').substring(0, 19)
+        };
+        setCurrentUser(updatedUser);
+        setIsAuthenticated(true);
+        if (typeof window !== 'undefined') {
+          try {
+            const sessionData = JSON.stringify({
+              userId: updatedUser.id,
+              username: 'Admin',
+              nama: updatedUser.nama,
+              role: updatedUser.role,
+              loginAt: updatedUser.lastLogin
+            });
+            localStorage.setItem(AUTH_SESSION_KEY, sessionData);
+            sessionStorage.setItem(AUTH_SESSION_KEY, sessionData);
+          } catch {}
+        }
+        logActivity(`Pengguna "${updatedUser.nama}" (${updatedUser.role}) berhasil masuk ke sistem (Login)`);
+        return { success: true, message: 'Login berhasil sebagai Administrator', user: updatedUser };
+      } else {
+        return { success: false, message: 'Password untuk Admin salah! Gunakan password: Admin123' };
+      }
+    }
+
+    return {
+      success: false,
+      message: 'Username atau password tidak cocok. Gunakan username "Kepala Badan" (password: Kaban123) atau "Admin" (password: Admin123).'
+    };
+  };
+
+  // Authentication Logout
+  const logout = () => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem(AUTH_SESSION_KEY);
+        sessionStorage.removeItem(AUTH_SESSION_KEY);
+      } catch {}
+    }
+    setIsAuthenticated(false);
+    logActivity(`Pengguna "${currentUser.nama}" telah keluar dari aplikasi (Logout)`);
   };
 
   // Compute Notifications dynamically based on actual budget & realisasi state
@@ -2767,6 +2888,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider
       value={{
+        isAuthenticated,
+        login,
+        logout,
         currentUser,
         setCurrentUser,
         switchRole,

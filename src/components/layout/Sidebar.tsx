@@ -87,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   interfaceMode = 'bakesbang',
   setInterfaceMode
 }) => {
-  const { currentUser, switchRole, resetAllData } = useApp();
+  const { currentUser, switchRole, logout, resetAllData } = useApp();
 
   // Accordion state for sidebar sub-menus
   const [openMaster, setOpenMaster] = useState(true);
@@ -512,12 +512,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           <button
-            onClick={() => switchRole(role === 'Administrator' ? 'Kepala Badan' : 'Administrator')}
-            className="rounded-lg bg-slate-800 p-2 text-slate-400 hover:bg-rose-950 hover:text-rose-300 transition"
-            title="Keluar / Ganti User"
+            onClick={logout}
+            className="flex items-center gap-1 rounded-lg bg-slate-800/80 hover:bg-rose-950/80 hover:text-rose-300 p-2 text-slate-400 border border-slate-700/60 transition shadow-sm"
+            title="Keluar dari Aplikasi (Logout)"
             id="btn-logout-sidebar"
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-4 w-4 text-rose-400" />
+            <span className="text-[10px] font-bold">Keluar</span>
           </button>
         </div>
       </div>

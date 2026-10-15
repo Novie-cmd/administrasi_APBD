@@ -12,14 +12,20 @@ import { PelaporanView } from './components/pelaporan/PelaporanView';
 import { AnalisisView } from './components/analisis/AnalisisView';
 import { PengaturanView } from './components/pengaturan/PengaturanView';
 import { PortalSeluruhOPDView } from './components/portal-opd/PortalSeluruhOPDView';
+import { LoginView } from './components/auth/LoginView';
 import { Cloud, AlertCircle, X, ArrowRight } from 'lucide-react';
 
 const MainContent: React.FC = () => {
-  const { cloudSync } = useApp();
+  const { cloudSync, isAuthenticated } = useApp();
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dismissQuotaBanner, setDismissQuotaBanner] = useState(false);
   const [interfaceMode, setInterfaceMode] = useState<'bakesbang' | 'seluruh-opd'>('bakesbang');
+
+  // Login Gate: Tampilkan formulir login sebelum pengguna masuk ke aplikasi
+  if (!isAuthenticated) {
+    return <LoginView />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased flex flex-col">
