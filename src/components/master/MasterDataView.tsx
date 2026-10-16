@@ -28,7 +28,8 @@ import {
   FileCheck,
   AlertCircle,
   Sparkles,
-  Info
+  Info,
+  X
 } from 'lucide-react';
 
 interface MasterDataViewProps {
@@ -138,6 +139,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
   const [parsedDataPreview, setParsedDataPreview] = useState<any[]>([]);
   const [importErrors, setImportErrors] = useState<string[]>([]);
   const [importSuccessMsg, setImportSuccessMsg] = useState<string | null>(null);
+  const [actionNotice, setActionNotice] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
 
   // Confirm Clear Database Handler
   const handleConfirmClearDb = () => {
@@ -256,8 +258,14 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
   };
   const handleConfirmDeleteProgram = () => {
     if (!deletingProgram) return;
+    const kode = deletingProgram.kodeProgram;
     deleteProgram(deletingProgram.kodeProgram, deletingProgram.tahun);
     setDeletingProgram(null);
+    setActionNotice({
+      type: 'success',
+      message: `Program "${kode}" berhasil dihapus secara permanen dari sistem dan database.`
+    });
+    setTimeout(() => setActionNotice(null), 5000);
   };
 
   // Kegiatan handlers
@@ -272,8 +280,14 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
   };
   const handleConfirmDeleteKegiatan = () => {
     if (!deletingKegiatan) return;
+    const kode = deletingKegiatan.kodeKegiatan;
     deleteKegiatan(deletingKegiatan.kodeKegiatan, deletingKegiatan.tahun);
     setDeletingKegiatan(null);
+    setActionNotice({
+      type: 'success',
+      message: `Kegiatan "${kode}" berhasil dihapus secara permanen dari sistem dan database.`
+    });
+    setTimeout(() => setActionNotice(null), 5000);
   };
 
   // Sub Kegiatan handlers
@@ -288,8 +302,14 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
   };
   const handleConfirmDeleteSub = () => {
     if (!deletingSub) return;
+    const kode = deletingSub.kodeSub;
     deleteSubKegiatan(deletingSub.kodeSub, deletingSub.tahun);
     setDeletingSub(null);
+    setActionNotice({
+      type: 'success',
+      message: `Sub-Kegiatan "${kode}" berhasil dihapus secara permanen dari sistem dan database.`
+    });
+    setTimeout(() => setActionNotice(null), 5000);
   };
 
   // Belanja handlers
@@ -304,8 +324,15 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
   };
   const handleConfirmDeleteBelanja = () => {
     if (!deletingBelanja) return;
+    const kode = deletingBelanja.kodeBelanja;
+    const nama = deletingBelanja.namaBelanja;
     deleteBelanja(deletingBelanja.kodeBelanja, deletingBelanja.tahun);
     setDeletingBelanja(null);
+    setActionNotice({
+      type: 'success',
+      message: `Rekening Belanja "${kode} - ${nama}" berhasil dihapus secara permanen dari sistem dan database.`
+    });
+    setTimeout(() => setActionNotice(null), 5000);
   };
 
   // Sumber Dana handlers
@@ -325,6 +352,11 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
     if (!targetKey) return;
     deleteSumberDana(targetKey);
     setDeletingSumberDana(null);
+    setActionNotice({
+      type: 'success',
+      message: `Sumber Dana "${targetKey}" berhasil dihapus secara permanen dari sistem dan database.`
+    });
+    setTimeout(() => setActionNotice(null), 5000);
   };
   const handleSaveAddSumberDana = (e: React.FormEvent) => {
     e.preventDefault();
@@ -764,6 +796,23 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
           </div>
         )}
       </div>
+
+      {/* Global Permanent Action Notification */}
+      {actionNotice && (
+        <div className="rounded-2xl border border-emerald-500/60 bg-emerald-950/80 p-4 flex items-center justify-between gap-3 text-emerald-200 text-xs shadow-xl animate-fadeIn">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+            <span className="font-bold text-white">{actionNotice.message}</span>
+          </div>
+          <button
+            onClick={() => setActionNotice(null)}
+            className="p-1 text-emerald-400 hover:text-white rounded-lg transition"
+            title="Tutup pemberitahuan"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Sub Tabs Navigation */}
       <div className="flex overflow-x-auto gap-2 border-b border-slate-800 pb-2 scrollbar-none">

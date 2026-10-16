@@ -28,7 +28,7 @@ const MainContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased flex flex-col">
+    <div className="min-h-screen bg-[#F4F7FB] text-[#17324D] font-sans antialiased flex flex-col">
       {/* Top Navbar */}
       <Navbar
         sidebarOpen={sidebarOpen}
@@ -53,23 +53,23 @@ const MainContent: React.FC = () => {
         {sidebarOpen && (
           <div
             onClick={() => setSidebarOpen(false)}
-            className="fixed inset-0 z-30 bg-slate-950/80 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-30 bg-[#17324D]/40 backdrop-blur-sm lg:hidden"
           />
         )}
 
         {/* Main Operational Container */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[#F4F7FB]">
           <div className="mx-auto max-w-7xl space-y-4">
             {/* Global Friendly Quota Banner */}
             {cloudSync.status === 'quota_exceeded' && !dismissQuotaBanner && (
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-amber-500/40 bg-amber-950/40 px-4 py-3 text-amber-200 text-xs shadow-lg backdrop-blur-sm animate-fadeIn">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900 text-xs shadow-sm animate-fadeIn">
                 <div className="flex items-center gap-2.5">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
                     <Cloud className="h-3.5 w-3.5" />
                   </span>
                   <div>
-                    <span className="font-semibold text-white">Mode Offline Aktif (Kuota Tulis Firestore Gratis Hari Ini Tercapai): </span>
-                    <span className="text-amber-200/90">
+                    <span className="font-semibold text-amber-950">Mode Offline Aktif (Kuota Tulis Firestore Gratis Hari Ini Tercapai): </span>
+                    <span className="text-amber-800">
                       Seluruh data tersimpan aman 100% di browser. Aplikasi tetap berjalan normal dan kuota akan otomatis di-reset besok.
                     </span>
                   </div>
@@ -77,14 +77,14 @@ const MainContent: React.FC = () => {
                 <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
                   <button
                     onClick={() => setActiveTab('pengaturan')}
-                    className="flex items-center gap-1 font-semibold text-amber-300 hover:text-white underline underline-offset-2 transition"
+                    className="flex items-center gap-1 font-semibold text-[#079669] hover:text-[#065f46] underline underline-offset-2 transition"
                   >
                     <span>Detail & Spreadsheet</span>
                     <ArrowRight className="h-3 w-3" />
                   </button>
                   <button
                     onClick={() => setDismissQuotaBanner(true)}
-                    className="p-1 rounded-md text-amber-400/70 hover:text-amber-200 hover:bg-amber-900/40 transition"
+                    className="p-1 rounded-md text-amber-600 hover:text-amber-900 hover:bg-amber-100 transition"
                     title="Tutup pemberitahuan"
                   >
                     <X className="h-3.5 w-3.5" />

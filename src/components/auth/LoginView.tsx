@@ -7,7 +7,6 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
-  Building2,
   Sparkles,
   ArrowRight,
   CheckCircle2,
@@ -36,7 +35,6 @@ export const LoginView: React.FC = () => {
         setIsLoading(false);
       } else {
         setLoginSuccessNotice(res.message);
-        // Page state will transition smoothly via isAuthenticated
       }
     }, 350);
   };
@@ -48,80 +46,85 @@ export const LoginView: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col justify-between relative overflow-hidden font-sans selection:bg-cyan-500 selection:text-black">
-      {/* Dynamic Background Glow Effects */}
-      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-cyan-600/10 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[550px] h-[550px] rounded-full bg-emerald-600/10 blur-[130px] pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full bg-amber-500/5 blur-[160px] pointer-events-none" />
-
-      {/* Top Banner Navigation Identity */}
-      <header className="relative z-10 w-full border-b border-slate-800/80 bg-slate-950/70 backdrop-blur-md px-4 sm:px-8 py-3.5 flex items-center justify-between">
+    <div className="min-h-screen w-full bg-[#F4F7FB] text-[#17324D] flex flex-col justify-between font-sans selection:bg-[#079669] selection:text-white">
+      {/* Top Banner Navigation Identity - Clean Government Terang */}
+      <header className="w-full border-b border-[#DFE6EF] bg-[#FFFFFF] px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-slate-900 border border-amber-500/50 shadow-md shadow-amber-500/10 overflow-hidden flex items-center justify-center">
-            <img src="/app-logo.jpg" alt="Logo NTB" className="h-full w-full object-cover" />
+          <div className="h-10 w-10 rounded-xl bg-[#F4F7FB] border border-[#DFE6EF] overflow-hidden flex items-center justify-center p-0.5 shadow-xs">
+            <img
+              src="/app-logo.jpg"
+              alt="Logo NTB"
+              className="h-full w-full object-cover rounded-lg"
+              onError={(e) => { e.currentTarget.src = './favicon.png'; }}
+            />
           </div>
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-[#079669]">
               PEMERINTAH PROVINSI NUSA TENGGARA BARAT
             </div>
-            <div className="text-xs sm:text-sm font-extrabold text-white tracking-tight">
+            <div className="text-xs sm:text-sm font-extrabold text-[#17324D] tracking-tight">
               BAKESBANGPOLDAGRI NTB • BFMS
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-800/70 text-[11px] font-bold text-cyan-300">
-            <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-bold text-[#079669]">
+            <Sparkles className="h-3.5 w-3.5 text-[#079669]" />
             <span>NTB MAKMUR MENDUNIA</span>
           </span>
-          <span className="text-[11px] font-mono px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+          <span className="text-[11px] font-mono font-bold px-2.5 py-1 rounded-lg bg-[#F4F7FB] border border-[#DFE6EF] text-[#17324D]">
             TA {selectedTahun}
           </span>
         </div>
       </header>
 
       {/* Main Login Card Container */}
-      <main className="relative z-10 flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
-        <div className="w-full max-w-md">
-          {/* Card Frame with Glow Border */}
-          <div className="relative rounded-3xl border border-slate-800 bg-slate-900/90 shadow-2xl backdrop-blur-xl p-6 sm:p-8 space-y-6">
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8 my-auto">
+        <div className="w-full max-w-md my-4">
+          {/* Pure White Card with Clean Government Border */}
+          <div className="rounded-2xl border border-[#DFE6EF] bg-[#FFFFFF] shadow-sm p-6 sm:p-8 space-y-6">
             
             {/* Header & Logo Badge */}
             <div className="text-center space-y-2">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-amber-500/20 via-cyan-500/20 to-emerald-500/20 border border-amber-500/40 p-2 shadow-inner">
-                <img src="/app-logo.jpg" alt="Logo Pemprov NTB" className="h-full w-full object-contain rounded-xl" />
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 border border-emerald-200 p-2 shadow-xs">
+                <img
+                  src="/app-logo.jpg"
+                  alt="Logo Pemprov NTB"
+                  className="h-full w-full object-contain rounded-xl"
+                  onError={(e) => { e.currentTarget.src = './favicon.png'; }}
+                />
               </div>
 
               <div>
-                <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest text-amber-300 bg-amber-950/80 border border-amber-600/40">
+                <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest text-[#079669] bg-emerald-50 border border-emerald-200">
                   NTB MAKMUR MENDUNIA
                 </span>
-                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-1">
+                <h1 className="text-xl sm:text-2xl font-black text-[#17324D] tracking-tight mt-1.5">
                   Login Sistem Keuangan
                 </h1>
-                <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                  Silakan masuk menggunakan akun resmi untuk mengakses pengelolaan anggaran &amp; realisasi NTB
+                <p className="text-xs text-[#64748B] max-w-xs mx-auto mt-0.5">
+                  Masuk menggunakan akun resmi untuk mengakses data anggaran &amp; realisasi keuangan daerah
                 </p>
               </div>
             </div>
 
             {/* Error Message Box */}
             {errorMessage && (
-              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-rose-950/90 border border-rose-600/70 text-rose-200 text-xs shadow-lg animate-fadeIn">
-                <AlertCircle className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" />
+              <div className="flex items-start gap-3 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs shadow-xs animate-fadeIn">
+                <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
                 <div className="space-y-0.5">
-                  <div className="font-bold text-white">Gagal Masuk:</div>
-                  <div className="text-[11px] leading-relaxed text-rose-200">{errorMessage}</div>
+                  <div className="font-bold text-rose-900">Gagal Masuk:</div>
+                  <div className="text-[11px] leading-relaxed text-rose-700">{errorMessage}</div>
                 </div>
               </div>
             )}
 
             {/* Success Message Box */}
             {loginSuccessNotice && (
-              <div className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-emerald-950/90 border border-emerald-500/70 text-emerald-200 text-xs shadow-lg animate-fadeIn">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-                <span className="font-bold text-white">{loginSuccessNotice}</span>
+              <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs shadow-xs animate-fadeIn">
+                <CheckCircle2 className="h-4 w-4 text-[#079669] shrink-0" />
+                <span className="font-bold text-emerald-900">{loginSuccessNotice}</span>
               </div>
             )}
 
@@ -129,11 +132,11 @@ export const LoginView: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Username Field */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-300">
+                <label className="block text-xs font-bold text-[#17324D]">
                   Username Akun:
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#64748B]">
                     <UserIcon className="h-4 w-4" />
                   </div>
                   <input
@@ -143,7 +146,7 @@ export const LoginView: React.FC = () => {
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Contoh: Kepala Badan atau Admin"
                     autoFocus
-                    className="w-full rounded-xl bg-slate-950 border border-slate-700/80 pl-10 pr-3.5 py-3 text-xs sm:text-sm font-semibold text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition shadow-inner"
+                    className="w-full rounded-xl bg-[#FFFFFF] border border-[#DFE6EF] pl-10 pr-3.5 py-2.5 text-xs sm:text-sm font-semibold text-[#17324D] placeholder:text-[#64748B] focus:outline-none focus:border-[#079669] focus:ring-2 focus:ring-[#079669]/20 transition"
                   />
                 </div>
               </div>
@@ -151,15 +154,15 @@ export const LoginView: React.FC = () => {
               {/* Password Field */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-slate-300">
+                  <label className="block text-xs font-bold text-[#17324D]">
                     Kata Sandi (Password):
                   </label>
-                  <span className="text-[10px] text-cyan-400/80 font-mono">
+                  <span className="text-[10px] text-[#64748B] font-mono">
                     Sensitif huruf besar/kecil
                   </span>
                 </div>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#64748B]">
                     <Lock className="h-4 w-4" />
                   </div>
                   <input
@@ -168,12 +171,12 @@ export const LoginView: React.FC = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Masukkan kata sandi..."
-                    className="w-full rounded-xl bg-slate-950 border border-slate-700/80 pl-10 pr-11 py-3 text-xs sm:text-sm font-mono font-semibold text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition shadow-inner"
+                    className="w-full rounded-xl bg-[#FFFFFF] border border-[#DFE6EF] pl-10 pr-11 py-2.5 text-xs sm:text-sm font-mono font-semibold text-[#17324D] placeholder:text-[#64748B] focus:outline-none focus:border-[#079669] focus:ring-2 focus:ring-[#079669]/20 transition"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-white transition"
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#64748B] hover:text-[#17324D] transition"
                     title={showPassword ? 'Sembunyikan password' : 'Lihat password'}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -181,11 +184,11 @@ export const LoginView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Submit Button */}
+              {/* Submit Button - Emerald Accent */}
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 via-cyan-500 to-emerald-600 hover:from-cyan-500 hover:to-emerald-500 p-3.5 text-xs sm:text-sm font-bold text-white shadow-xl shadow-cyan-950 transition active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#079669] hover:bg-[#065f46] p-3 text-xs sm:text-sm font-bold text-white shadow-xs transition active:scale-[0.99] disabled:opacity-60 cursor-pointer"
               >
                 {isLoading ? (
                   <>
@@ -194,22 +197,22 @@ export const LoginView: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    <ShieldCheck className="h-4 w-4 text-emerald-200" />
+                    <ShieldCheck className="h-4 w-4 text-white" />
                     <span>Masuk ke Sistem Keuangan</span>
-                    <ArrowRight className="h-4 w-4 text-cyan-200 ml-1" />
+                    <ArrowRight className="h-4 w-4 text-emerald-100 ml-1" />
                   </>
                 )}
               </button>
             </form>
 
             {/* Quick Access Account Cards */}
-            <div className="pt-2 border-t border-slate-800 space-y-2.5">
-              <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 px-1">
-                <span className="flex items-center gap-1 text-slate-300">
-                  <KeyRound className="h-3.5 w-3.5 text-amber-400" />
-                  <span>Pilih Akun Cepat (Sesuai Ketetapan):</span>
+            <div className="pt-3 border-t border-[#DFE6EF] space-y-2.5">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-[#64748B] px-1">
+                <span className="flex items-center gap-1 text-[#17324D] font-bold">
+                  <KeyRound className="h-3.5 w-3.5 text-[#079669]" />
+                  <span>Pilih Akun Cepat:</span>
                 </span>
-                <span className="text-[10px] text-cyan-400">Klik untuk isi otomatis</span>
+                <span className="text-[10px] text-[#079669]">Klik untuk isi otomatis</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -217,25 +220,25 @@ export const LoginView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleSelectQuickAccount('Kepala Badan', 'Kaban123')}
-                  className={`group text-left p-3 rounded-2xl border transition relative overflow-hidden ${
+                  className={`text-left p-2.5 rounded-xl border transition ${
                     username === 'Kepala Badan'
-                      ? 'bg-amber-950/60 border-amber-500/80 ring-1 ring-amber-500/40'
-                      : 'bg-slate-950/80 hover:bg-slate-800/80 border-slate-800 hover:border-amber-500/50'
+                      ? 'bg-emerald-50 border-[#079669] ring-1 ring-[#079669]'
+                      : 'bg-[#F4F7FB] hover:bg-slate-100/80 border-[#DFE6EF] hover:border-[#079669]'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#079669]">
                       Kepala Badan
                     </span>
-                    <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded">
+                    <span className="text-[9px] bg-emerald-100 text-[#079669] px-1.5 py-0.2 rounded font-bold">
                       Kaban
                     </span>
                   </div>
-                  <div className="text-xs font-bold text-white group-hover:text-amber-200 transition">
+                  <div className="text-xs font-bold text-[#17324D]">
                     Kepala Badan
                   </div>
-                  <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                    Pass: <span className="text-amber-300 font-bold">Kaban123</span>
+                  <div className="text-[10px] text-[#64748B] font-mono">
+                    Pass: <span className="text-[#079669] font-bold">Kaban123</span>
                   </div>
                 </button>
 
@@ -243,33 +246,33 @@ export const LoginView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleSelectQuickAccount('Admin', 'Admin123')}
-                  className={`group text-left p-3 rounded-2xl border transition relative overflow-hidden ${
+                  className={`text-left p-2.5 rounded-xl border transition ${
                     username === 'Admin'
-                      ? 'bg-cyan-950/60 border-cyan-500/80 ring-1 ring-cyan-500/40'
-                      : 'bg-slate-950/80 hover:bg-slate-800/80 border-slate-800 hover:border-cyan-500/50'
+                      ? 'bg-emerald-50 border-[#079669] ring-1 ring-[#079669]'
+                      : 'bg-[#F4F7FB] hover:bg-slate-100/80 border-[#DFE6EF] hover:border-[#079669]'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-400">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#3984E8]">
                       Administrator
                     </span>
-                    <span className="text-[9px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-1.5 py-0.5 rounded">
+                    <span className="text-[9px] bg-blue-100 text-[#3984E8] px-1.5 py-0.2 rounded font-bold">
                       Admin
                     </span>
                   </div>
-                  <div className="text-xs font-bold text-white group-hover:text-cyan-200 transition">
+                  <div className="text-xs font-bold text-[#17324D]">
                     Admin
                   </div>
-                  <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                    Pass: <span className="text-cyan-300 font-bold">Admin123</span>
+                  <div className="text-[10px] text-[#64748B] font-mono">
+                    Pass: <span className="text-[#3984E8] font-bold">Admin123</span>
                   </div>
                 </button>
               </div>
             </div>
 
             {/* Security Badge */}
-            <div className="flex items-center justify-center gap-1.5 text-[10px] text-slate-400 pt-1">
-              <ShieldAlert className="h-3.5 w-3.5 text-emerald-400" />
+            <div className="flex items-center justify-center gap-1.5 text-[10px] text-[#64748B] pt-1">
+              <ShieldAlert className="h-3.5 w-3.5 text-[#079669]" />
               <span>Sistem Terotentikasi &amp; Terintegrasi Kasda Pemprov NTB</span>
             </div>
           </div>
@@ -277,11 +280,11 @@ export const LoginView: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 w-full border-t border-slate-800/80 bg-slate-950/80 backdrop-blur-md px-4 py-3 text-center text-xs text-slate-400 space-y-0.5">
+      <footer className="w-full border-t border-[#DFE6EF] bg-[#FFFFFF] px-4 py-3 text-center text-xs text-[#64748B] space-y-0.5">
         <div>
-          <strong className="text-slate-300">BANGKIT BERSAMA! NTB MAKMUR MENDUNIA</strong>
+          <strong className="text-[#17324D]">BANGKIT BERSAMA! NTB MAKMUR MENDUNIA</strong>
         </div>
-        <div className="text-[11px] text-slate-400">
+        <div className="text-[11px] text-[#64748B]">
           © {new Date().getFullYear()} Badan Kesatuan Bangsa dan Politik Dalam Negeri • Pemerintah Provinsi Nusa Tenggara Barat
         </div>
       </footer>

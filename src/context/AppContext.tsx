@@ -215,6 +215,120 @@ export const LOCAL_TIMESTAMP_KEY = 'BFMS_NTB_LOCAL_TIMESTAMP_V1';
 export const SELECTED_TAHUN_KEY = 'BFMS_NTB_SELECTED_TAHUN_V1';
 export const AUTH_SESSION_KEY = 'bfms_auth_user_session_v1';
 const LEGACY_STORAGE_KEYS = ['BFMS_STORE_V1', 'BFMS_NTB_SNAPSHOT_V2', 'BFMS_APP_DATA'];
+export const BELANJA_TOMBSTONES_KEY = 'bfms_deleted_belanja_tombstones_v1';
+
+export const getDeletedBelanjaTombstones = (): { kode: string; tahun?: number }[] => {
+  try {
+    const raw = safeLocalStorageGet(BELANJA_TOMBSTONES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const recordDeletedBelanjaTombstone = (kodeBelanja: string, tahun?: number) => {
+  try {
+    const cur = getDeletedBelanjaTombstones();
+    const cleanKode = (kodeBelanja || '').trim().toLowerCase();
+    const targetTahun = tahun !== undefined && tahun !== null && !isNaN(Number(tahun)) ? Number(tahun) : undefined;
+    const exists = cur.some(t => t.kode === cleanKode && (targetTahun === undefined || t.tahun === undefined || t.tahun === targetTahun));
+    if (!exists) {
+      cur.push({ kode: cleanKode, tahun: targetTahun });
+      safeLocalStorageSet(BELANJA_TOMBSTONES_KEY, JSON.stringify(cur));
+    }
+  } catch {}
+};
+
+export const removeDeletedBelanjaTombstone = (kodeBelanja: string, tahun?: number) => {
+  try {
+    const cur = getDeletedBelanjaTombstones();
+    const cleanKode = (kodeBelanja || '').trim().toLowerCase();
+    const targetTahun = tahun !== undefined && tahun !== null && !isNaN(Number(tahun)) ? Number(tahun) : undefined;
+    const filtered = cur.filter(t => !(t.kode === cleanKode && (targetTahun === undefined || t.tahun === undefined || t.tahun === targetTahun)));
+    safeLocalStorageSet(BELANJA_TOMBSTONES_KEY, JSON.stringify(filtered));
+  } catch {}
+};
+
+export const filterOutBelanjaTombstones = (list: Belanja[]): Belanja[] => {
+  if (!Array.isArray(list)) return [];
+  const tombstones = getDeletedBelanjaTombstones();
+  if (tombstones.length === 0) return list;
+  return list.filter(b => {
+    const bKode = (b.kodeBelanja || '').trim().toLowerCase();
+    const bTahun = b.tahun !== undefined && b.tahun !== null ? Number(b.tahun) : undefined;
+    const isDeleted = tombstones.some(t => {
+      if (t.kode !== bKode) return false;
+      if (t.tahun !== undefined && bTahun !== undefined) {
+        return t.tahun === bTahun;
+      }
+      return true;
+    });
+    return !isDeleted;
+  });
+};
+
+// Safe storage access functions preventing SecurityError/ReferenceError in iframe or privacy mode
+export const safeLocalStorageGet = (key: string): string | null => {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return window.localStorage.getItem(key);
+    }
+  } catch (e) {
+    console.warn('safeLocalStorageGet error:', e);
+  }
+  return null;
+};
+
+export const safeLocalStorageSet = (key: string, value: string): void => {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(key, value);
+    }
+  } catch (e) {
+    console.warn('safeLocalStorageSet error:', e);
+  }
+};
+
+export const safeLocalStorageRemove = (key: string): void => {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.removeItem(key);
+    }
+  } catch (e) {
+    console.warn('safeLocalStorageRemove error:', e);
+  }
+};
+
+export const safeSessionStorageGet = (key: string): string | null => {
+  try {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      return window.sessionStorage.getItem(key);
+    }
+  } catch (e) {
+    console.warn('safeSessionStorageGet error:', e);
+  }
+  return null;
+};
+
+export const safeSessionStorageSet = (key: string, value: string): void => {
+  try {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      window.sessionStorage.setItem(key, value);
+    }
+  } catch (e) {
+    console.warn('safeSessionStorageSet error:', e);
+  }
+};
+
+export const safeSessionStorageRemove = (key: string): void => {
+  try {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      window.sessionStorage.removeItem(key);
+    }
+  } catch (e) {
+    console.warn('safeSessionStorageRemove error:', e);
+  }
+};
 
 // Fast state fingerprint calculation to detect actual data updates (including amount edits, status changes, etc.)
 const computeStateFingerprint = (data: any): string => {
@@ -223,8 +337,8 @@ const computeStateFingerprint = (data: any): string => {
   const aList = data.anggaranList || [];
   const rCount = rList.length;
   const aCount = aList.length;
-  const rSum = rList.reduce((sum: number, r: any) => sum + (Number(r.nilai) || 0), 0);
-  const aSum = aList.reduce((sum: number, a: any) => sum + (Number(a.paguAkhir || a.pagu) || 0), 0);
+  const rSum = rList.reduce((sum: number, r: any) => sum + (Number(r?.nilai) || 0), 0);
+  const aSum = aList.reduce((sum: number, a: any) => sum + (Number(a?.paguAkhir || a?.pagu) || 0), 0);
   const rHeadTail = rCount > 0 ? `${rList[0]?.id}_${rList[0]?.nilai}_${rList[0]?.statusValidation}_${rList[rCount - 1]?.id}` : '';
   const aHeadTail = aCount > 0 ? `${aList[0]?.id}_${aList[0]?.paguAkhir || aList[0]?.pagu}_${aList[aCount - 1]?.id}` : '';
   
@@ -262,17 +376,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const now = Date.now();
       if (markAsUserLocalEdit) {
         localModifiedAtRef.current = now;
-        localStorage.setItem(LOCAL_TIMESTAMP_KEY, String(now));
+        safeLocalStorageSet(LOCAL_TIMESTAMP_KEY, String(now));
       }
       latestStateRef.current = data;
-      localStorage.setItem('bfms_has_ever_initialized', 'true');
+      safeLocalStorageSet('bfms_has_ever_initialized', 'true');
       if (data.selectedTahun) {
-        localStorage.setItem(SELECTED_TAHUN_KEY, String(data.selectedTahun));
+        safeLocalStorageSet(SELECTED_TAHUN_KEY, String(data.selectedTahun));
       }
       const serialized = JSON.stringify(data);
-      localStorage.setItem(STORAGE_KEY, serialized);
+      safeLocalStorageSet(STORAGE_KEY, serialized);
       // Keep backup synchronously updated so old data is never resurrected
-      localStorage.setItem(BACKUP_STORAGE_KEY, serialized);
+      safeLocalStorageSet(BACKUP_STORAGE_KEY, serialized);
     } catch (e) {
       console.error('Failed to write to localStorage:', e);
     }
@@ -281,9 +395,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Load initial or local stored data with multi-layer backup recovery
   const loadStoredData = () => {
     try {
-      const primaryStr = localStorage.getItem(STORAGE_KEY);
-      const backupStr = localStorage.getItem(BACKUP_STORAGE_KEY);
-      const hasEverInitialized = typeof window !== 'undefined' && localStorage.getItem('bfms_has_ever_initialized') === 'true';
+      const primaryStr = safeLocalStorageGet(STORAGE_KEY);
+      const backupStr = safeLocalStorageGet(BACKUP_STORAGE_KEY);
+      const hasEverInitialized = safeLocalStorageGet('bfms_has_ever_initialized') === 'true';
       
       let primary = primaryStr ? JSON.parse(primaryStr) : null;
       let backup = backupStr ? JSON.parse(backupStr) : null;
@@ -291,7 +405,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Check legacy storage keys only on fresh install before any initialization
       if (!primary && !backup && !hasEverInitialized) {
         for (const legKey of LEGACY_STORAGE_KEYS) {
-          const legStr = localStorage.getItem(legKey);
+          const legStr = safeLocalStorageGet(legKey);
           if (legStr) {
             try {
               const legData = JSON.parse(legStr);
@@ -338,7 +452,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         programs: Array.isArray(primary?.programs) ? primary.programs : (hasEverInitialized ? [] : INITIAL_PROGRAMS),
         kegiatanList: Array.isArray(primary?.kegiatanList) ? primary.kegiatanList : (hasEverInitialized ? [] : INITIAL_KEGIATAN),
         subKegiatanList: Array.isArray(primary?.subKegiatanList) ? primary.subKegiatanList : (hasEverInitialized ? [] : INITIAL_SUBKEGIATAN),
-        belanjaList: Array.isArray(primary?.belanjaList) ? primary.belanjaList : (hasEverInitialized ? [] : INITIAL_BELANJA),
+        belanjaList: filterOutBelanjaTombstones(Array.isArray(primary?.belanjaList) ? primary.belanjaList : (hasEverInitialized ? [] : INITIAL_BELANJA)),
         sumberDanaList: Array.isArray(primary?.sumberDanaList) ? primary.sumberDanaList : (hasEverInitialized ? [] : INITIAL_SUMBER_DANA),
         rekananList: Array.isArray(primary?.rekananList) ? primary.rekananList : (hasEverInitialized ? [] : INITIAL_REKANAN),
         anggaranList: Array.isArray(primary?.anggaranList) ? primary.anggaranList : (hasEverInitialized ? [] : INITIAL_ANGGARAN),
@@ -355,34 +469,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const storedData = loadStoredData();
 
-  // Authentication state initialized from saved session
+  // Authentication state: Always require explicit login upon fresh browser visit or session
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      const session = localStorage.getItem(AUTH_SESSION_KEY);
-      if (session) {
-        try {
-          const parsed = JSON.parse(session);
-          if (parsed && (parsed.username || parsed.userId)) return true;
-        } catch {
-          return false;
-        }
+    const session = safeSessionStorageGet(AUTH_SESSION_KEY) || safeLocalStorageGet(AUTH_SESSION_KEY);
+    if (session) {
+      try {
+        const parsed = JSON.parse(session);
+        if (parsed && (parsed.username || parsed.userId)) return true;
+      } catch {
+        return false;
       }
     }
     return false;
   });
 
   const [currentUser, setCurrentUser] = useState<User>(() => {
-    if (typeof window !== 'undefined') {
-      const session = localStorage.getItem(AUTH_SESSION_KEY);
-      if (session) {
-        try {
-          const parsed = JSON.parse(session);
-          if (parsed && parsed.role) {
-            const matched = INITIAL_USERS.find(u => u.role === parsed.role || u.id === parsed.userId);
-            if (matched) return matched;
-          }
-        } catch {}
-      }
+    const session = safeSessionStorageGet(AUTH_SESSION_KEY) || safeLocalStorageGet(AUTH_SESSION_KEY);
+    if (session) {
+      try {
+        const parsed = JSON.parse(session);
+        if (parsed && parsed.role) {
+          const matched = INITIAL_USERS.find(u => u.role === parsed.role || u.id === parsed.userId);
+          if (matched) return matched;
+        }
+      } catch {}
     }
     return storedData?.currentUser || INITIAL_USERS[0];
   });
@@ -390,7 +500,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     storedData?.users || INITIAL_USERS
   );
   const [selectedTahun, setSelectedTahunState] = useState<number>(() => {
-    const savedTahun = localStorage.getItem(SELECTED_TAHUN_KEY);
+    const savedTahun = safeLocalStorageGet(SELECTED_TAHUN_KEY);
     if (savedTahun && !isNaN(Number(savedTahun))) return Number(savedTahun);
     return storedData?.selectedTahun || 2025;
   });
@@ -398,9 +508,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const setSelectedTahun = (tahun: number) => {
     const num = Number(tahun);
     setSelectedTahunState(num);
-    try {
-      localStorage.setItem(SELECTED_TAHUN_KEY, String(num));
-    } catch {}
+    safeLocalStorageSet(SELECTED_TAHUN_KEY, String(num));
   };
 
   const [tahunList, setTahunList] = useState<TahunAnggaran[]>(
@@ -419,9 +527,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [subKegiatanList, setSubKegiatanList] = useState<SubKegiatan[]>(
     storedData?.subKegiatanList || INITIAL_SUBKEGIATAN
   );
-  const [belanjaList, setBelanjaList] = useState<Belanja[]>(
-    storedData?.belanjaList || INITIAL_BELANJA
-  );
+  const [belanjaList, setBelanjaList] = useState<Belanja[]>(() => {
+    if (storedData?.belanjaList && Array.isArray(storedData.belanjaList)) {
+      return filterOutBelanjaTombstones(storedData.belanjaList);
+    }
+    const hasInit = safeLocalStorageGet('bfms_has_ever_initialized') === 'true';
+    return filterOutBelanjaTombstones(hasInit ? [] : INITIAL_BELANJA);
+  });
   const [sumberDanaList, setSumberDanaList] = useState<SumberDana[]>(
     storedData?.sumberDanaList || INITIAL_SUMBER_DANA
   );
@@ -432,14 +544,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (storedData?.anggaranList && Array.isArray(storedData.anggaranList)) {
       return storedData.anggaranList;
     }
-    const hasInit = typeof window !== 'undefined' && localStorage.getItem('bfms_has_ever_initialized') === 'true';
+    const hasInit = safeLocalStorageGet('bfms_has_ever_initialized') === 'true';
     return hasInit ? [] : INITIAL_ANGGARAN;
   });
   const [realisasiList, setRealisasiList] = useState<Realisasi[]>(() => {
     if (storedData?.realisasiList && Array.isArray(storedData.realisasiList)) {
       return sanitizeRealisasiList(storedData.realisasiList);
     }
-    const hasInit = typeof window !== 'undefined' && localStorage.getItem('bfms_has_ever_initialized') === 'true';
+    const hasInit = safeLocalStorageGet('bfms_has_ever_initialized') === 'true';
     return hasInit ? [] : INITIAL_REALISASI;
   });
   const [importLogs, setImportLogs] = useState<ImportLog[]>(
@@ -791,7 +903,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     const nextState = { ...base, ...partialNext };
     latestStateRef.current = nextState;
-    persistToLocalStorage(nextState);
+    persistToLocalStorage(nextState, true);
     saveStateBundleToCloud(nextState);
     return nextState;
   };
@@ -809,13 +921,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         const remoteUpdatedTime = remoteData.updatedAt ? new Date(remoteData.updatedAt).getTime() : 0;
-        const localSavedTimestampStr = localStorage.getItem(LOCAL_TIMESTAMP_KEY);
+        const localSavedTimestampStr = safeLocalStorageGet(LOCAL_TIMESTAMP_KEY);
         const localUpdatedTime = localSavedTimestampStr ? Number(localSavedTimestampStr) : 0;
 
-        // Conflict check: if local changes were made very recently (<3000ms) or local timestamp is newer,
+        // Conflict check: if local changes were made very recently (<10000ms) or local timestamp is newer,
         // retain local inputs so in-flight snapshots or race conditions don't resurrect deleted records
         const timeSinceLocalEdit = localModifiedAtRef.current > 0 ? (Date.now() - localModifiedAtRef.current) : Infinity;
-        if (timeSinceLocalEdit < 3000 || (localModifiedAtRef.current > 0 && localUpdatedTime > remoteUpdatedTime + 1000)) {
+        if (timeSinceLocalEdit < 10000 || (localModifiedAtRef.current > 0 && localUpdatedTime >= remoteUpdatedTime)) {
           console.info('Local state is newer or recently modified. Retaining local inputs.');
           return;
         }
@@ -847,7 +959,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setSubKegiatanList(remoteData.subKegiatanList);
         }
         if (remoteData.belanjaList && Array.isArray(remoteData.belanjaList)) {
-          setBelanjaList(remoteData.belanjaList);
+          setBelanjaList(filterOutBelanjaTombstones(remoteData.belanjaList));
         }
         if (remoteData.sumberDanaList && Array.isArray(remoteData.sumberDanaList)) {
           setSumberDanaList(remoteData.sumberDanaList);
@@ -1154,19 +1266,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
         setCurrentUser(updatedUser);
         setIsAuthenticated(true);
-        if (typeof window !== 'undefined') {
-          try {
-            const sessionData = JSON.stringify({
-              userId: updatedUser.id,
-              username: 'Kepala Badan',
-              nama: updatedUser.nama,
-              role: updatedUser.role,
-              loginAt: updatedUser.lastLogin
-            });
-            localStorage.setItem(AUTH_SESSION_KEY, sessionData);
-            sessionStorage.setItem(AUTH_SESSION_KEY, sessionData);
-          } catch {}
-        }
+        const sessionData = JSON.stringify({
+          userId: updatedUser.id,
+          username: 'Kepala Badan',
+          nama: updatedUser.nama,
+          role: updatedUser.role,
+          loginAt: updatedUser.lastLogin
+        });
+        safeLocalStorageSet(AUTH_SESSION_KEY, sessionData);
+        safeSessionStorageSet(AUTH_SESSION_KEY, sessionData);
         logActivity(`Pengguna "${updatedUser.nama}" (${updatedUser.role}) berhasil masuk ke sistem (Login)`);
         return { success: true, message: 'Login berhasil sebagai Kepala Badan', user: updatedUser };
       } else {
@@ -1185,19 +1293,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
         setCurrentUser(updatedUser);
         setIsAuthenticated(true);
-        if (typeof window !== 'undefined') {
-          try {
-            const sessionData = JSON.stringify({
-              userId: updatedUser.id,
-              username: 'Admin',
-              nama: updatedUser.nama,
-              role: updatedUser.role,
-              loginAt: updatedUser.lastLogin
-            });
-            localStorage.setItem(AUTH_SESSION_KEY, sessionData);
-            sessionStorage.setItem(AUTH_SESSION_KEY, sessionData);
-          } catch {}
-        }
+        const sessionData = JSON.stringify({
+          userId: updatedUser.id,
+          username: 'Admin',
+          nama: updatedUser.nama,
+          role: updatedUser.role,
+          loginAt: updatedUser.lastLogin
+        });
+        safeLocalStorageSet(AUTH_SESSION_KEY, sessionData);
+        safeSessionStorageSet(AUTH_SESSION_KEY, sessionData);
         logActivity(`Pengguna "${updatedUser.nama}" (${updatedUser.role}) berhasil masuk ke sistem (Login)`);
         return { success: true, message: 'Login berhasil sebagai Administrator', user: updatedUser };
       } else {
@@ -1213,12 +1317,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Authentication Logout
   const logout = () => {
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.removeItem(AUTH_SESSION_KEY);
-        sessionStorage.removeItem(AUTH_SESSION_KEY);
-      } catch {}
-    }
+    safeLocalStorageRemove(AUTH_SESSION_KEY);
+    safeSessionStorageRemove(AUTH_SESSION_KEY);
     setIsAuthenticated(false);
     logActivity(`Pengguna "${currentUser.nama}" telah keluar dari aplikasi (Logout)`);
   };
@@ -1823,158 +1923,232 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteProgram = (kodeProgram: string, tahun: number) => {
     const targetTahun = Number(tahun);
-    setPrograms(prev => prev.filter(p => !(p.kodeProgram === kodeProgram && Number(p.tahun) === targetTahun)));
+    const curList = latestStateRef.current?.programs !== undefined ? latestStateRef.current.programs : programs;
+    const cleanKode = (kodeProgram || '').trim().toLowerCase();
+    const nextList = curList.filter((p: Program) => {
+      const matchKode = (p.kodeProgram || '').trim().toLowerCase() === cleanKode;
+      const matchTahun = p.tahun ? Number(p.tahun) === targetTahun : true;
+      return !(matchKode && matchTahun);
+    });
+    setPrograms(nextList);
+    applyAndPersistState({ programs: nextList });
     logActivity(`Menghapus Program Master: ${kodeProgram}`);
   };
 
   const clearProgramDatabase = (tahun?: number) => {
+    const curList = latestStateRef.current?.programs !== undefined ? latestStateRef.current.programs : programs;
+    let nextList: Program[];
     if (tahun !== undefined && tahun !== null) {
       const targetTahun = Number(tahun);
-      setPrograms(prev => prev.filter(p => Number(p.tahun) !== targetTahun));
+      nextList = curList.filter((p: Program) => p.tahun && Number(p.tahun) !== targetTahun);
       logActivity(`Kosongkan Database Master Program TA ${targetTahun}`);
     } else {
-      setPrograms([]);
+      nextList = [];
       logActivity('Kosongkan Seluruh Database Master Program');
     }
+    setPrograms(nextList);
+    applyAndPersistState({ programs: nextList });
   };
 
   const addKegiatan = (keg: Kegiatan) => {
-    setKegiatanList(prev => [...prev, keg]);
+    const curList = latestStateRef.current?.kegiatanList !== undefined ? latestStateRef.current.kegiatanList : kegiatanList;
+    const nextList = [...curList, keg];
+    setKegiatanList(nextList);
+    applyAndPersistState({ kegiatanList: nextList });
     logActivity(`Menambah Kegiatan Master: ${keg.kodeKegiatan}`);
   };
 
   const updateKegiatan = (oldKode: string, oldTahun: number, updated: Partial<Kegiatan>) => {
     const targetTahun = Number(oldTahun);
-    setKegiatanList(prev =>
-      prev.map(k =>
-        (k.kodeKegiatan === oldKode || (updated.kodeKegiatan && k.kodeKegiatan === updated.kodeKegiatan)) &&
-        Number(k.tahun) === targetTahun
-          ? { ...k, ...updated }
-          : k
-      )
-    );
-    // Cascade update to SubKegiatan if kodeKegiatan changed
+    const curList = latestStateRef.current?.kegiatanList !== undefined ? latestStateRef.current.kegiatanList : kegiatanList;
+    const cleanOldKode = (oldKode || '').trim().toLowerCase();
+    const cleanNewKode = updated.kodeKegiatan ? (updated.kodeKegiatan || '').trim().toLowerCase() : cleanOldKode;
+    const nextList = curList.map((k: Kegiatan) => {
+      const kKode = (k.kodeKegiatan || '').trim().toLowerCase();
+      const match = (kKode === cleanOldKode || (updated.kodeKegiatan && kKode === cleanNewKode)) && Number(k.tahun) === targetTahun;
+      return match ? { ...k, ...updated } : k;
+    });
+    setKegiatanList(nextList);
+    let nextSub = latestStateRef.current?.subKegiatanList !== undefined ? latestStateRef.current.subKegiatanList : subKegiatanList;
     if (updated.kodeKegiatan && updated.kodeKegiatan !== oldKode) {
-      setSubKegiatanList(prev =>
-        prev.map(s => (s.kodeKegiatan === oldKode && Number(s.tahun) === targetTahun ? { ...s, kodeKegiatan: updated.kodeKegiatan! } : s))
-      );
+      nextSub = nextSub.map((s: SubKegiatan) => (s.kodeKegiatan === oldKode && Number(s.tahun) === targetTahun ? { ...s, kodeKegiatan: updated.kodeKegiatan! } : s));
+      setSubKegiatanList(nextSub);
     }
+    applyAndPersistState({ kegiatanList: nextList, subKegiatanList: nextSub });
     logActivity(`Memperbarui Kegiatan Master: ${oldKode} -> ${updated.kodeKegiatan || oldKode}`);
   };
 
   const deleteKegiatan = (kodeKegiatan: string, tahun: number) => {
     const targetTahun = Number(tahun);
-    setKegiatanList(prev => prev.filter(k => !(k.kodeKegiatan === kodeKegiatan && Number(k.tahun) === targetTahun)));
+    const curList = latestStateRef.current?.kegiatanList !== undefined ? latestStateRef.current.kegiatanList : kegiatanList;
+    const cleanKode = (kodeKegiatan || '').trim().toLowerCase();
+    const nextList = curList.filter((k: Kegiatan) => {
+      const matchKode = (k.kodeKegiatan || '').trim().toLowerCase() === cleanKode;
+      const matchTahun = k.tahun ? Number(k.tahun) === targetTahun : true;
+      return !(matchKode && matchTahun);
+    });
+    setKegiatanList(nextList);
+    applyAndPersistState({ kegiatanList: nextList });
     logActivity(`Menghapus Kegiatan Master: ${kodeKegiatan}`);
   };
 
   const clearKegiatanDatabase = (tahun?: number) => {
+    const curList = latestStateRef.current?.kegiatanList !== undefined ? latestStateRef.current.kegiatanList : kegiatanList;
+    let nextList: Kegiatan[];
     if (tahun !== undefined && tahun !== null) {
       const targetTahun = Number(tahun);
-      setKegiatanList(prev => prev.filter(k => Number(k.tahun) !== targetTahun));
+      nextList = curList.filter((k: Kegiatan) => k.tahun && Number(k.tahun) !== targetTahun);
       logActivity(`Kosongkan Database Master Kegiatan TA ${targetTahun}`);
     } else {
-      setKegiatanList([]);
+      nextList = [];
       logActivity('Kosongkan Seluruh Database Master Kegiatan');
     }
+    setKegiatanList(nextList);
+    applyAndPersistState({ kegiatanList: nextList });
   };
 
   const addSubKegiatan = (sub: SubKegiatan) => {
-    setSubKegiatanList(prev => [...prev, sub]);
+    const curList = latestStateRef.current?.subKegiatanList !== undefined ? latestStateRef.current.subKegiatanList : subKegiatanList;
+    const nextList = [...curList, sub];
+    setSubKegiatanList(nextList);
+    applyAndPersistState({ subKegiatanList: nextList });
     logActivity(`Menambah Sub Kegiatan Master: ${sub.kodeSub}`);
   };
 
   const updateSubKegiatan = (oldKode: string, oldTahun: number, updated: Partial<SubKegiatan>) => {
     const targetTahun = Number(oldTahun);
-    setSubKegiatanList(prev =>
-      prev.map(s =>
-        (s.kodeSub === oldKode || (updated.kodeSub && s.kodeSub === updated.kodeSub)) &&
-        Number(s.tahun) === targetTahun
-          ? { ...s, ...updated }
-          : s
-      )
-    );
+    const curList = latestStateRef.current?.subKegiatanList !== undefined ? latestStateRef.current.subKegiatanList : subKegiatanList;
+    const cleanOldKode = (oldKode || '').trim().toLowerCase();
+    const cleanNewKode = updated.kodeSub ? (updated.kodeSub || '').trim().toLowerCase() : cleanOldKode;
+    const nextList = curList.map((s: SubKegiatan) => {
+      const sKode = (s.kodeSub || '').trim().toLowerCase();
+      const match = (sKode === cleanOldKode || (updated.kodeSub && sKode === cleanNewKode)) && Number(s.tahun) === targetTahun;
+      return match ? { ...s, ...updated } : s;
+    });
+    setSubKegiatanList(nextList);
+    applyAndPersistState({ subKegiatanList: nextList });
     logActivity(`Memperbarui Sub Kegiatan Master: ${oldKode} -> ${updated.kodeSub || oldKode}`);
   };
 
   const deleteSubKegiatan = (kodeSub: string, tahun: number) => {
     const targetTahun = Number(tahun);
-    setSubKegiatanList(prev => prev.filter(s => !(s.kodeSub === kodeSub && Number(s.tahun) === targetTahun)));
+    const curList = latestStateRef.current?.subKegiatanList !== undefined ? latestStateRef.current.subKegiatanList : subKegiatanList;
+    const cleanKode = (kodeSub || '').trim().toLowerCase();
+    const nextList = curList.filter((s: SubKegiatan) => {
+      const matchKode = (s.kodeSub || '').trim().toLowerCase() === cleanKode;
+      const matchTahun = s.tahun ? Number(s.tahun) === targetTahun : true;
+      return !(matchKode && matchTahun);
+    });
+    setSubKegiatanList(nextList);
+    applyAndPersistState({ subKegiatanList: nextList });
     logActivity(`Menghapus Sub Kegiatan Master: ${kodeSub}`);
   };
 
   const clearSubKegiatanDatabase = (tahun?: number) => {
+    const curList = latestStateRef.current?.subKegiatanList !== undefined ? latestStateRef.current.subKegiatanList : subKegiatanList;
+    let nextList: SubKegiatan[];
     if (tahun !== undefined && tahun !== null) {
       const targetTahun = Number(tahun);
-      setSubKegiatanList(prev => prev.filter(s => Number(s.tahun) !== targetTahun));
+      nextList = curList.filter((s: SubKegiatan) => s.tahun && Number(s.tahun) !== targetTahun);
       logActivity(`Kosongkan Database Master Sub Kegiatan TA ${targetTahun}`);
     } else {
-      setSubKegiatanList([]);
+      nextList = [];
       logActivity('Kosongkan Seluruh Database Master Sub Kegiatan');
     }
+    setSubKegiatanList(nextList);
+    applyAndPersistState({ subKegiatanList: nextList });
   };
 
   const addBelanja = (bel: Belanja) => {
-    setBelanjaList(prev => [...prev, bel]);
+    removeDeletedBelanjaTombstone(bel.kodeBelanja, bel.tahun);
+    const curList = latestStateRef.current?.belanjaList !== undefined ? latestStateRef.current.belanjaList : belanjaList;
+    const nextList = [...curList, bel];
+    setBelanjaList(nextList);
+    applyAndPersistState({ belanjaList: nextList });
     logActivity(`Menambah Belanja Master: ${bel.kodeBelanja}`);
   };
 
   const updateBelanja = (oldKode: string, oldTahun: number, updated: Partial<Belanja>) => {
     const targetTahun = oldTahun ? Number(oldTahun) : undefined;
-    setBelanjaList(prev =>
-      prev.map(b => {
-        const matchesKode = b.kodeBelanja === oldKode || (updated.kodeBelanja && b.kodeBelanja === updated.kodeBelanja);
-        const matchesTahun = targetTahun !== undefined ? (!b.tahun || Number(b.tahun) === targetTahun) : true;
-        return matchesKode && matchesTahun ? { ...b, ...updated } : b;
-      })
-    );
+    const cleanOldKode = (oldKode || '').trim().toLowerCase();
+    const cleanNewKode = updated.kodeBelanja ? (updated.kodeBelanja || '').trim().toLowerCase() : cleanOldKode;
+    const curList = latestStateRef.current?.belanjaList !== undefined ? latestStateRef.current.belanjaList : belanjaList;
+    const nextList = curList.map((b: Belanja) => {
+      const bKode = (b.kodeBelanja || '').trim().toLowerCase();
+      const matchesKode = bKode === cleanOldKode || (updated.kodeBelanja && bKode === cleanNewKode);
+      const matchesTahun = targetTahun !== undefined && b.tahun ? Number(b.tahun) === targetTahun : true;
+      return matchesKode && matchesTahun ? { ...b, ...updated } : b;
+    });
+    setBelanjaList(nextList);
+    applyAndPersistState({ belanjaList: nextList });
     logActivity(`Memperbarui Belanja Master: ${oldKode} -> ${updated.kodeBelanja || oldKode}`);
   };
 
   const deleteBelanja = (kodeBelanja: string, tahun?: number) => {
-    const targetTahun = tahun ? Number(tahun) : undefined;
-    setBelanjaList(prev =>
-      prev.filter(b => {
-        const matchesKode = b.kodeBelanja === kodeBelanja;
-        const matchesTahun = targetTahun !== undefined && b.tahun ? Number(b.tahun) === targetTahun : true;
-        return !(matchesKode && matchesTahun);
-      })
-    );
+    const targetTahun = tahun !== undefined && tahun !== null && !isNaN(Number(tahun)) ? Number(tahun) : undefined;
+    const cleanTargetKode = (kodeBelanja || '').trim().toLowerCase();
+    const curList = latestStateRef.current?.belanjaList !== undefined ? latestStateRef.current.belanjaList : belanjaList;
+
+    const nextList = curList.filter((b: Belanja) => {
+      const cleanItemKode = (b.kodeBelanja || '').trim().toLowerCase();
+      if (cleanItemKode !== cleanTargetKode) return true;
+      // If code matches:
+      if (targetTahun !== undefined && b.tahun !== undefined && b.tahun !== null) {
+        return Number(b.tahun) !== targetTahun;
+      }
+      return false;
+    });
+
+    // Record tombstone so that cloud echoes, reload, and local persistence never resurrect it
+    recordDeletedBelanjaTombstone(kodeBelanja, targetTahun);
+
+    setBelanjaList(nextList);
+    applyAndPersistState({ belanjaList: nextList });
     logActivity(`Menghapus Belanja Master: ${kodeBelanja}`);
   };
 
   const clearBelanjaDatabase = (tahun?: number) => {
+    const curList = latestStateRef.current?.belanjaList !== undefined ? latestStateRef.current.belanjaList : belanjaList;
+    let nextList: Belanja[];
     if (tahun !== undefined && tahun !== null) {
       const targetTahun = Number(tahun);
-      setBelanjaList(prev => prev.filter(b => b.tahun && Number(b.tahun) !== targetTahun));
+      nextList = curList.filter((b: Belanja) => b.tahun && Number(b.tahun) !== targetTahun);
+      curList.forEach(b => {
+        if (b.tahun && Number(b.tahun) === targetTahun) {
+          recordDeletedBelanjaTombstone(b.kodeBelanja, targetTahun);
+        }
+      });
       logActivity(`Kosongkan Database Master Belanja Rekening TA ${targetTahun}`);
     } else {
-      setBelanjaList([]);
+      nextList = [];
+      curList.forEach(b => recordDeletedBelanjaTombstone(b.kodeBelanja, b.tahun));
       logActivity('Kosongkan Seluruh Database Master Belanja Rekening');
     }
+    setBelanjaList(nextList);
+    applyAndPersistState({ belanjaList: nextList });
   };
 
   const importProgramsBatch = (items: Program[]) => {
     let successCount = 0;
     let duplicateCount = 0;
+    const curList = latestStateRef.current?.programs !== undefined ? latestStateRef.current.programs : programs;
+    const updated = [...curList];
 
-    setPrograms(prev => {
-      const updated = [...prev];
-      items.forEach(newItem => {
-        const index = updated.findIndex(
-          p => p.kodeProgram === newItem.kodeProgram && p.tahun === newItem.tahun
-        );
-        if (index >= 0) {
-          updated[index] = newItem;
-          duplicateCount++;
-        } else {
-          updated.push(newItem);
-          successCount++;
-        }
-      });
-      return updated;
+    items.forEach(newItem => {
+      const index = updated.findIndex(
+        p => (p.kodeProgram || '').trim() === (newItem.kodeProgram || '').trim() && Number(p.tahun) === Number(newItem.tahun)
+      );
+      if (index >= 0) {
+        updated[index] = newItem;
+        duplicateCount++;
+      } else {
+        updated.push(newItem);
+        successCount++;
+      }
     });
 
+    setPrograms(updated);
+    applyAndPersistState({ programs: updated });
     logActivity(`Import Excel Program Master: ${successCount} baru, ${duplicateCount} diperbarui.`);
     return { successCount, duplicateCount };
   };
@@ -1982,24 +2156,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const importKegiatanBatch = (items: Kegiatan[]) => {
     let successCount = 0;
     let duplicateCount = 0;
+    const curList = latestStateRef.current?.kegiatanList !== undefined ? latestStateRef.current.kegiatanList : kegiatanList;
+    const updated = [...curList];
 
-    setKegiatanList(prev => {
-      const updated = [...prev];
-      items.forEach(newItem => {
-        const index = updated.findIndex(
-          k => k.kodeKegiatan === newItem.kodeKegiatan && k.tahun === newItem.tahun
-        );
-        if (index >= 0) {
-          updated[index] = newItem;
-          duplicateCount++;
-        } else {
-          updated.push(newItem);
-          successCount++;
-        }
-      });
-      return updated;
+    items.forEach(newItem => {
+      const index = updated.findIndex(
+        k => (k.kodeKegiatan || '').trim() === (newItem.kodeKegiatan || '').trim() && Number(k.tahun) === Number(newItem.tahun)
+      );
+      if (index >= 0) {
+        updated[index] = newItem;
+        duplicateCount++;
+      } else {
+        updated.push(newItem);
+        successCount++;
+      }
     });
 
+    setKegiatanList(updated);
+    applyAndPersistState({ kegiatanList: updated });
     logActivity(`Import Excel Kegiatan Master: ${successCount} baru, ${duplicateCount} diperbarui.`);
     return { successCount, duplicateCount };
   };
@@ -2007,24 +2181,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const importSubKegiatanBatch = (items: SubKegiatan[]) => {
     let successCount = 0;
     let duplicateCount = 0;
+    const curList = latestStateRef.current?.subKegiatanList !== undefined ? latestStateRef.current.subKegiatanList : subKegiatanList;
+    const updated = [...curList];
 
-    setSubKegiatanList(prev => {
-      const updated = [...prev];
-      items.forEach(newItem => {
-        const index = updated.findIndex(
-          s => s.kodeSub === newItem.kodeSub && s.tahun === newItem.tahun
-        );
-        if (index >= 0) {
-          updated[index] = newItem;
-          duplicateCount++;
-        } else {
-          updated.push(newItem);
-          successCount++;
-        }
-      });
-      return updated;
+    items.forEach(newItem => {
+      const index = updated.findIndex(
+        s => (s.kodeSub || '').trim() === (newItem.kodeSub || '').trim() && Number(s.tahun) === Number(newItem.tahun)
+      );
+      if (index >= 0) {
+        updated[index] = newItem;
+        duplicateCount++;
+      } else {
+        updated.push(newItem);
+        successCount++;
+      }
     });
 
+    setSubKegiatanList(updated);
+    applyAndPersistState({ subKegiatanList: updated });
     logActivity(`Import Excel Sub Kegiatan Master: ${successCount} baru, ${duplicateCount} diperbarui.`);
     return { successCount, duplicateCount };
   };
@@ -2032,73 +2206,92 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const importBelanjaBatch = (items: Belanja[]) => {
     let successCount = 0;
     let duplicateCount = 0;
+    const curList = latestStateRef.current?.belanjaList !== undefined ? latestStateRef.current.belanjaList : belanjaList;
+    const updated = [...curList];
 
-    setBelanjaList(prev => {
-      const updated = [...prev];
-      items.forEach(newItem => {
-        const index = updated.findIndex(
-          b => b.kodeBelanja === newItem.kodeBelanja && b.tahun === newItem.tahun
-        );
-        if (index >= 0) {
-          updated[index] = newItem;
-          duplicateCount++;
-        } else {
-          updated.push(newItem);
-          successCount++;
-        }
-      });
-      return updated;
+    items.forEach(newItem => {
+      removeDeletedBelanjaTombstone(newItem.kodeBelanja, newItem.tahun);
+      const index = updated.findIndex(
+        b => (b.kodeBelanja || '').trim() === (newItem.kodeBelanja || '').trim() && Number(b.tahun) === Number(newItem.tahun)
+      );
+      if (index >= 0) {
+        updated[index] = newItem;
+        duplicateCount++;
+      } else {
+        updated.push(newItem);
+        successCount++;
+      }
     });
 
+    setBelanjaList(updated);
+    applyAndPersistState({ belanjaList: updated });
     logActivity(`Import Excel Belanja Master: ${successCount} baru, ${duplicateCount} diperbarui.`);
     return { successCount, duplicateCount };
   };
 
   const addSumberDana = (sd: Omit<SumberDana, 'id'>) => {
     const fullSd: SumberDana = { ...sd, id: `SD-${Date.now()}` };
-    setSumberDanaList(prev => [...prev, fullSd]);
+    const curList = latestStateRef.current?.sumberDanaList !== undefined ? latestStateRef.current.sumberDanaList : sumberDanaList;
+    const nextList = [...curList, fullSd];
+    setSumberDanaList(nextList);
+    applyAndPersistState({ sumberDanaList: nextList });
     logActivity(`Menambah Sumber Dana: ${fullSd.namaSumber}`);
   };
 
   const updateSumberDana = (idOrKode: string, updated: Partial<SumberDana>) => {
-    setSumberDanaList(prev =>
-      prev.map(sd =>
-        (sd.id === idOrKode || sd.kodeSumber === idOrKode || (updated.kodeSumber && sd.kodeSumber === updated.kodeSumber))
-          ? { ...sd, ...updated }
-          : sd
-      )
+    const curList = latestStateRef.current?.sumberDanaList !== undefined ? latestStateRef.current.sumberDanaList : sumberDanaList;
+    const nextList = curList.map((sd: SumberDana) =>
+      (sd.id === idOrKode || sd.kodeSumber === idOrKode || (updated.kodeSumber && sd.kodeSumber === updated.kodeSumber))
+        ? { ...sd, ...updated }
+        : sd
     );
+    setSumberDanaList(nextList);
+    applyAndPersistState({ sumberDanaList: nextList });
     logActivity(`Memperbarui Sumber Dana: ${idOrKode}`);
   };
 
   const deleteSumberDana = (idOrKode: string) => {
-    setSumberDanaList(prev => prev.filter(sd => sd.id !== idOrKode && sd.kodeSumber !== idOrKode));
+    const curList = latestStateRef.current?.sumberDanaList !== undefined ? latestStateRef.current.sumberDanaList : sumberDanaList;
+    const nextList = curList.filter((sd: SumberDana) => sd.id !== idOrKode && sd.kodeSumber !== idOrKode);
+    setSumberDanaList(nextList);
+    applyAndPersistState({ sumberDanaList: nextList });
     logActivity(`Menghapus Sumber Dana: ${idOrKode}`);
   };
 
   const clearSumberDanaDatabase = () => {
     setSumberDanaList([]);
+    applyAndPersistState({ sumberDanaList: [] });
     logActivity('Kosongkan Seluruh Database Master Sumber Dana');
   };
 
   const addRekanan = (rek: Omit<Rekanan, 'id'>) => {
     const fullRek: Rekanan = { ...rek, id: `REK-${Date.now()}` };
-    setRekananList(prev => [...prev, fullRek]);
+    const curList = latestStateRef.current?.rekananList !== undefined ? latestStateRef.current.rekananList : rekananList;
+    const nextList = [...curList, fullRek];
+    setRekananList(nextList);
+    applyAndPersistState({ rekananList: nextList });
     logActivity(`Menambah Rekanan Baru: ${fullRek.namaRekanan}`);
   };
 
   const updateRekanan = (id: string, updated: Partial<Rekanan>) => {
-    setRekananList(prev => prev.map(r => (r.id === id ? { ...r, ...updated } : r)));
+    const curList = latestStateRef.current?.rekananList !== undefined ? latestStateRef.current.rekananList : rekananList;
+    const nextList = curList.map((r: Rekanan) => (r.id === id ? { ...r, ...updated } : r));
+    setRekananList(nextList);
+    applyAndPersistState({ rekananList: nextList });
     logActivity(`Memperbarui Rekanan ID: ${id}`);
   };
 
   const deleteRekanan = (id: string) => {
-    setRekananList(prev => prev.filter(r => r.id !== id));
+    const curList = latestStateRef.current?.rekananList !== undefined ? latestStateRef.current.rekananList : rekananList;
+    const nextList = curList.filter((r: Rekanan) => r.id !== id);
+    setRekananList(nextList);
+    applyAndPersistState({ rekananList: nextList });
     logActivity(`Menghapus Rekanan ID: ${id}`);
   };
 
   const clearRekananDatabase = () => {
     setRekananList([]);
+    applyAndPersistState({ rekananList: [] });
     logActivity('Kosongkan Seluruh Database Master Data Rekanan');
   };
 
@@ -2108,36 +2301,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...newOpd,
       id: newOpd.id || `OPD-${Date.now().toString().slice(-4)}`
     };
-    setOpdList(prev => [...prev, fullOpd]);
+    const curList = latestStateRef.current?.opdList !== undefined ? latestStateRef.current.opdList : opdList;
+    const nextList = [...curList, fullOpd];
+    setOpdList(nextList);
+    applyAndPersistState({ opdList: nextList });
     logActivity(`Menambah Unit Kerja / OPD Baru: ${fullOpd.namaOPD}`);
   };
 
   const updateOpd = (idOrKode: string, updated: Partial<OPD>) => {
-    setOpdList(prev =>
-      prev.map(item =>
-        (item.id === idOrKode || item.kodeOPD === idOrKode)
-          ? { ...item, ...updated }
-          : item
-      )
+    const curList = latestStateRef.current?.opdList !== undefined ? latestStateRef.current.opdList : opdList;
+    const nextList = curList.map((item: OPD) =>
+      (item.id === idOrKode || item.kodeOPD === idOrKode)
+        ? { ...item, ...updated }
+        : item
     );
+    setOpdList(nextList);
+    applyAndPersistState({ opdList: nextList });
     logActivity(`Memperbarui Data OPD / Unit Kerja ID/Kode: ${idOrKode}`);
   };
 
   const deleteOpd = (idOrKode: string) => {
-    setOpdList(prev =>
-      prev.filter(item => item.id !== idOrKode && item.kodeOPD !== idOrKode)
-    );
+    const curList = latestStateRef.current?.opdList !== undefined ? latestStateRef.current.opdList : opdList;
+    const nextList = curList.filter((item: OPD) => item.id !== idOrKode && item.kodeOPD !== idOrKode);
+    setOpdList(nextList);
+    applyAndPersistState({ opdList: nextList });
     logActivity(`Menghapus Data OPD / Unit Kerja ID/Kode: ${idOrKode}`);
   };
 
   const importOpdLogo = (idOrKode: string, logoUrl: string) => {
-    setOpdList(prev =>
-      prev.map(item =>
-        (item.id === idOrKode || item.kodeOPD === idOrKode)
-          ? { ...item, logoUrl }
-          : item
-      )
+    const curList = latestStateRef.current?.opdList !== undefined ? latestStateRef.current.opdList : opdList;
+    const nextList = curList.map((item: OPD) =>
+      (item.id === idOrKode || item.kodeOPD === idOrKode)
+        ? { ...item, logoUrl }
+        : item
     );
+    setOpdList(nextList);
+    applyAndPersistState({ opdList: nextList });
     logActivity(`Mengimpor / Mengunggah Logo Provinsi NTB untuk OPD ID/Kode: ${idOrKode}`);
   };
 
@@ -2147,22 +2346,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `USR-${Date.now()}`,
       lastLogin: '-'
     };
-    setUsers(prev => [...prev, fullUser]);
+    const curList = latestStateRef.current?.users !== undefined ? latestStateRef.current.users : users;
+    const nextList = [...curList, fullUser];
+    setUsers(nextList);
+    applyAndPersistState({ users: nextList });
     logActivity(`Menambah Pengguna Sistem Baru: ${fullUser.username} (${fullUser.role})`);
   };
 
   const updateUserStatus = (id: string, status: 'Aktif' | 'Nonaktif') => {
-    setUsers(prev => prev.map(u => (u.id === id ? { ...u, status } : u)));
+    const curList = latestStateRef.current?.users !== undefined ? latestStateRef.current.users : users;
+    const nextList = curList.map((u: User) => (u.id === id ? { ...u, status } : u));
+    setUsers(nextList);
+    applyAndPersistState({ users: nextList });
     logActivity(`Mengubah Status User ID ${id} menjadi ${status}`);
   };
 
   const updateUser = (id: string, updated: Partial<User>) => {
-    setUsers(prev => prev.map(u => (u.id === id ? { ...u, ...updated } : u)));
+    const curList = latestStateRef.current?.users !== undefined ? latestStateRef.current.users : users;
+    const nextList = curList.map((u: User) => (u.id === id ? { ...u, ...updated } : u));
+    setUsers(nextList);
+    applyAndPersistState({ users: nextList });
     logActivity(`Memperbarui Data User ID ${id}: ${updated.nama || updated.username || ''}`);
   };
 
   const deleteUser = (id: string) => {
-    setUsers(prev => prev.filter(u => u.id !== id));
+    const curList = latestStateRef.current?.users !== undefined ? latestStateRef.current.users : users;
+    const nextList = curList.filter((u: User) => u.id !== id);
+    setUsers(nextList);
+    applyAndPersistState({ users: nextList });
     logActivity(`Menghapus User Sistem ID ${id}`);
   };
 
