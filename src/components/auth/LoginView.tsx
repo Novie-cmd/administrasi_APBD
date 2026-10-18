@@ -137,7 +137,7 @@ export const LoginView: React.FC = () => {
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Contoh: Kepala Badan atau Admin"
+                    placeholder="Masukkan username akun..."
                     autoFocus
                     className="w-full rounded-xl bg-[#FFFFFF] border border-[#DFE6EF] pl-10 pr-3.5 py-2.5 text-xs sm:text-sm font-semibold text-[#17324D] placeholder:text-[#64748B] focus:outline-none focus:border-[#079669] focus:ring-2 focus:ring-[#079669]/20 transition"
                   />

@@ -1278,7 +1278,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         logActivity(`Pengguna "${updatedUser.nama}" (${updatedUser.role}) berhasil masuk ke sistem (Login)`);
         return { success: true, message: 'Login berhasil sebagai Kepala Badan', user: updatedUser };
       } else {
-        return { success: false, message: 'Password untuk Kepala Badan salah! Gunakan password: Kaban123' };
+        return { success: false, message: 'Password untuk Kepala Badan tidak valid.' };
       }
     }
 
@@ -1305,13 +1305,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         logActivity(`Pengguna "${updatedUser.nama}" (${updatedUser.role}) berhasil masuk ke sistem (Login)`);
         return { success: true, message: 'Login berhasil sebagai Administrator', user: updatedUser };
       } else {
-        return { success: false, message: 'Password untuk Admin salah! Gunakan password: Admin123' };
+        return { success: false, message: 'Password untuk Administrator tidak valid.' };
       }
     }
 
     return {
       success: false,
-      message: 'Username atau password tidak cocok. Gunakan username "Kepala Badan" (password: Kaban123) atau "Admin" (password: Admin123).'
+      message: 'Username atau password tidak cocok. Silakan periksa kembali kredensial Anda.'
     };
   };
 
