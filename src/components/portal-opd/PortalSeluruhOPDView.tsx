@@ -2733,37 +2733,37 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                 {allMasterProgramList.slice(0, 40).map((p, idx) => {
                   const pct = p.pagu > 0 ? (p.realisasi / p.pagu) * 100 : 0;
                   return (
-                    <div key={p.id || idx} className="rounded-xl border border-slate-800 bg-slate-900/90 p-3.5 space-y-2.5 shadow-sm">
+                    <div key={p.id || idx} className="rounded-xl border border-[#DFE6EF] bg-[#FFFFFF] p-3.5 space-y-2.5 shadow-xs">
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="flex items-center gap-1.5">
-                            <span className="rounded bg-cyan-950 px-2 py-0.5 text-[9px] font-bold text-cyan-300 border border-cyan-800/60 font-mono">
+                            <span className="rounded bg-blue-50 px-2 py-0.5 text-[9px] font-bold text-[#3984E8] border border-blue-200 font-mono">
                               {p.kodeProgram}
                             </span>
-                            <span className="text-[10.5px] font-bold text-white bg-slate-800 px-2 py-0.5 rounded">
+                            <span className="text-[10.5px] font-bold text-[#17324D] bg-slate-100 px-2 py-0.5 rounded border border-[#DFE6EF]">
                               {p.singkatan}
                             </span>
                           </div>
-                          <h4 className="font-bold text-xs text-white mt-1 leading-snug">{p.namaProgram}</h4>
-                          <p className="text-[10px] text-slate-400 truncate">{p.namaOPD}</p>
+                          <h4 className="font-bold text-xs text-[#17324D] mt-1 leading-snug">{p.namaProgram}</h4>
+                          <p className="text-[10px] text-[#64748B] truncate">{p.namaOPD}</p>
                         </div>
                         <span
                           className={`rounded-full px-2 py-0.5 text-[10px] font-bold shrink-0 ${
-                            pct >= 80 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-cyan-500/20 text-cyan-300'
+                            pct >= 80 ? 'bg-emerald-50 text-[#079669] border border-emerald-200' : 'bg-blue-50 text-[#3984E8] border border-blue-200'
                           }`}
                         >
                           {pct.toFixed(1)}%
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 text-[11px] pt-2 border-t border-slate-800">
+                      <div className="grid grid-cols-2 gap-2 text-[11px] pt-2 border-t border-[#DFE6EF]">
                         <div>
-                          <span className="text-slate-400 block text-[10px]">Pagu Program:</span>
-                          <span className="font-bold font-mono text-slate-200">{formatRupiah(p.pagu)}</span>
+                          <span className="text-[#64748B] block text-[10px]">Pagu Program:</span>
+                          <span className="font-bold font-mono text-[#17324D]">{formatRupiah(p.pagu)}</span>
                         </div>
                         <div>
-                          <span className="text-slate-400 block text-[10px]">Realisasi SP2D:</span>
-                          <span className="font-bold font-mono text-emerald-400">{formatRupiah(p.realisasi)}</span>
+                          <span className="text-[#64748B] block text-[10px]">Realisasi SP2D:</span>
+                          <span className="font-bold font-mono text-[#079669]">{formatRupiah(p.realisasi)}</span>
                         </div>
                       </div>
 
@@ -3182,9 +3182,9 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                       const sisa = prog.pagu - prog.realisasi;
                       return (
                         <tr key={prog.id || idx} className="hover:bg-slate-800/40">
-                          <td className="p-3 text-center text-slate-400 font-bold">{idx + 1}</td>
-                          <td className="p-3 font-mono text-cyan-300 font-semibold">{prog.kodeProgram}</td>
-                          <td className="p-3 font-bold text-white">{prog.namaProgram}</td>
+                          <td className="p-3 text-center text-[#64748B] font-bold">{idx + 1}</td>
+                          <td className="p-3 font-mono text-[#3984E8] font-semibold">{prog.kodeProgram}</td>
+                          <td className="p-3 font-bold text-[#17324D]">{prog.namaProgram}</td>
                           {laporanOpdId === 'ALL' && (
                             <td className="p-3 font-semibold text-cyan-400">{prog.namaOPD}</td>
                           )}
@@ -3361,9 +3361,9 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                       const sisa = keg.pagu - keg.realisasi;
                       return (
                         <tr key={keg.id || idx} className="hover:bg-slate-800/40">
-                          <td className="p-3 text-center text-slate-400 font-bold">{idx + 1}</td>
-                          <td className="p-3 font-mono text-cyan-300 font-semibold">{keg.kodeKegiatan}</td>
-                          <td className="p-3 font-bold text-white">{keg.namaKegiatan}</td>
+                          <td className="p-3 text-center text-[#64748B] font-bold">{idx + 1}</td>
+                          <td className="p-3 font-mono text-[#3984E8] font-semibold">{keg.kodeKegiatan}</td>
+                          <td className="p-3 font-bold text-[#17324D]">{keg.namaKegiatan}</td>
                           <td className="p-3 font-mono text-slate-400">{keg.kodeProgram}</td>
                           {laporanOpdId === 'ALL' && (
                             <td className="p-3 font-semibold text-cyan-400">{keg.namaOPD}</td>
@@ -3543,9 +3543,9 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                       const sisa = sub.pagu - sub.realisasi;
                       return (
                         <tr key={sub.id || idx} className="hover:bg-slate-800/40">
-                          <td className="p-3 text-center text-slate-400 font-bold">{idx + 1}</td>
-                          <td className="p-3 font-mono text-cyan-300 font-semibold">{sub.kodeSub}</td>
-                          <td className="p-3 font-bold text-white">{sub.namaSub}</td>
+                          <td className="p-3 text-center text-[#64748B] font-bold">{idx + 1}</td>
+                          <td className="p-3 font-mono text-[#3984E8] font-semibold">{sub.kodeSub}</td>
+                          <td className="p-3 font-bold text-[#17324D]">{sub.namaSub}</td>
                           <td className="p-3 font-mono text-slate-400">{sub.kodeKegiatan}</td>
                           {laporanOpdId === 'ALL' && (
                             <td className="p-3 font-semibold text-cyan-400">{sub.namaOPD}</td>

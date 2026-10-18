@@ -22,6 +22,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   margin: 0;
   padding: 0;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Custom clean government scrollbars */
@@ -87,14 +88,10 @@ body {
   border-color: #DFE6EF !important;
 }
 
-/* Main text colors */
+/* Primary text colors */
 .text-slate-100,
 .text-slate-200,
 .text-slate-300 {
-  color: #17324D !important;
-}
-
-.text-white:not(button):not(button *):not([class*="bg-[#079669]"] *):not([class*="bg-[#3984E8]"] *):not([class*="bg-emerald-600"] *):not([class*="bg-blue-600"] *):not([class*="bg-rose-600"] *):not([class*="bg-red-600"] *):not([class*="bg-amber-600"] *) {
   color: #17324D !important;
 }
 
@@ -158,7 +155,8 @@ body {
 }
 
 /* Accent amber / yellow overrides */
-.text-amber-400 {
+.text-amber-400,
+.text-amber-300 {
   color: #D99A24 !important;
 }
 
@@ -173,7 +171,8 @@ body {
 }
 
 /* Accent rose / danger overrides */
-.text-rose-400 {
+.text-rose-400,
+.text-red-400 {
   color: #D94F70 !important;
 }
 
@@ -182,6 +181,8 @@ body {
 .bg-rose-950\/70,
 .bg-rose-950\/60,
 .bg-rose-950\/40,
+.bg-rose-950\/20,
+.bg-rose-950\/30,
 .bg-red-950,
 .bg-red-950\/80 {
   background-color: #FFF1F2 !important;
@@ -189,12 +190,79 @@ body {
   border-color: #FECDD3 !important;
 }
 
-/* Table and interactive hover overrides */
-.hover\:bg-slate-800\/50:hover,
-.hover\:bg-slate-800\/40:hover,
-.hover\:bg-slate-900\/50:hover,
-.hover\:bg-slate-900\/60:hover {
+/* ========================================================
+   PROFESSIONAL GOVERNMENT TABLES ENFORCEMENT
+   Ensures table rows, headers, and text have high contrast
+   ======================================================== */
+
+table {
+  color: #17324D !important;
+}
+
+table thead {
   background-color: #F8FAFC !important;
+  border-bottom: 2px solid #DFE6EF !important;
+}
+
+table thead th {
+  color: #17324D !important;
+  font-weight: 700 !important;
+}
+
+table tbody tr {
+  border-bottom: 1px solid #DFE6EF !important;
+}
+
+table tbody tr:hover,
+.hover\:bg-slate-800\/40:hover,
+.hover\:bg-slate-800\/50:hover,
+.hover\:bg-slate-900\/50:hover,
+.hover\:bg-slate-900\/60:hover,
+.hover\:bg-slate-900\/80:hover {
+  background-color: #F8FAFC !important;
+}
+
+table td {
+  color: #17324D;
+}
+
+/* CRITICAL: Overwrite any text-white on table cells, divs, spans inside tables */
+table td.text-white,
+table td .text-white,
+table th.text-white,
+table th .text-white,
+table tfoot td.text-white,
+table tfoot td .text-white,
+table tfoot th.text-white,
+table tfoot th .text-white {
+  color: #17324D !important;
+}
+
+table tfoot {
+  background-color: #F8FAFC !important;
+  border-top: 2px solid #CBD5E1 !important;
+  color: #17324D !important;
+}
+
+/* Ensure buttons and colored action pills retain pure white text */
+button.text-white,
+button .text-white,
+a.text-white,
+.bg-emerald-600.text-white,
+.bg-emerald-600 .text-white,
+.bg-blue-600.text-white,
+.bg-blue-600 .text-white,
+.bg-amber-600.text-white,
+.bg-amber-600 .text-white,
+.bg-rose-600.text-white,
+.bg-rose-600 .text-white,
+.bg-teal-600.text-white,
+.bg-teal-600 .text-white,
+.bg-\[\#079669\].text-white,
+.bg-\[\#079669\] .text-white,
+.bg-\[\#3984E8\].text-white,
+.bg-\[\#3984E8\] .text-white {
+  color: #FFFFFF !important;
 }
 
 /* Form inputs & selects styled with dark classes */
@@ -229,7 +297,7 @@ textarea.bg-slate-900:focus {
 .gov-table-header {
   background-color: #F8FAFC;
   color: #17324D;
-  border-bottom: 1px solid #DFE6EF;
+  border-bottom: 2px solid #DFE6EF;
 }
 
 .gov-table-row {

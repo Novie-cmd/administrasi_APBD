@@ -410,58 +410,58 @@ const RealisasiDetailModal: React.FC<RealisasiDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col rounded-3xl border border-slate-700 bg-slate-900 shadow-2xl overflow-hidden text-slate-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#17324D]/40 p-4 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col rounded-3xl border border-[#DFE6EF] bg-[#FFFFFF] shadow-2xl overflow-hidden text-[#17324D]">
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-slate-800 p-5 bg-slate-950">
+        <div className="flex items-start justify-between border-b border-[#DFE6EF] p-5 bg-[#F8FAFC]">
           <div className="space-y-1 pr-6">
             <div className="flex items-center gap-2">
-              <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-500/30">
+              <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-[#079669] border border-emerald-200">
                 Rincian Uraian Realisasi
               </span>
-              <span className="text-xs font-semibold text-slate-400">TA {selectedTahun}</span>
+              <span className="text-xs font-semibold text-[#64748B]">TA {selectedTahun}</span>
             </div>
-            <h2 className="text-lg font-bold text-white leading-tight">
+            <h2 className="text-lg font-bold text-[#17324D] leading-tight">
               {filter.title}
             </h2>
             {filter.subtitle && (
-              <p className="text-xs text-amber-400 font-semibold">
+              <p className="text-xs text-[#079669] font-semibold">
                 {filter.subtitle}
               </p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+            className="rounded-xl p-2 text-[#64748B] hover:bg-slate-100 hover:text-[#17324D] transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Search & Stat Summary Bar */}
-        <div className="flex flex-col gap-3 p-4 bg-slate-900/90 border-b border-slate-800">
+        <div className="flex flex-col gap-3 p-4 bg-[#FFFFFF] border-b border-[#DFE6EF]">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {/* Stat Card 1: Jumlah Transaksi */}
-            <div className="flex items-center gap-3 rounded-2xl bg-slate-950 p-3 border border-emerald-500/30">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400">
+            <div className="flex items-center gap-3 rounded-2xl bg-[#F8FAFC] p-3 border border-[#DFE6EF]">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-[#079669]">
                 <FileText className="h-5 w-5" />
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Jumlah Transaksi</span>
-                <div className="text-lg font-black font-mono text-emerald-400">
-                  {searchedRealisasi.length} <span className="text-xs font-normal text-slate-300">Transaksi SP2D</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Jumlah Transaksi</span>
+                <div className="text-lg font-black font-mono text-[#079669]">
+                  {searchedRealisasi.length} <span className="text-xs font-normal text-[#64748B]">Transaksi SP2D</span>
                 </div>
               </div>
             </div>
 
             {/* Stat Card 2: Total Nilai Realisasi */}
-            <div className="flex items-center gap-3 rounded-2xl bg-slate-950 p-3 border border-emerald-500/30">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400">
+            <div className="flex items-center gap-3 rounded-2xl bg-[#F8FAFC] p-3 border border-[#DFE6EF]">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-[#D99A24]">
                 <Sparkles className="h-5 w-5" />
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Nilai Realisasi</span>
-                <div className="text-lg font-black font-mono text-amber-400">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Total Nilai Realisasi</span>
+                <div className="text-lg font-black font-mono text-[#079669]">
                   Rp {totalNilaiModal.toLocaleString('id-ID')}
                 </div>
               </div>
@@ -470,18 +470,18 @@ const RealisasiDetailModal: React.FC<RealisasiDetailModalProps> = ({
             {/* Stat Card 3: Pencarian Uraian */}
             <div className="flex items-center gap-2 sm:col-span-2 lg:col-span-1">
               <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748B]" />
                 <input
                   type="text"
                   value={modalSearch}
                   onChange={e => setModalSearch(e.target.value)}
                   placeholder="Cari uraian, No SP2D, rekanan..."
-                  className="w-full bg-slate-950 text-white rounded-xl pl-9 pr-8 py-2.5 text-xs border border-slate-700 focus:outline-none focus:border-emerald-500 placeholder:text-slate-500"
+                  className="w-full bg-[#FFFFFF] text-[#17324D] rounded-xl pl-9 pr-8 py-2.5 text-xs border border-[#DFE6EF] focus:outline-none focus:border-[#079669] placeholder:text-[#64748B]"
                 />
                 {modalSearch && (
                   <button
                     onClick={() => setModalSearch('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#17324D]"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -490,7 +490,7 @@ const RealisasiDetailModal: React.FC<RealisasiDetailModalProps> = ({
               <button
                 onClick={exportModalExcel}
                 disabled={searchedRealisasi.length === 0}
-                className="flex items-center gap-1.5 shrink-0 rounded-xl bg-emerald-950 hover:bg-emerald-900 px-3 py-2 text-xs font-bold text-emerald-300 border border-emerald-700 disabled:opacity-50 transition-colors"
+                className="flex items-center gap-1.5 shrink-0 rounded-xl bg-emerald-50 hover:bg-emerald-100 px-3 py-2 text-xs font-bold text-[#079669] border border-emerald-300 disabled:opacity-50 transition-colors cursor-pointer"
                 title="Ekspor daftar uraian ke Excel"
               >
                 <Download className="h-3.5 w-3.5" />
@@ -503,15 +503,15 @@ const RealisasiDetailModal: React.FC<RealisasiDetailModalProps> = ({
         {/* Content Table */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin">
           {searchedRealisasi.length === 0 ? (
-            <div className="py-12 text-center text-slate-400 space-y-2">
-              <FileText className="h-10 w-10 text-slate-600 mx-auto" />
-              <p className="font-semibold text-sm">Tidak ada data realisasi yang ditemukan.</p>
-              <p className="text-xs text-slate-500">Coba gunakan kata kunci pencarian yang berbeda.</p>
+            <div className="py-12 text-center text-[#64748B] space-y-2">
+              <FileText className="h-10 w-10 text-slate-300 mx-auto" />
+              <p className="font-semibold text-sm text-[#17324D]">Tidak ada data realisasi yang ditemukan.</p>
+              <p className="text-xs text-[#64748B]">Coba gunakan kata kunci pencarian yang berbeda.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950">
+            <div className="overflow-x-auto rounded-2xl border border-[#DFE6EF] bg-[#FFFFFF]">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-slate-900 text-slate-300 font-bold uppercase border-b border-slate-800">
+                <thead className="bg-[#F8FAFC] text-[#17324D] font-bold uppercase border-b-2 border-[#DFE6EF] text-[11px] tracking-wider">
                   <tr>
                     <th className="p-3 text-center w-12">No</th>
                     <th className="p-3 min-w-[140px]">Tanggal & SP2D</th>
@@ -521,44 +521,44 @@ const RealisasiDetailModal: React.FC<RealisasiDetailModalProps> = ({
                     <th className="p-3 text-right min-w-[140px]">Nilai SP2D (Rp)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-[#DFE6EF] text-[#17324D]">
                   {searchedRealisasi.map((item, idx) => {
                     const bObj = belanjaList.find(b => isCodeEqual(b.kodeBelanja, item.kodeBelanja));
                     const sObj = subKegiatanList.find(s => isCodeEqual(s.kodeSub, item.kodeSub));
                     return (
-                      <tr key={item.id || idx} className="hover:bg-slate-900/80 transition-colors">
-                        <td className="p-3 text-center text-slate-500 font-mono font-bold">{idx + 1}</td>
+                      <tr key={item.id || idx} className="hover:bg-[#F8FAFC] transition-colors">
+                        <td className="p-3 text-center text-[#64748B] font-mono font-bold">{idx + 1}</td>
                         <td className="p-3 space-y-1">
-                          <div className="font-semibold text-white">{item.tanggal}</div>
-                          <div className="font-mono text-[11px] text-amber-400 font-bold">{item.noSP2D}</div>
+                          <div className="font-semibold text-[#17324D]">{item.tanggal}</div>
+                          <div className="font-mono text-[11px] text-[#079669] font-bold">{item.noSP2D}</div>
                           {item.noSPM && (
-                            <div className="text-[10px] text-slate-400 font-mono">SPM: {item.noSPM}</div>
+                            <div className="text-[10px] text-[#64748B] font-mono">SPM: {item.noSPM}</div>
                           )}
                         </td>
                         <td className="p-3 space-y-1">
-                          <div className="text-[11px] font-bold text-slate-200">
+                          <div className="text-[11px] font-bold text-[#17324D]">
                             {sObj?.namaSub || item.kodeSub}
                           </div>
-                          <div className="font-mono text-[10px] text-slate-400">{item.kodeSub}</div>
+                          <div className="font-mono text-[10px] text-[#64748B]">{item.kodeSub}</div>
                           <div className="pt-1 flex items-center gap-1">
-                            <span className="font-mono font-bold text-emerald-400 text-[10px] bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-800/60">
+                            <span className="font-mono font-bold text-[#079669] text-[10px] bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
                               {item.kodeBelanja}
                             </span>
-                            <span className="text-slate-300 text-[10px] truncate max-w-[160px]">
+                            <span className="text-[#64748B] text-[10px] truncate max-w-[160px]">
                               {bObj?.namaBelanja || `Belanja ${item.kodeBelanja}`}
                             </span>
                           </div>
                         </td>
                         <td className="p-3">
-                          <div className="bg-slate-900 border border-slate-800/80 rounded-xl p-3 text-slate-100 text-xs font-normal leading-relaxed break-words shadow-inner">
-                            <div className="text-[10px] font-bold uppercase text-slate-400 mb-1">Uraian Transaksi:</div>
-                            {item.uraian || '-'}
+                          <div className="bg-[#F8FAFC] border border-[#DFE6EF] rounded-xl p-3 text-[#17324D] text-xs font-normal leading-relaxed break-words">
+                            <div className="text-[10px] font-bold uppercase text-[#64748B] mb-1">Uraian Transaksi:</div>
+                            <span className="font-medium text-[#17324D]">{item.uraian || '-'}</span>
                           </div>
                         </td>
-                        <td className="p-3 font-medium text-slate-300 text-xs">
+                        <td className="p-3 font-medium text-[#64748B] text-xs">
                           {item.rekanan || '-'}
                         </td>
-                        <td className="p-3 text-right font-mono font-bold text-emerald-400 text-sm whitespace-nowrap bg-emerald-950/10">
+                        <td className="p-3 text-right font-mono font-bold text-[#079669] text-sm whitespace-nowrap bg-emerald-50/40">
                           Rp {item.nilai.toLocaleString('id-ID')}
                         </td>
                       </tr>
@@ -571,7 +571,7 @@ const RealisasiDetailModal: React.FC<RealisasiDetailModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-slate-800 p-4 bg-slate-950 text-xs">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-[#DFE6EF] p-4 bg-[#F8FAFC] text-xs">
           <div className="flex items-center gap-2 text-slate-300 font-semibold">
             <span className="rounded-lg bg-emerald-950 border border-emerald-700/60 px-2.5 py-1 text-emerald-300 font-mono">
               Total {searchedRealisasi.length} Transaksi
@@ -687,72 +687,72 @@ const SPDDetailModal: React.FC<SPDDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col rounded-3xl border border-blue-500/30 bg-slate-900 shadow-2xl overflow-hidden text-slate-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col rounded-3xl border border-[#DFE6EF] bg-[#FFFFFF] shadow-2xl overflow-hidden text-[#17324D]">
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-slate-800 p-5 bg-slate-950">
+        <div className="flex items-start justify-between border-b border-[#DFE6EF] p-5 bg-[#F8FAFC]">
           <div className="space-y-1 pr-6">
             <div className="flex items-center gap-2">
-              <span className="rounded-full bg-blue-500/20 px-2.5 py-0.5 text-[10px] font-bold text-blue-400 border border-blue-500/30 flex items-center gap-1">
+              <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-bold text-[#3984E8] border border-blue-200 flex items-center gap-1">
                 <DollarSign className="h-3 w-3" />
                 Rincian Surat Penyediaan Dana (SPD) & Anggaran
               </span>
-              <span className="text-xs font-semibold text-slate-400">TA {selectedTahun}</span>
+              <span className="text-xs font-semibold text-[#64748B]">TA {selectedTahun}</span>
             </div>
-            <h2 className="text-lg font-bold text-white leading-tight">
+            <h2 className="text-lg font-bold text-[#17324D] leading-tight">
               {filter.title}
             </h2>
             {filter.subtitle && (
-              <p className="text-xs text-cyan-400 font-semibold">
+              <p className="text-xs text-[#3984E8] font-semibold">
                 {filter.subtitle}
               </p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+            className="rounded-xl p-2 text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#17324D] transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Search & Stat Summary Bar */}
-        <div className="flex flex-col gap-3 p-4 bg-slate-900/90 border-b border-slate-800">
+        <div className="flex flex-col gap-3 p-4 bg-[#F8FAFC] border-b border-[#DFE6EF]">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {/* Stat Card 1: Jumlah Rekening */}
-            <div className="flex items-center gap-3 rounded-2xl bg-slate-950 p-3 border border-blue-500/30">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/20 text-blue-400">
+            <div className="flex items-center gap-3 rounded-2xl bg-[#FFFFFF] p-3 border border-[#DFE6EF] shadow-xs">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#3984E8]">
                 <BookOpen className="h-5 w-5" />
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Jumlah Rekening</span>
-                <div className="text-base sm:text-lg font-black font-mono text-blue-400">
-                  {searchedAnggaran.length} <span className="text-xs font-normal text-slate-300">Rekening</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Jumlah Rekening</span>
+                <div className="text-base sm:text-lg font-black font-mono text-[#3984E8]">
+                  {searchedAnggaran.length} <span className="text-xs font-normal text-[#64748B]">Rekening</span>
                 </div>
               </div>
             </div>
 
             {/* Stat Card 2: Total Nilai SPD */}
-            <div className="flex items-center gap-3 rounded-2xl bg-slate-950 p-3 border border-blue-500/30">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600/20 text-cyan-300">
+            <div className="flex items-center gap-3 rounded-2xl bg-[#FFFFFF] p-3 border border-[#DFE6EF] shadow-xs">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-[#079669]">
                 <DollarSign className="h-5 w-5" />
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-300">Total Nilai SPD</span>
-                <div className="text-base sm:text-lg font-black font-mono text-cyan-300 truncate">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#079669]">Total Nilai SPD</span>
+                <div className="text-base sm:text-lg font-black font-mono text-[#079669] truncate">
                   Rp {totalSPD.toLocaleString('id-ID')}
                 </div>
               </div>
             </div>
 
             {/* Stat Card 3: Total Nilai Anggaran (Pagu Akhir) */}
-            <div className="flex items-center gap-3 rounded-2xl bg-slate-950 p-3 border border-slate-700">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-slate-300">
+            <div className="flex items-center gap-3 rounded-2xl bg-[#FFFFFF] p-3 border border-[#DFE6EF] shadow-xs">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-[#17324D]">
                 <Layers className="h-5 w-5" />
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Nilai Anggaran (Pagu)</span>
-                <div className="text-base sm:text-lg font-black font-mono text-white truncate">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Nilai Anggaran (Pagu)</span>
+                <div className="text-base sm:text-lg font-black font-mono text-[#17324D] truncate">
                   Rp {totalPaguAkhir.toLocaleString('id-ID')}
                 </div>
               </div>
@@ -761,18 +761,18 @@ const SPDDetailModal: React.FC<SPDDetailModalProps> = ({
             {/* Search Input & Export Button */}
             <div className="flex items-center gap-2">
               <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748B]" />
                 <input
                   type="text"
                   value={modalSearch}
                   onChange={e => setModalSearch(e.target.value)}
                   placeholder="Cari kode rekening, belanja..."
-                  className="w-full bg-slate-950 text-white rounded-xl pl-9 pr-8 py-2.5 text-xs border border-slate-700 focus:outline-none focus:border-blue-500 placeholder:text-slate-500"
+                  className="w-full bg-[#FFFFFF] text-[#17324D] rounded-xl pl-9 pr-8 py-2.5 text-xs border border-[#DFE6EF] focus:outline-none focus:border-[#079669] placeholder:text-[#64748B]"
                 />
                 {modalSearch && (
                   <button
                     onClick={() => setModalSearch('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#17324D]"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -781,7 +781,7 @@ const SPDDetailModal: React.FC<SPDDetailModalProps> = ({
               <button
                 onClick={exportModalExcel}
                 disabled={searchedAnggaran.length === 0}
-                className="flex items-center gap-1.5 shrink-0 rounded-xl bg-blue-950 hover:bg-blue-900 px-3 py-2 text-xs font-bold text-blue-300 border border-blue-700 disabled:opacity-50 transition-colors"
+                className="flex items-center gap-1.5 shrink-0 rounded-xl bg-blue-50 hover:bg-blue-100 px-3 py-2 text-xs font-bold text-[#3984E8] border border-blue-200 disabled:opacity-50 transition-colors"
                 title="Ekspor rincian SPD & Anggaran ke Excel"
               >
                 <Download className="h-3.5 w-3.5" />
@@ -794,15 +794,15 @@ const SPDDetailModal: React.FC<SPDDetailModalProps> = ({
         {/* Content Table */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin">
           {searchedAnggaran.length === 0 ? (
-            <div className="py-12 text-center text-slate-400 space-y-2">
-              <BookOpen className="h-10 w-10 text-slate-600 mx-auto" />
-              <p className="font-semibold text-sm">Tidak ada data rekening anggaran yang ditemukan.</p>
-              <p className="text-xs text-slate-500">Coba gunakan kata kunci pencarian yang berbeda.</p>
+            <div className="py-12 text-center text-[#64748B] space-y-2">
+              <BookOpen className="h-10 w-10 text-slate-300 mx-auto" />
+              <p className="font-semibold text-sm text-[#17324D]">Tidak ada data rekening anggaran yang ditemukan.</p>
+              <p className="text-xs text-[#64748B]">Coba gunakan kata kunci pencarian yang berbeda.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950">
+            <div className="overflow-x-auto rounded-2xl border border-[#DFE6EF] bg-[#FFFFFF]">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-slate-900 text-slate-300 font-bold uppercase border-b border-slate-800">
+                <thead className="bg-[#F8FAFC] text-[#17324D] font-bold uppercase border-b-2 border-[#DFE6EF] text-[11px] tracking-wider">
                   <tr>
                     <th className="p-3 text-center w-12">No</th>
                     <th className="p-3 min-w-[130px]">Kode Rekening</th>
@@ -815,49 +815,49 @@ const SPDDetailModal: React.FC<SPDDetailModalProps> = ({
                     <th className="p-3 text-center min-w-[100px]">Sumber Dana</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60 font-sans">
+                <tbody className="divide-y divide-[#DFE6EF] font-sans text-[#17324D]">
                   {searchedAnggaran.map((item, idx) => {
                     const bObj = belanjaList.find(b => isCodeEqual(b.kodeBelanja, item.kodeBelanja));
                     const sObj = subKegiatanList.find(s => isCodeEqual(s.kodeSub, item.kodeSub));
                     const nilaiSpdItem = item.nilaiSPD !== undefined ? item.nilaiSPD : item.paguAkhir;
                     return (
-                      <tr key={item.id || idx} className="hover:bg-slate-900/80 transition-colors">
-                        <td className="p-3 text-center text-slate-500 font-mono font-bold">{idx + 1}</td>
+                      <tr key={item.id || idx} className="hover:bg-[#F8FAFC] transition-colors">
+                        <td className="p-3 text-center text-[#64748B] font-mono font-bold">{idx + 1}</td>
                         <td className="p-3">
-                          <span className="font-mono font-bold text-cyan-300 text-[11px] bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-800/60">
+                          <span className="font-mono font-bold text-[#3984E8] text-[11px] bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
                             {item.kodeBelanja}
                           </span>
                         </td>
                         <td className="p-3 space-y-1">
-                          <div className="font-bold text-white leading-snug">
+                          <div className="font-bold text-[#17324D] leading-snug">
                             {item.namaBelanja || bObj?.namaBelanja || `Belanja ${item.kodeBelanja}`}
                           </div>
                           {bObj?.jenisBelanja && (
-                            <span className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                            <span className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-[#64748B] border border-[#DFE6EF]">
                               {bObj.jenisBelanja}
                             </span>
                           )}
                         </td>
                         <td className="p-3 space-y-1">
-                          <div className="text-[11px] font-semibold text-slate-200">
+                          <div className="text-[11px] font-semibold text-[#17324D]">
                             {sObj?.namaSub || item.kodeSub}
                           </div>
-                          <div className="font-mono text-[10px] text-slate-400">{item.kodeSub}</div>
+                          <div className="font-mono text-[10px] text-[#64748B]">{item.kodeSub}</div>
                         </td>
-                        <td className="p-3 text-right font-mono text-slate-300">
+                        <td className="p-3 text-right font-mono text-[#17324D]">
                           Rp {item.pagu.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-right font-mono text-amber-400/80">
+                        <td className="p-3 text-right font-mono text-[#D99A24]">
                           {item.revisi !== 0 ? `Rp ${item.revisi.toLocaleString('id-ID')}` : '-'}
                         </td>
-                        <td className="p-3 text-right font-mono font-bold text-white bg-slate-900/50">
+                        <td className="p-3 text-right font-mono font-bold text-[#17324D] bg-slate-50/70">
                           Rp {item.paguAkhir.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-right font-mono font-bold text-cyan-300 text-sm whitespace-nowrap bg-blue-950/20">
+                        <td className="p-3 text-right font-mono font-bold text-[#3984E8] text-sm whitespace-nowrap bg-blue-50/50">
                           Rp {nilaiSpdItem.toLocaleString('id-ID')}
                         </td>
                         <td className="p-3 text-center">
-                          <span className="rounded bg-slate-800/80 px-2 py-0.5 text-[10px] text-slate-300 font-medium border border-slate-700">
+                          <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] text-[#64748B] font-medium border border-[#DFE6EF]">
                             {item.sumberDana || 'DAU / APBD'}
                           </span>
                         </td>
@@ -871,23 +871,23 @@ const SPDDetailModal: React.FC<SPDDetailModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-slate-800 p-4 bg-slate-950 text-xs">
-          <div className="flex items-center gap-2 text-slate-300 font-semibold">
-            <span className="rounded-lg bg-blue-950 border border-blue-700/60 px-2.5 py-1 text-blue-300 font-mono">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-[#DFE6EF] p-4 bg-[#F8FAFC] text-xs">
+          <div className="flex items-center gap-2 text-[#17324D] font-semibold">
+            <span className="rounded-lg bg-blue-50 border border-blue-200 px-2.5 py-1 text-[#3984E8] font-mono">
               Total {searchedAnggaran.length} Rekening Belanja
             </span>
-            <span className="text-slate-400">Rincian Nilai SPD & Anggaran</span>
+            <span className="text-[#64748B]">Rincian Nilai SPD & Anggaran</span>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5">
-              <span className="text-slate-400 font-semibold">Total Nilai Anggaran:</span>
-              <span className="font-black font-mono text-white text-sm">
+              <span className="text-[#64748B] font-semibold">Total Nilai Anggaran:</span>
+              <span className="font-black font-mono text-[#17324D] text-sm">
                 Rp {totalPaguAkhir.toLocaleString('id-ID')}
               </span>
             </div>
-            <div className="flex items-center gap-1.5 border-l border-slate-800 pl-4">
-              <span className="text-cyan-400 font-semibold">Total Nilai SPD:</span>
-              <span className="text-base sm:text-lg font-black font-mono text-cyan-300">
+            <div className="flex items-center gap-1.5 border-l border-[#DFE6EF] pl-4">
+              <span className="text-[#3984E8] font-semibold">Total Nilai SPD:</span>
+              <span className="text-base sm:text-lg font-black font-mono text-[#3984E8]">
                 Rp {totalSPD.toLocaleString('id-ID')}
               </span>
             </div>
@@ -1883,12 +1883,12 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
       </div>
 
       {/* REPORT CANVAS SHEET FOR PRINT & DISPLAY */}
-      <div className="rounded-3xl border border-slate-800 bg-slate-900 p-8 shadow-2xl text-slate-100 print:border-none print:p-0 print:bg-white print:text-slate-950">
+      <div className="rounded-3xl border border-[#DFE6EF] bg-[#FFFFFF] p-8 shadow-xs text-[#17324D] print:border-none print:p-0 print:bg-white print:text-black">
         
         {/* OFFICIAL GOVERNMENT REPORT KOP SURAT / HEADER */}
-        <div className="text-center border-b-2 border-slate-700 print:border-slate-900 pb-4 mb-6">
+        <div className="text-center border-b-2 border-[#DFE6EF] print:border-slate-900 pb-4 mb-6">
           <div className="flex justify-center mb-2">
-            <div className="relative flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-slate-950 print:bg-transparent p-0.5 border border-emerald-500/40 print:border-none shadow-md overflow-hidden">
+            <div className="relative flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-[#F8FAFC] print:bg-transparent p-0.5 border border-[#079669]/40 print:border-none shadow-xs overflow-hidden">
               {opd?.logoUrl ? (
                 <img
                   src={opd.logoUrl}
@@ -1900,13 +1900,13 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
               )}
             </div>
           </div>
-          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 print:text-slate-700">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-[#64748B] print:text-slate-700">
             PEMERINTAH PROVINSI NUSA TENGGARA BARAT
           </h2>
-          <h1 className="text-base font-black uppercase text-white print:text-black sm:text-lg">
+          <h1 className="text-base font-black uppercase text-[#17324D] print:text-black sm:text-lg">
             {opd.namaOPD}
           </h1>
-          <p className="text-[11px] font-medium text-emerald-400 print:text-slate-600">
+          <p className="text-[11px] font-semibold text-[#079669] print:text-slate-600">
             LAPORAN REALISASI ANGGARAN (LRA) TAHUN ANGGARAN {selectedTahun}
           </p>
         </div>
@@ -1914,12 +1914,12 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
         {/* 1. LAPORAN PER PROGRAM */}
         {activeTab === 'laporan-program' && (
           <div className="space-y-4">
-            <h3 className="text-xs font-bold uppercase text-amber-400 print:text-slate-900 border-b border-slate-800 pb-1">
+            <h3 className="text-xs font-bold uppercase text-[#079669] print:text-slate-900 border-b border-[#DFE6EF] pb-1">
               I. Laporan Realisasi Keuangan Per Program
             </h3>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-xl border border-[#DFE6EF]">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-slate-950 print:bg-slate-200 text-slate-300 print:text-slate-900 font-bold uppercase border-b border-slate-800">
+                <thead className="bg-[#F8FAFC] text-[#17324D] font-bold uppercase border-b-2 border-[#DFE6EF] text-[11px] tracking-wider">
                   <tr>
                     <th className="p-3">Kode Program</th>
                     <th className="p-3">Nama Program</th>
@@ -1932,52 +1932,52 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                     <th className="p-3 text-center">% Serapan</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800 print:divide-slate-300">
+                <tbody className="divide-y divide-[#DFE6EF] text-[#17324D]">
                   {programReportData.map(r => (
-                    <tr key={r.kode} className="hover:bg-slate-800/40">
-                      <td className="p-3 font-mono font-bold text-amber-400 print:text-slate-900">{r.kode}</td>
-                      <td className="p-3 font-semibold text-white print:text-slate-900">{r.nama}</td>
-                      <td className="p-3 text-right font-mono text-slate-300 print:text-slate-800">Rp {r.paguMurni.toLocaleString('id-ID')}</td>
-                      <td className="p-3 text-right font-mono text-amber-400/80 print:text-slate-800">Rp {r.revisi.toLocaleString('id-ID')}</td>
+                    <tr key={r.kode} className="hover:bg-[#F8FAFC] transition-colors">
+                      <td className="p-3 font-mono font-bold text-[#079669] print:text-slate-900">{r.kode}</td>
+                      <td className="p-3 font-semibold text-[#17324D]">{r.nama}</td>
+                      <td className="p-3 text-right font-mono text-[#17324D] print:text-slate-800">Rp {r.paguMurni.toLocaleString('id-ID')}</td>
+                      <td className="p-3 text-right font-mono text-[#D99A24] print:text-slate-800">Rp {r.revisi.toLocaleString('id-ID')}</td>
                       <td
                         onClick={() => setSelectedSPDFilter({
                           title: `Rincian SPD & Anggaran Belanja Program`,
                           subtitle: `${r.kode} - ${r.nama}`,
                           kodeProgram: r.kode
                         })}
-                        className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer print:text-slate-800 font-bold transition-colors group"
+                        className="p-3 text-right font-mono text-[#3984E8] hover:text-blue-700 hover:underline cursor-pointer font-bold transition-colors group"
                         title="Klik untuk melihat data kode rekening, belanja, dan nilai anggaran"
                       >
                         <span className="inline-flex items-center gap-1 justify-end">
                           <span>Rp {r.nilaiSPD.toLocaleString('id-ID')}</span>
-                          <Eye className="h-3.5 w-3.5 text-blue-400/80 group-hover:text-blue-200 print:hidden" />
+                          <Eye className="h-3.5 w-3.5 text-[#3984E8]/80 group-hover:text-blue-700 print:hidden" />
                         </span>
                       </td>
-                      <td className="p-3 text-right font-mono font-bold text-white print:text-slate-900">Rp {r.paguAkhir.toLocaleString('id-ID')}</td>
+                      <td className="p-3 text-right font-mono font-bold text-[#17324D] print:text-slate-900">Rp {r.paguAkhir.toLocaleString('id-ID')}</td>
                       <td
                         onClick={() => setSelectedRealisasiFilter({
                           title: `Rincian Uraian Realisasi Program`,
                           subtitle: `${r.kode} - ${r.nama}`,
                           kodeProgram: r.kode
                         })}
-                        className="p-3 text-right font-mono text-emerald-400 hover:text-emerald-200 hover:underline cursor-pointer print:text-slate-900 font-bold"
+                        className="p-3 text-right font-mono text-[#079669] hover:text-emerald-700 hover:underline cursor-pointer font-bold"
                         title="Klik untuk melihat rincian uraian realisasi"
                       >
                         <span className="inline-flex items-center gap-1 justify-end">
                           <span>Rp {r.realisasi.toLocaleString('id-ID')}</span>
-                          <Eye className="h-3.5 w-3.5 text-emerald-400/80 print:hidden" />
+                          <Eye className="h-3.5 w-3.5 text-[#079669]/80 print:hidden" />
                         </span>
                       </td>
-                      <td className="p-3 text-right font-mono text-amber-300 print:text-slate-900">
+                      <td className="p-3 text-right font-mono text-[#D99A24] print:text-slate-900">
                         Rp {r.sisa.toLocaleString('id-ID')}
                       </td>
-                      <td className="p-3 text-center font-bold text-emerald-300 print:text-slate-900">
+                      <td className="p-3 text-center font-bold text-[#079669] print:text-slate-900">
                         {r.persen.toFixed(2)} %
                       </td>
                     </tr>
                   ))}
                 </tbody>
-                <tfoot className="bg-slate-950 font-bold border-t-2 border-slate-700 text-white print:bg-slate-100 print:text-black">
+                <tfoot className="bg-[#F8FAFC] font-bold border-t-2 border-[#DFE6EF] text-[#17324D] print:bg-slate-100 print:text-black">
                   {(() => {
                     const totalMurni = programReportData.reduce((s, r) => s + r.paguMurni, 0);
                     const totalRev = programReportData.reduce((s, r) => s + r.revisi, 0);
@@ -1990,18 +1990,18 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                       <tr>
                         <td colSpan={2} className="p-3 text-right uppercase">TOTAL KESELURUHAN PROGRAM:</td>
                         <td className="p-3 text-right font-mono">Rp {totalMurni.toLocaleString('id-ID')}</td>
-                        <td className="p-3 text-right font-mono text-amber-300">Rp {totalRev.toLocaleString('id-ID')}</td>
+                        <td className="p-3 text-right font-mono text-[#D99A24]">Rp {totalRev.toLocaleString('id-ID')}</td>
                         <td
                           onClick={() => setSelectedSPDFilter({
                             title: `Rincian Seluruh SPD & Anggaran Belanja (Semua Program)`,
                             subtitle: `Tahun Anggaran ${selectedTahun}`
                           })}
-                          className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer font-bold"
+                          className="p-3 text-right font-mono text-[#3984E8] hover:text-blue-700 hover:underline cursor-pointer font-bold"
                           title="Klik untuk melihat seluruh rincian kode rekening, belanja, dan nilai anggaran"
                         >
                           Rp {totalSPD.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-right font-mono text-emerald-400">Rp {totalAkhir.toLocaleString('id-ID')}</td>
+                        <td className="p-3 text-right font-mono text-[#079669]">Rp {totalAkhir.toLocaleString('id-ID')}</td>
                         <td className="p-3 text-right font-mono text-emerald-300">Rp {totalReal.toLocaleString('id-ID')}</td>
                         <td className="p-3 text-right font-mono text-amber-300">Rp {totalSisa.toLocaleString('id-ID')}</td>
                         <td className="p-3 text-center text-emerald-300">{totalPct.toFixed(2)} %</td>
@@ -2017,12 +2017,12 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
         {/* 2. LAPORAN PER KEGIATAN */}
         {activeTab === 'laporan-kegiatan' && (
           <div className="space-y-4">
-            <h3 className="text-xs font-bold uppercase text-amber-400 print:text-slate-900 border-b border-slate-800 pb-1">
+            <h3 className="text-xs font-bold uppercase text-[#079669] print:text-slate-900 border-b border-[#DFE6EF] pb-1">
               II. Laporan Realisasi Keuangan Per Kegiatan
             </h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950 print:bg-slate-200 text-slate-300 print:text-slate-900 font-bold uppercase border-b border-slate-800">
+            <div className="overflow-x-auto rounded-xl border border-[#DFE6EF]">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#F8FAFC] text-[#17324D] font-bold uppercase border-b-2 border-[#DFE6EF] text-[11px] tracking-wider">
                   <tr>
                     <th className="p-3">Kode Kegiatan</th>
                     <th className="p-3">Nama Kegiatan</th>
@@ -2035,52 +2035,52 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                     <th className="p-3 text-center">% Serapan</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800 print:divide-slate-300">
+                <tbody className="divide-y divide-[#DFE6EF] text-[#17324D]">
                   {kegiatanReportData.map(r => (
-                    <tr key={r.kodeKeg} className="hover:bg-slate-800/40">
-                      <td className="p-3 font-mono font-bold text-teal-400 print:text-slate-900">{r.kodeKeg}</td>
-                      <td className="p-3 font-semibold text-white print:text-slate-900">{r.namaKeg}</td>
-                      <td className="p-3 text-right font-mono text-slate-300 print:text-slate-800">Rp {r.paguMurni.toLocaleString('id-ID')}</td>
-                      <td className="p-3 text-right font-mono text-amber-400/80 print:text-slate-800">Rp {r.revisi.toLocaleString('id-ID')}</td>
+                    <tr key={r.kodeKeg} className="hover:bg-[#F8FAFC] transition-colors">
+                      <td className="p-3 font-mono font-bold text-[#079669] print:text-slate-900">{r.kodeKeg}</td>
+                      <td className="p-3 font-semibold text-[#17324D]">{r.namaKeg}</td>
+                      <td className="p-3 text-right font-mono text-[#17324D] print:text-slate-800">Rp {r.paguMurni.toLocaleString('id-ID')}</td>
+                      <td className="p-3 text-right font-mono text-[#D99A24] print:text-slate-800">Rp {r.revisi.toLocaleString('id-ID')}</td>
                       <td
                         onClick={() => setSelectedSPDFilter({
                           title: `Rincian SPD & Anggaran Belanja Kegiatan`,
                           subtitle: `${r.kodeKeg} - ${r.namaKeg}`,
                           kodeKegiatan: r.kodeKeg
                         })}
-                        className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer print:text-slate-800 font-bold transition-colors group"
+                        className="p-3 text-right font-mono text-[#3984E8] hover:text-blue-700 hover:underline cursor-pointer font-bold transition-colors group"
                         title="Klik untuk melihat data kode rekening, belanja, dan nilai anggaran"
                       >
                         <span className="inline-flex items-center gap-1 justify-end">
                           <span>Rp {r.nilaiSPD.toLocaleString('id-ID')}</span>
-                          <Eye className="h-3.5 w-3.5 text-blue-400/80 group-hover:text-blue-200 print:hidden" />
+                          <Eye className="h-3.5 w-3.5 text-[#3984E8]/80 group-hover:text-blue-700 print:hidden" />
                         </span>
                       </td>
-                      <td className="p-3 text-right font-mono font-bold text-white print:text-slate-900">Rp {r.paguAkhir.toLocaleString('id-ID')}</td>
+                      <td className="p-3 text-right font-mono font-bold text-[#17324D] print:text-slate-900">Rp {r.paguAkhir.toLocaleString('id-ID')}</td>
                       <td
                         onClick={() => setSelectedRealisasiFilter({
                           title: `Rincian Uraian Realisasi Kegiatan`,
                           subtitle: `${r.kodeKeg} - ${r.namaKeg}`,
                           kodeKegiatan: r.kodeKeg
                         })}
-                        className="p-3 text-right font-mono text-emerald-400 hover:text-emerald-200 hover:underline cursor-pointer print:text-slate-900 font-bold"
+                        className="p-3 text-right font-mono text-[#079669] hover:text-emerald-700 hover:underline cursor-pointer font-bold"
                         title="Klik untuk melihat rincian uraian realisasi"
                       >
                         <span className="inline-flex items-center gap-1 justify-end">
                           <span>Rp {r.realisasi.toLocaleString('id-ID')}</span>
-                          <Eye className="h-3.5 w-3.5 text-emerald-400/80 print:hidden" />
+                          <Eye className="h-3.5 w-3.5 text-[#079669]/80 print:hidden" />
                         </span>
                       </td>
-                      <td className="p-3 text-right font-mono text-amber-300 print:text-slate-900">
+                      <td className="p-3 text-right font-mono text-[#D99A24] print:text-slate-900">
                         Rp {r.sisa.toLocaleString('id-ID')}
                       </td>
-                      <td className="p-3 text-center font-bold text-emerald-300 print:text-slate-900">
+                      <td className="p-3 text-center font-bold text-[#079669] print:text-slate-900">
                         {r.persen.toFixed(2)} %
                       </td>
                     </tr>
                   ))}
                 </tbody>
-                <tfoot className="bg-slate-950 font-bold border-t-2 border-slate-700 text-white print:bg-slate-100 print:text-black">
+                <tfoot className="bg-[#F8FAFC] font-bold border-t-2 border-[#DFE6EF] text-[#17324D] print:bg-slate-100 print:text-black">
                   {(() => {
                     const totalMurni = kegiatanReportData.reduce((s, r) => s + r.paguMurni, 0);
                     const totalRev = kegiatanReportData.reduce((s, r) => s + r.revisi, 0);
@@ -2093,21 +2093,21 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                       <tr>
                         <td colSpan={2} className="p-3 text-right uppercase">TOTAL KESELURUHAN KEGIATAN:</td>
                         <td className="p-3 text-right font-mono">Rp {totalMurni.toLocaleString('id-ID')}</td>
-                        <td className="p-3 text-right font-mono text-amber-300">Rp {totalRev.toLocaleString('id-ID')}</td>
+                        <td className="p-3 text-right font-mono text-[#D99A24]">Rp {totalRev.toLocaleString('id-ID')}</td>
                         <td
                           onClick={() => setSelectedSPDFilter({
                             title: `Rincian Seluruh SPD & Anggaran Belanja (Semua Kegiatan)`,
                             subtitle: `Tahun Anggaran ${selectedTahun}`
                           })}
-                          className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer font-bold"
+                          className="p-3 text-right font-mono text-[#3984E8] hover:text-blue-700 hover:underline cursor-pointer font-bold"
                           title="Klik untuk melihat seluruh rincian kode rekening, belanja, dan nilai anggaran"
                         >
                           Rp {totalSPD.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-right font-mono text-emerald-400">Rp {totalAkhir.toLocaleString('id-ID')}</td>
-                        <td className="p-3 text-right font-mono text-emerald-300">Rp {totalReal.toLocaleString('id-ID')}</td>
-                        <td className="p-3 text-right font-mono text-amber-300">Rp {totalSisa.toLocaleString('id-ID')}</td>
-                        <td className="p-3 text-center text-emerald-300">{totalPct.toFixed(2)} %</td>
+                        <td className="p-3 text-right font-mono text-[#079669]">Rp {totalAkhir.toLocaleString('id-ID')}</td>
+                        <td className="p-3 text-right font-mono text-emerald-700">Rp {totalReal.toLocaleString('id-ID')}</td>
+                        <td className="p-3 text-right font-mono text-[#D99A24]">Rp {totalSisa.toLocaleString('id-ID')}</td>
+                        <td className="p-3 text-center text-[#079669] font-bold">{totalPct.toFixed(2)} %</td>
                       </tr>
                     );
                   })()}
@@ -2121,10 +2121,10 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
         {activeTab === 'laporan-subkegiatan' && (
           <div className="space-y-4">
             {/* Filter Droplist Sub Kegiatan */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-950 p-3.5 rounded-2xl border border-slate-800 print:hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#F8FAFC] p-3.5 rounded-2xl border border-[#DFE6EF] print:hidden">
               <div className="flex items-center gap-2">
-                <Layers className="h-4 w-4 text-amber-400" />
-                <label className="text-xs font-bold text-slate-200">Filter Sub Kegiatan:</label>
+                <Layers className="h-4 w-4 text-[#079669]" />
+                <label className="text-xs font-bold text-[#17324D]">Filter Sub Kegiatan:</label>
               </div>
               <SubKegiatanCombobox
                 value={filterSelectedSub}
@@ -2133,27 +2133,27 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
               />
             </div>
 
-            <h3 className="text-xs font-bold uppercase text-amber-400 print:text-slate-900 border-b border-slate-800 pb-1">
+            <h3 className="text-xs font-bold uppercase text-[#079669] print:text-slate-900 border-b border-[#DFE6EF] pb-1">
               {filterSelectedSub === 'all'
                 ? 'III. Laporan Realisasi Keuangan Per Sub-Kegiatan (Rekapitulasi)'
                 : `III. Laporan Realisasi Rekening Belanja - Sub-Kegiatan ${filterSelectedSub}`}
             </h3>
 
             {filterSelectedSub !== 'all' && selectedSubDetail && (
-              <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-1.5 print:bg-slate-100 print:border-slate-300">
+              <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#DFE6EF] space-y-1.5 print:bg-slate-100 print:border-slate-300">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
                   <div>
-                    <span className="text-slate-400 font-bold">Kode Sub Kegiatan: </span>
-                    <span className="font-mono font-bold text-amber-400 print:text-black">{selectedSubDetail.kodeSub}</span>
+                    <span className="text-[#64748B] font-bold">Kode Sub Kegiatan: </span>
+                    <span className="font-mono font-bold text-[#079669] print:text-black">{selectedSubDetail.kodeSub}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 font-bold">Nama Sub Kegiatan: </span>
-                    <span className="font-bold text-white print:text-black">{selectedSubDetail.namaSub}</span>
+                    <span className="text-[#64748B] font-bold">Nama Sub Kegiatan: </span>
+                    <span className="font-bold text-[#17324D] print:text-black">{selectedSubDetail.namaSub}</span>
                   </div>
                   {selectedSubDetail.namaKegiatan && (
                     <div className="md:col-span-2">
-                      <span className="text-slate-400 font-bold">Kegiatan: </span>
-                      <span className="text-slate-300 print:text-slate-800">{selectedSubDetail.kodeKegiatan} - {selectedSubDetail.namaKegiatan}</span>
+                      <span className="text-[#64748B] font-bold">Kegiatan: </span>
+                      <span className="text-[#17324D] print:text-slate-800">{selectedSubDetail.kodeKegiatan} - {selectedSubDetail.namaKegiatan}</span>
                     </div>
                   )}
                 </div>
@@ -2161,9 +2161,9 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
             )}
 
             {filterSelectedSub === 'all' ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-950 print:bg-slate-200 text-slate-300 print:text-slate-900 font-bold uppercase border-b border-slate-800">
+              <div className="overflow-x-auto rounded-xl border border-[#DFE6EF]">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-[#F8FAFC] text-[#17324D] font-bold uppercase border-b-2 border-[#DFE6EF] text-[11px] tracking-wider">
                     <tr>
                       <th className="p-3">Kode Sub</th>
                       <th className="p-3">Uraian Sub Kegiatan</th>
@@ -2176,13 +2176,13 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                       <th className="p-3 text-center">% Serapan</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800 print:divide-slate-300">
+                  <tbody className="divide-y divide-[#DFE6EF] text-[#17324D]">
                     {subReportData.map(r => (
-                      <tr key={r.kodeSub} className="hover:bg-slate-800/40 cursor-pointer" onClick={() => setFilterSelectedSub(r.kodeSub)}>
-                        <td className="p-3 font-mono font-bold text-amber-400 print:text-slate-900">{r.kodeSub}</td>
-                        <td className="p-3 font-semibold text-white print:text-slate-900">{r.namaSub}</td>
-                        <td className="p-3 text-right font-mono text-slate-300 print:text-slate-800">Rp {r.paguMurni.toLocaleString('id-ID')}</td>
-                        <td className="p-3 text-right font-mono text-amber-400/80 print:text-slate-800">Rp {r.revisi.toLocaleString('id-ID')}</td>
+                      <tr key={r.kodeSub} className="hover:bg-[#F8FAFC] cursor-pointer transition-colors" onClick={() => setFilterSelectedSub(r.kodeSub)}>
+                        <td className="p-3 font-mono font-bold text-[#079669] print:text-slate-900">{r.kodeSub}</td>
+                        <td className="p-3 font-semibold text-[#17324D]">{r.namaSub}</td>
+                        <td className="p-3 text-right font-mono text-[#17324D] print:text-slate-800">Rp {r.paguMurni.toLocaleString('id-ID')}</td>
+                        <td className="p-3 text-right font-mono text-[#D99A24] print:text-slate-800">Rp {r.revisi.toLocaleString('id-ID')}</td>
                         <td
                           onClick={(e) => {
                             e.stopPropagation();
@@ -2192,15 +2192,15 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                               kodeSub: r.kodeSub
                             });
                           }}
-                          className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer print:text-slate-800 font-bold transition-colors group"
+                          className="p-3 text-right font-mono text-[#3984E8] hover:text-blue-700 hover:underline cursor-pointer font-bold transition-colors group"
                           title="Klik untuk melihat data kode rekening, belanja, dan nilai anggaran"
                         >
                           <span className="inline-flex items-center gap-1 justify-end">
                             <span>Rp {r.nilaiSPD.toLocaleString('id-ID')}</span>
-                            <Eye className="h-3.5 w-3.5 text-blue-400/80 group-hover:text-blue-200 print:hidden" />
+                            <Eye className="h-3.5 w-3.5 text-[#3984E8]/80 group-hover:text-blue-700 print:hidden" />
                           </span>
                         </td>
-                        <td className="p-3 text-right font-mono font-bold text-white print:text-slate-900">Rp {r.paguAkhir.toLocaleString('id-ID')}</td>
+                        <td className="p-3 text-right font-mono font-bold text-[#17324D] print:text-slate-900">Rp {r.paguAkhir.toLocaleString('id-ID')}</td>
                         <td
                           onClick={(e) => {
                             e.stopPropagation();
@@ -2210,24 +2210,24 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                               kodeSub: r.kodeSub
                             });
                           }}
-                          className="p-3 text-right font-mono text-emerald-400 hover:text-emerald-200 hover:underline cursor-pointer print:text-slate-900 font-bold"
+                          className="p-3 text-right font-mono text-[#079669] hover:text-emerald-700 hover:underline cursor-pointer font-bold"
                           title="Klik untuk melihat rincian uraian realisasi belanja"
                         >
                           <span className="inline-flex items-center gap-1 justify-end">
                             <span>Rp {r.realisasi.toLocaleString('id-ID')}</span>
-                            <Eye className="h-3.5 w-3.5 text-emerald-400/80 print:hidden" />
+                            <Eye className="h-3.5 w-3.5 text-[#079669]/80 print:hidden" />
                           </span>
                         </td>
-                        <td className="p-3 text-right font-mono text-amber-300 print:text-slate-900">
+                        <td className="p-3 text-right font-mono text-[#D99A24] print:text-slate-900">
                           Rp {r.sisa.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-center font-bold text-emerald-300 print:text-slate-900">
+                        <td className="p-3 text-center font-bold text-[#079669] print:text-slate-900">
                           {r.persen.toFixed(2)} %
                         </td>
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-slate-950 font-bold border-t-2 border-slate-700 text-white print:bg-slate-100 print:text-black">
+                  <tfoot className="bg-[#F8FAFC] font-bold border-t-2 border-[#DFE6EF] text-[#17324D] print:bg-slate-100 print:text-black">
                     {(() => {
                       const totalMurni = subReportData.reduce((s, r) => s + r.paguMurni, 0);
                       const totalRev = subReportData.reduce((s, r) => s + r.revisi, 0);
@@ -2240,21 +2240,21 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                         <tr>
                           <td colSpan={2} className="p-3 text-right uppercase">TOTAL KESELURUHAN SUB-KEGIATAN:</td>
                           <td className="p-3 text-right font-mono">Rp {totalMurni.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-right font-mono text-amber-300">Rp {totalRev.toLocaleString('id-ID')}</td>
+                          <td className="p-3 text-right font-mono text-[#D99A24]">Rp {totalRev.toLocaleString('id-ID')}</td>
                           <td
                             onClick={() => setSelectedSPDFilter({
                               title: `Rincian Seluruh SPD & Anggaran Belanja (Semua Sub-Kegiatan)`,
                               subtitle: `Tahun Anggaran ${selectedTahun}`
                             })}
-                            className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer font-bold"
+                            className="p-3 text-right font-mono text-[#3984E8] hover:text-blue-700 hover:underline cursor-pointer font-bold"
                             title="Klik untuk melihat seluruh rincian kode rekening, belanja, dan nilai anggaran"
                           >
                             Rp {totalSPD.toLocaleString('id-ID')}
                           </td>
-                          <td className="p-3 text-right font-mono text-emerald-400">Rp {totalAkhir.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-right font-mono text-emerald-300">Rp {totalReal.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-right font-mono text-amber-300">Rp {totalSisa.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-center text-emerald-300">{totalPct.toFixed(2)} %</td>
+                          <td className="p-3 text-right font-mono text-[#079669]">Rp {totalAkhir.toLocaleString('id-ID')}</td>
+                          <td className="p-3 text-right font-mono text-emerald-700">Rp {totalReal.toLocaleString('id-ID')}</td>
+                          <td className="p-3 text-right font-mono text-[#D99A24]">Rp {totalSisa.toLocaleString('id-ID')}</td>
+                          <td className="p-3 text-center text-[#079669] font-bold">{totalPct.toFixed(2)} %</td>
                         </tr>
                       );
                     })()}
@@ -2262,9 +2262,9 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                 </table>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-950 print:bg-slate-200 text-slate-300 print:text-slate-900 font-bold uppercase border-b border-slate-800">
+              <div className="overflow-x-auto rounded-xl border border-[#DFE6EF]">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-[#F8FAFC] text-[#17324D] font-bold uppercase border-b-2 border-[#DFE6EF] text-[11px] tracking-wider">
                     <tr>
                       <th className="p-3">Kode Rekening</th>
                       <th className="p-3">Nama Uraian Belanja</th>
@@ -2278,21 +2278,21 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                       <th className="p-3 text-center">% Serapan</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800 print:divide-slate-300">
+                  <tbody className="divide-y divide-[#DFE6EF] text-[#17324D]">
                     {selectedSubBelanjaData.length === 0 ? (
                       <tr>
-                        <td colSpan={10} className="p-6 text-center text-slate-500 italic">
+                        <td colSpan={10} className="p-6 text-center text-[#64748B] italic">
                           Tidak ada data rekening belanja pada sub kegiatan ini.
                         </td>
                       </tr>
                     ) : (
                       selectedSubBelanjaData.map(r => (
-                        <tr key={r.kodeBelanja} className="hover:bg-slate-800/40">
-                          <td className="p-3 font-mono font-bold text-emerald-400 print:text-slate-900">{r.kodeBelanja}</td>
-                          <td className="p-3 font-semibold text-white print:text-slate-900">{r.namaBelanja}</td>
-                          <td className="p-3 text-slate-300 print:text-slate-700">{r.jenisBelanja}</td>
-                          <td className="p-3 text-right font-mono text-slate-300 print:text-slate-800">Rp {r.paguMurni.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-right font-mono text-amber-400/80 print:text-slate-800">Rp {r.revisi.toLocaleString('id-ID')}</td>
+                        <tr key={r.kodeBelanja} className="hover:bg-[#F8FAFC] transition-colors">
+                          <td className="p-3 font-mono font-bold text-[#079669] print:text-slate-900">{r.kodeBelanja}</td>
+                          <td className="p-3 font-semibold text-[#17324D]">{r.namaBelanja}</td>
+                          <td className="p-3 text-[#64748B] print:text-slate-700">{r.jenisBelanja}</td>
+                          <td className="p-3 text-right font-mono text-[#17324D] print:text-slate-800">Rp {r.paguMurni.toLocaleString('id-ID')}</td>
+                          <td className="p-3 text-right font-mono text-[#D99A24] print:text-slate-800">Rp {r.revisi.toLocaleString('id-ID')}</td>
                           <td
                             onClick={() => setSelectedSPDFilter({
                               title: `Rincian SPD & Anggaran Rekening Belanja`,
@@ -2300,15 +2300,15 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                               kodeSub: filterSelectedSub,
                               kodeBelanja: r.kodeBelanja
                             })}
-                            className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer print:text-slate-800 font-bold transition-colors group"
+                            className="p-3 text-right font-mono text-[#3984E8] hover:text-blue-700 hover:underline cursor-pointer font-bold transition-colors group"
                             title="Klik untuk melihat data kode rekening, belanja, dan nilai anggaran"
                           >
                             <span className="inline-flex items-center gap-1 justify-end">
                               <span>Rp {r.nilaiSPD.toLocaleString('id-ID')}</span>
-                              <Eye className="h-3.5 w-3.5 text-blue-400/80 group-hover:text-blue-200 print:hidden" />
+                              <Eye className="h-3.5 w-3.5 text-[#3984E8]/80 group-hover:text-blue-700 print:hidden" />
                             </span>
                           </td>
-                          <td className="p-3 text-right font-mono font-bold text-white print:text-slate-900">Rp {r.paguAkhir.toLocaleString('id-ID')}</td>
+                          <td className="p-3 text-right font-mono font-bold text-[#17324D] print:text-slate-900">Rp {r.paguAkhir.toLocaleString('id-ID')}</td>
                           <td
                             onClick={() => {
                               setSelectedRealisasiFilter({
@@ -2318,25 +2318,25 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                                 kodeBelanja: r.kodeBelanja
                               });
                             }}
-                            className="p-3 text-right font-mono text-emerald-400 hover:text-emerald-200 hover:underline cursor-pointer print:text-slate-900 font-bold"
+                            className="p-3 text-right font-mono text-[#079669] hover:text-emerald-700 hover:underline cursor-pointer font-bold"
                             title="Klik untuk melihat rincian uraian realisasi belanja"
                           >
                             <span className="inline-flex items-center gap-1 justify-end">
                               <span>Rp {r.realisasi.toLocaleString('id-ID')}</span>
-                              <Eye className="h-3.5 w-3.5 text-emerald-400/80 print:hidden" />
+                              <Eye className="h-3.5 w-3.5 text-[#079669]/80 print:hidden" />
                             </span>
                           </td>
-                          <td className="p-3 text-right font-mono text-amber-300 print:text-slate-900">
+                          <td className="p-3 text-right font-mono text-[#D99A24] print:text-slate-900">
                             Rp {r.sisa.toLocaleString('id-ID')}
                           </td>
-                          <td className="p-3 text-center font-bold text-emerald-300 print:text-slate-900">
+                          <td className="p-3 text-center font-bold text-[#079669] print:text-slate-900">
                             {r.persen.toFixed(2)} %
                           </td>
                         </tr>
                       ))
                     )}
                   </tbody>
-                  <tfoot className="bg-slate-950 font-bold border-t-2 border-slate-700 text-white print:bg-slate-100 print:text-black">
+                  <tfoot className="bg-[#F8FAFC] font-bold border-t-2 border-[#DFE6EF] text-[#17324D] print:bg-slate-100 print:text-black">
                     {(() => {
                       const totalMurni = selectedSubBelanjaData.reduce((s, r) => s + r.paguMurni, 0);
                       const totalRev = selectedSubBelanjaData.reduce((s, r) => s + r.revisi, 0);
@@ -2349,22 +2349,22 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                         <tr>
                           <td colSpan={3} className="p-3 text-right uppercase">TOTAL SUB-KEGIATAN INI:</td>
                           <td className="p-3 text-right font-mono">Rp {totalMurni.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-right font-mono text-amber-300">Rp {totalRev.toLocaleString('id-ID')}</td>
+                          <td className="p-3 text-right font-mono text-[#D99A24]">Rp {totalRev.toLocaleString('id-ID')}</td>
                           <td
                             onClick={() => setSelectedSPDFilter({
                               title: `Rincian SPD & Anggaran Belanja Sub-Kegiatan`,
                               subtitle: `${selectedSubDetail?.namaSub || filterSelectedSub} (${filterSelectedSub})`,
                               kodeSub: filterSelectedSub
                             })}
-                            className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer font-bold"
+                            className="p-3 text-right font-mono text-[#3984E8] hover:text-blue-700 hover:underline cursor-pointer font-bold"
                             title="Klik untuk melihat rincian kode rekening, belanja, dan nilai anggaran"
                           >
                             Rp {totalSPD.toLocaleString('id-ID')}
                           </td>
-                          <td className="p-3 text-right font-mono text-emerald-400">Rp {totalAkhir.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-right font-mono text-emerald-300">Rp {totalReal.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-right font-mono text-amber-300">Rp {totalSisa.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-center text-emerald-300">{totalPct.toFixed(2)} %</td>
+                          <td className="p-3 text-right font-mono text-[#079669]">Rp {totalAkhir.toLocaleString('id-ID')}</td>
+                          <td className="p-3 text-right font-mono text-emerald-700">Rp {totalReal.toLocaleString('id-ID')}</td>
+                          <td className="p-3 text-right font-mono text-[#D99A24]">Rp {totalSisa.toLocaleString('id-ID')}</td>
+                          <td className="p-3 text-center text-[#079669] font-bold">{totalPct.toFixed(2)} %</td>
                         </tr>
                       );
                     })()}
@@ -2379,10 +2379,10 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
         {activeTab === 'laporan-belanja' && (
           <div className="space-y-4">
             {/* Filter Droplist Rekening Belanja */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-950 p-3.5 rounded-2xl border border-slate-800 print:hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#F8FAFC] p-3.5 rounded-2xl border border-[#DFE6EF] print:hidden">
               <div className="flex items-center gap-2">
-                <BookOpen className="h-4 w-4 text-amber-400" />
-                <label className="text-xs font-bold text-slate-200">Filter Rekening Belanja:</label>
+                <BookOpen className="h-4 w-4 text-[#079669]" />
+                <label className="text-xs font-bold text-[#17324D]">Filter Rekening Belanja:</label>
               </div>
               <BelanjaCombobox
                 value={filterSelectedBelanja}
@@ -2391,35 +2391,35 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
               />
             </div>
 
-            <h3 className="text-xs font-bold uppercase text-amber-400 print:text-slate-900 border-b border-slate-800 pb-1">
+            <h3 className="text-xs font-bold uppercase text-[#079669] print:text-slate-900 border-b border-[#DFE6EF] pb-1">
               {filterSelectedBelanja === 'all'
                 ? 'IV. Laporan Realisasi Per Rekening Belanja (Rekapitulasi Global)'
                 : `IV. Laporan Realisasi Sub-Kegiatan Per Rekening Belanja - ${filterSelectedBelanja}`}
             </h3>
 
             {filterSelectedBelanja !== 'all' && selectedBelanjaDetail && (
-              <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-1.5 print:bg-slate-100 print:border-slate-300">
+              <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#DFE6EF] space-y-1.5 print:bg-slate-100 print:border-slate-300">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
                   <div>
-                    <span className="text-slate-400 font-bold">Kode Rekening: </span>
-                    <span className="font-mono font-bold text-emerald-400 print:text-black">{selectedBelanjaDetail.kodeBelanja}</span>
+                    <span className="text-[#64748B] font-bold">Kode Rekening: </span>
+                    <span className="font-mono font-bold text-[#079669] print:text-black">{selectedBelanjaDetail.kodeBelanja}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 font-bold">Uraian Belanja: </span>
-                    <span className="font-bold text-white print:text-black">{selectedBelanjaDetail.namaBelanja}</span>
+                    <span className="text-[#64748B] font-bold">Uraian Belanja: </span>
+                    <span className="font-bold text-[#17324D] print:text-black">{selectedBelanjaDetail.namaBelanja}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 font-bold">Jenis Belanja: </span>
-                    <span className="text-slate-300 print:text-slate-800">{selectedBelanjaDetail.jenisBelanja}</span>
+                    <span className="text-[#64748B] font-bold">Jenis Belanja: </span>
+                    <span className="text-[#64748B] print:text-slate-800">{selectedBelanjaDetail.jenisBelanja}</span>
                   </div>
                 </div>
               </div>
             )}
 
             {filterSelectedBelanja === 'all' ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-950 print:bg-slate-200 text-slate-300 print:text-slate-900 font-bold uppercase border-b border-slate-800">
+              <div className="overflow-x-auto rounded-xl border border-[#DFE6EF]">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-[#F8FAFC] text-[#17324D] font-bold uppercase border-b-2 border-[#DFE6EF] text-[11px] tracking-wider">
                     <tr>
                       <th className="p-3">Kode Rekening</th>
                       <th className="p-3">Nama Uraian Belanja</th>
@@ -2433,14 +2433,14 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                       <th className="p-3 text-center">% Serapan</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800 print:divide-slate-300">
+                  <tbody className="divide-y divide-[#DFE6EF] text-[#17324D]">
                     {belanjaReportData.map(r => (
-                      <tr key={r.kode} className="hover:bg-slate-800/40 cursor-pointer" onClick={() => setFilterSelectedBelanja(r.kode)}>
-                        <td className="p-3 font-mono font-bold text-emerald-400 print:text-slate-900">{r.kode}</td>
-                        <td className="p-3 font-semibold text-white print:text-slate-900">{r.nama}</td>
-                        <td className="p-3 text-slate-300 print:text-slate-700">{r.jenis}</td>
-                        <td className="p-3 text-right font-mono text-slate-300 print:text-slate-800">Rp {r.paguMurni.toLocaleString('id-ID')}</td>
-                        <td className="p-3 text-right font-mono text-amber-400/80 print:text-slate-800">Rp {r.revisi.toLocaleString('id-ID')}</td>
+                      <tr key={r.kode} className="hover:bg-[#F8FAFC] cursor-pointer transition-colors" onClick={() => setFilterSelectedBelanja(r.kode)}>
+                        <td className="p-3 font-mono font-bold text-[#079669] print:text-slate-900">{r.kode}</td>
+                        <td className="p-3 font-semibold text-[#17324D]">{r.nama}</td>
+                        <td className="p-3 text-[#64748B] print:text-slate-700">{r.jenis}</td>
+                        <td className="p-3 text-right font-mono text-[#17324D] print:text-slate-800">Rp {r.paguMurni.toLocaleString('id-ID')}</td>
+                        <td className="p-3 text-right font-mono text-[#D99A24] print:text-slate-800">Rp {r.revisi.toLocaleString('id-ID')}</td>
                         <td
                           onClick={(e) => {
                             e.stopPropagation();
@@ -2450,15 +2450,15 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                               kodeBelanja: r.kode
                             });
                           }}
-                          className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer print:text-slate-800 font-bold transition-colors group"
+                          className="p-3 text-right font-mono text-[#3984E8] hover:text-blue-700 hover:underline cursor-pointer font-bold transition-colors group"
                           title="Klik untuk melihat data kode rekening, belanja, dan nilai anggaran"
                         >
                           <span className="inline-flex items-center gap-1 justify-end">
                             <span>Rp {r.nilaiSPD.toLocaleString('id-ID')}</span>
-                            <Eye className="h-3.5 w-3.5 text-blue-400/80 group-hover:text-blue-200 print:hidden" />
+                            <Eye className="h-3.5 w-3.5 text-[#3984E8]/80 group-hover:text-blue-700 print:hidden" />
                           </span>
                         </td>
-                        <td className="p-3 text-right font-mono font-bold text-white print:text-slate-900">Rp {r.paguAkhir.toLocaleString('id-ID')}</td>
+                        <td className="p-3 text-right font-mono font-bold text-[#17324D] print:text-slate-900">Rp {r.paguAkhir.toLocaleString('id-ID')}</td>
                         <td
                           onClick={(e) => {
                             e.stopPropagation();
@@ -2468,24 +2468,24 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                               kodeBelanja: r.kode
                             });
                           }}
-                          className="p-3 text-right font-mono text-emerald-400 hover:text-emerald-200 hover:underline cursor-pointer print:text-slate-900 font-bold"
+                          className="p-3 text-right font-mono text-[#079669] hover:text-emerald-700 hover:underline cursor-pointer font-bold"
                           title="Klik untuk melihat rincian uraian realisasi belanja"
                         >
                           <span className="inline-flex items-center gap-1 justify-end">
                             <span>Rp {r.realisasi.toLocaleString('id-ID')}</span>
-                            <Eye className="h-3.5 w-3.5 text-emerald-400/80 print:hidden" />
+                            <Eye className="h-3.5 w-3.5 text-[#079669]/80 print:hidden" />
                           </span>
                         </td>
-                        <td className="p-3 text-right font-mono text-amber-300 print:text-slate-900">
+                        <td className="p-3 text-right font-mono text-[#D99A24] print:text-slate-900">
                           Rp {r.sisa.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-center font-bold text-emerald-300 print:text-slate-900">
+                        <td className="p-3 text-center font-bold text-[#079669] print:text-slate-900">
                           {r.persen.toFixed(2)} %
                         </td>
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-slate-950 font-bold border-t-2 border-slate-700 text-white print:bg-slate-100 print:text-black">
+                  <tfoot className="bg-[#F8FAFC] font-bold border-t-2 border-[#DFE6EF] text-[#17324D] print:bg-slate-100 print:text-black">
                     {(() => {
                       const totalMurni = belanjaReportData.reduce((s, r) => s + r.paguMurni, 0);
                       const totalRev = belanjaReportData.reduce((s, r) => s + r.revisi, 0);
@@ -2498,21 +2498,21 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                         <tr>
                           <td colSpan={3} className="p-3 text-right uppercase">TOTAL KESELURUHAN BELANJA:</td>
                           <td className="p-3 text-right font-mono">Rp {totalMurni.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-right font-mono text-amber-300">Rp {totalRev.toLocaleString('id-ID')}</td>
+                          <td className="p-3 text-right font-mono text-[#D99A24]">Rp {totalRev.toLocaleString('id-ID')}</td>
                           <td
                             onClick={() => setSelectedSPDFilter({
                               title: `Rincian Seluruh SPD & Anggaran Belanja (Semua Rekening Belanja)`,
                               subtitle: `Tahun Anggaran ${selectedTahun}`
                             })}
-                            className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer font-bold"
+                            className="p-3 text-right font-mono text-[#3984E8] hover:text-blue-700 hover:underline cursor-pointer font-bold"
                             title="Klik untuk melihat seluruh rincian kode rekening, belanja, dan nilai anggaran"
                           >
                             Rp {totalSPD.toLocaleString('id-ID')}
                           </td>
-                          <td className="p-3 text-right font-mono text-emerald-400">Rp {totalAkhir.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-right font-mono text-emerald-300">Rp {totalReal.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-right font-mono text-amber-300">Rp {totalSisa.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-center text-emerald-300">{totalPct.toFixed(2)} %</td>
+                          <td className="p-3 text-right font-mono text-[#079669]">Rp {totalAkhir.toLocaleString('id-ID')}</td>
+                          <td className="p-3 text-right font-mono text-emerald-700">Rp {totalReal.toLocaleString('id-ID')}</td>
+                          <td className="p-3 text-right font-mono text-[#D99A24]">Rp {totalSisa.toLocaleString('id-ID')}</td>
+                          <td className="p-3 text-center text-[#079669] font-bold">{totalPct.toFixed(2)} %</td>
                         </tr>
                       );
                     })()}
@@ -2520,9 +2520,9 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                 </table>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-950 print:bg-slate-200 text-slate-300 print:text-slate-900 font-bold uppercase border-b border-slate-800">
+              <div className="overflow-x-auto rounded-xl border border-[#DFE6EF]">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-[#F8FAFC] text-[#17324D] font-bold uppercase border-b-2 border-[#DFE6EF] text-[11px] tracking-wider">
                     <tr>
                       <th className="p-3">Kode Sub</th>
                       <th className="p-3">Uraian Sub Kegiatan</th>
@@ -2535,20 +2535,20 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                       <th className="p-3 text-center">% Serapan</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800 print:divide-slate-300">
+                  <tbody className="divide-y divide-[#DFE6EF] text-[#17324D]">
                     {selectedBelanjaSubData.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="p-6 text-center text-slate-500 italic">
+                        <td colSpan={9} className="p-6 text-center text-[#64748B] italic">
                           Tidak ada data sub kegiatan yang memiliki rekening belanja ini.
                         </td>
                       </tr>
                     ) : (
                       selectedBelanjaSubData.map(r => (
-                        <tr key={r.kodeSub} className="hover:bg-slate-800/40">
-                          <td className="p-3 font-mono font-bold text-amber-400 print:text-slate-900">{r.kodeSub}</td>
-                          <td className="p-3 font-semibold text-white print:text-slate-900">{r.namaSub}</td>
-                          <td className="p-3 text-right font-mono text-slate-300 print:text-slate-800">Rp {r.paguMurni.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-right font-mono text-amber-400/80 print:text-slate-800">Rp {r.revisi.toLocaleString('id-ID')}</td>
+                        <tr key={r.kodeSub} className="hover:bg-[#F8FAFC] transition-colors">
+                          <td className="p-3 font-mono font-bold text-[#079669] print:text-slate-900">{r.kodeSub}</td>
+                          <td className="p-3 font-semibold text-[#17324D]">{r.namaSub}</td>
+                          <td className="p-3 text-right font-mono text-[#17324D] print:text-slate-800">Rp {r.paguMurni.toLocaleString('id-ID')}</td>
+                          <td className="p-3 text-right font-mono text-[#D99A24] print:text-slate-800">Rp {r.revisi.toLocaleString('id-ID')}</td>
                           <td
                             onClick={() => setSelectedSPDFilter({
                               title: `Rincian SPD & Anggaran Belanja Sub-Kegiatan`,
@@ -2556,15 +2556,15 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                               kodeBelanja: filterSelectedBelanja,
                               kodeSub: r.kodeSub
                             })}
-                            className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer print:text-slate-800 font-bold transition-colors group"
+                            className="p-3 text-right font-mono text-[#3984E8] hover:text-blue-700 hover:underline cursor-pointer font-bold transition-colors group"
                             title="Klik untuk melihat data kode rekening, belanja, dan nilai anggaran"
                           >
                             <span className="inline-flex items-center gap-1 justify-end">
                               <span>Rp {r.nilaiSPD.toLocaleString('id-ID')}</span>
-                              <Eye className="h-3.5 w-3.5 text-blue-400/80 group-hover:text-blue-200 print:hidden" />
+                              <Eye className="h-3.5 w-3.5 text-[#3984E8]/80 group-hover:text-blue-700 print:hidden" />
                             </span>
                           </td>
-                          <td className="p-3 text-right font-mono font-bold text-white print:text-slate-900">Rp {r.paguAkhir.toLocaleString('id-ID')}</td>
+                          <td className="p-3 text-right font-mono font-bold text-[#17324D] print:text-slate-900">Rp {r.paguAkhir.toLocaleString('id-ID')}</td>
                           <td
                             onClick={() => {
                               setSelectedRealisasiFilter({
@@ -2574,25 +2574,25 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                                 kodeSub: r.kodeSub
                               });
                             }}
-                            className="p-3 text-right font-mono text-emerald-400 hover:text-emerald-200 hover:underline cursor-pointer print:text-slate-900 font-bold"
+                            className="p-3 text-right font-mono text-[#079669] hover:text-emerald-700 hover:underline cursor-pointer font-bold"
                             title="Klik untuk melihat rincian uraian realisasi belanja"
                           >
                             <span className="inline-flex items-center gap-1 justify-end">
                               <span>Rp {r.realisasi.toLocaleString('id-ID')}</span>
-                              <Eye className="h-3.5 w-3.5 text-emerald-400/80 print:hidden" />
+                              <Eye className="h-3.5 w-3.5 text-[#079669]/80 print:hidden" />
                             </span>
                           </td>
-                          <td className="p-3 text-right font-mono text-amber-300 print:text-slate-900">
+                          <td className="p-3 text-right font-mono text-[#D99A24] print:text-slate-900">
                             Rp {r.sisa.toLocaleString('id-ID')}
                           </td>
-                          <td className="p-3 text-center font-bold text-emerald-300 print:text-slate-900">
+                          <td className="p-3 text-center font-bold text-[#079669] print:text-slate-900">
                             {r.persen.toFixed(2)} %
                           </td>
                         </tr>
                       ))
                     )}
                   </tbody>
-                  <tfoot className="bg-slate-950 font-bold border-t-2 border-slate-700 text-white print:bg-slate-100 print:text-black">
+                  <tfoot className="bg-[#F8FAFC] font-bold border-t-2 border-[#DFE6EF] text-[#17324D] print:bg-slate-100 print:text-black">
                     {(() => {
                       const totalMurni = selectedBelanjaSubData.reduce((s, r) => s + r.paguMurni, 0);
                       const totalRev = selectedBelanjaSubData.reduce((s, r) => s + r.revisi, 0);
@@ -2605,22 +2605,22 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                         <tr>
                           <td colSpan={2} className="p-3 text-right uppercase">TOTAL REKENING BELANJA INI:</td>
                           <td className="p-3 text-right font-mono">Rp {totalMurni.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-right font-mono text-amber-300">Rp {totalRev.toLocaleString('id-ID')}</td>
+                          <td className="p-3 text-right font-mono text-[#D99A24]">Rp {totalRev.toLocaleString('id-ID')}</td>
                           <td
                             onClick={() => setSelectedSPDFilter({
                               title: `Rincian SPD & Anggaran Rekening Belanja`,
                               subtitle: `${selectedBelanjaDetail?.namaBelanja || filterSelectedBelanja} (${filterSelectedBelanja})`,
                               kodeBelanja: filterSelectedBelanja
                             })}
-                            className="p-3 text-right font-mono text-blue-300 hover:text-blue-100 hover:underline cursor-pointer font-bold"
+                            className="p-3 text-right font-mono text-[#3984E8] hover:text-blue-700 hover:underline cursor-pointer font-bold"
                             title="Klik untuk melihat rincian kode rekening, belanja, dan nilai anggaran"
                           >
                             Rp {totalSPD.toLocaleString('id-ID')}
                           </td>
-                          <td className="p-3 text-right font-mono text-emerald-400">Rp {totalAkhir.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-right font-mono text-emerald-300">Rp {totalReal.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-right font-mono text-amber-300">Rp {totalSisa.toLocaleString('id-ID')}</td>
-                          <td className="p-3 text-center text-emerald-300">{totalPct.toFixed(2)} %</td>
+                          <td className="p-3 text-right font-mono text-[#079669]">Rp {totalAkhir.toLocaleString('id-ID')}</td>
+                          <td className="p-3 text-right font-mono text-emerald-700">Rp {totalReal.toLocaleString('id-ID')}</td>
+                          <td className="p-3 text-right font-mono text-[#D99A24]">Rp {totalSisa.toLocaleString('id-ID')}</td>
+                          <td className="p-3 text-center text-[#079669] font-bold">{totalPct.toFixed(2)} %</td>
                         </tr>
                       );
                     })()}
@@ -2784,9 +2784,9 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
             </div>
 
             {/* HIBAH TABLE */}
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-xl border border-[#DFE6EF]">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-slate-950 print:bg-slate-200 text-slate-300 print:text-slate-900 font-bold uppercase border-b border-slate-800">
+                <thead className="bg-[#F8FAFC] text-[#17324D] font-bold uppercase border-b-2 border-[#DFE6EF] text-[11px] tracking-wider">
                   <tr>
                     <th className="p-3 w-10 text-center">No</th>
                     <th className="p-3 min-w-[200px]">Sub Kegiatan</th>
@@ -2801,45 +2801,45 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                     <th className="p-3 text-center min-w-[140px]">Status Pencairan</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800 print:divide-slate-300">
+                <tbody className="divide-y divide-[#DFE6EF] text-[#17324D]">
                   {filteredHibahData.length === 0 ? (
                     <tr>
-                      <td colSpan={11} className="p-8 text-center text-slate-400">
-                        <AlertCircle className="h-8 w-8 text-emerald-500/60 mx-auto mb-2" />
-                        <p className="font-semibold text-sm">Tidak ada data Rekening Belanja Hibah yang sesuai filter.</p>
-                        <p className="text-xs text-slate-500 mt-1">
+                      <td colSpan={11} className="p-8 text-center text-[#64748B]">
+                        <AlertCircle className="h-8 w-8 text-[#079669]/60 mx-auto mb-2" />
+                        <p className="font-semibold text-sm text-[#17324D]">Tidak ada data Rekening Belanja Hibah yang sesuai filter.</p>
+                        <p className="text-xs text-[#64748B] mt-1">
                           Pastikan rekening belanja hibah sudah diinput pada menu Input Anggaran atau Master Belanja (dengan kode 5.1.05.x, 5.1.02.01.001.00040 / Belanja Barang yang Diserahkan, atau memiliki kata "Hibah").
                         </p>
                       </td>
                     </tr>
                   ) : (
                     filteredHibahData.map((r, idx) => (
-                      <tr key={r.id || `${r.kodeSub}-${r.kodeBelanja}-${idx}`} className="hover:bg-slate-800/40">
-                        <td className="p-3 text-center font-mono text-slate-400">{idx + 1}</td>
+                      <tr key={r.id || `${r.kodeSub}-${r.kodeBelanja}-${idx}`} className="hover:bg-[#F8FAFC] transition-colors">
+                        <td className="p-3 text-center font-mono text-[#64748B]">{idx + 1}</td>
                         <td className="p-3">
-                          <div className="text-white print:text-slate-900 font-bold text-xs">{r.namaSub}</div>
-                          <div className="font-mono text-[11px] font-semibold text-teal-400 print:text-slate-700 mt-0.5">
+                          <div className="text-[#17324D] font-bold text-xs">{r.namaSub}</div>
+                          <div className="font-mono text-[11px] font-semibold text-[#079669] mt-0.5">
                             Kode: {r.kodeSub}
                           </div>
                         </td>
                         <td className="p-3">
-                          <div className="text-white print:text-slate-900 font-semibold line-clamp-2">{r.namaBelanja}</div>
-                          <div className="font-mono text-[11px] font-bold text-emerald-400 print:text-slate-700 mt-0.5">
+                          <div className="text-[#17324D] font-semibold line-clamp-2">{r.namaBelanja}</div>
+                          <div className="font-mono text-[11px] font-bold text-[#079669] mt-0.5">
                             Kode: {r.kodeBelanja}
                           </div>
                         </td>
                         <td className="p-3 text-center">
-                          <span className="inline-block px-2 py-0.5 rounded bg-slate-800 print:bg-slate-200 font-mono text-[10px] font-bold text-slate-300 print:text-slate-900">
+                          <span className="inline-block px-2 py-0.5 rounded bg-slate-100 border border-[#DFE6EF] font-mono text-[10px] font-bold text-[#17324D]">
                             {r.sumberDana}
                           </span>
                         </td>
-                        <td className="p-3 text-right font-mono text-slate-300 print:text-slate-900">
+                        <td className="p-3 text-right font-mono text-[#17324D] print:text-slate-900">
                           Rp {r.paguMurni.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-right font-mono text-amber-300 print:text-slate-900">
+                        <td className="p-3 text-right font-mono text-[#D99A24] print:text-slate-900">
                           {r.revisi >= 0 ? '+' : ''}Rp {r.revisi.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-right font-mono font-bold text-white print:text-slate-900">
+                        <td className="p-3 text-right font-mono font-bold text-[#17324D] print:text-slate-900">
                           Rp {r.paguAkhir.toLocaleString('id-ID')}
                         </td>
                         <td
@@ -2851,34 +2851,34 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                               kodeSub: r.kodeSub
                             })
                           }
-                          className="p-3 text-right font-mono text-emerald-400 hover:text-emerald-200 hover:underline cursor-pointer print:text-slate-900 font-bold"
+                          className="p-3 text-right font-mono text-[#079669] hover:text-emerald-700 hover:underline cursor-pointer font-bold"
                           title="Klik untuk melihat rincian SP2D transaksi"
                         >
                           <span className="inline-flex items-center gap-1 justify-end">
                             <span>Rp {r.realisasi.toLocaleString('id-ID')}</span>
-                            <Eye className="h-3.5 w-3.5 text-emerald-400/80 print:hidden" />
+                            <Eye className="h-3.5 w-3.5 text-[#079669]/80 print:hidden" />
                           </span>
                         </td>
-                        <td className="p-3 text-right font-mono font-black text-rose-400 print:text-slate-900 bg-rose-950/30 print:bg-transparent">
+                        <td className="p-3 text-right font-mono font-bold text-[#D94F70] print:text-slate-900 bg-rose-50/50">
                           Rp {r.sisa.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-center font-bold text-slate-200 print:text-slate-900 font-mono">
+                        <td className="p-3 text-center font-bold text-[#17324D] font-mono">
                           {r.persen.toFixed(2)} %
                         </td>
                         <td className="p-3 text-center">
                           {r.status === 'unexecuted' ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-rose-950/80 text-rose-300 border border-rose-500/40 print:border-slate-800 print:text-slate-900">
-                              <XCircle className="h-3 w-3 text-rose-400 shrink-0 print:hidden" />
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-50 text-[#D94F70] border border-rose-200">
+                              <XCircle className="h-3 w-3 text-[#D94F70] shrink-0 print:hidden" />
                               100% Belum Cair
                             </span>
                           ) : r.status === 'partial' ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-950/80 text-amber-300 border border-amber-500/40 print:border-slate-800 print:text-slate-900">
-                              <AlertTriangle className="h-3 w-3 text-amber-400 shrink-0 print:hidden" />
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-[#D99A24] border border-amber-200">
+                              <AlertTriangle className="h-3 w-3 text-[#D99A24] shrink-0 print:hidden" />
                               Cair Sebagian
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 print:border-slate-800 print:text-slate-900">
-                              <CheckCircle2 className="h-3 w-3 text-emerald-400 shrink-0 print:hidden" />
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-[#079669] border border-emerald-200">
+                              <CheckCircle2 className="h-3 w-3 text-[#079669] shrink-0 print:hidden" />
                               Tercairkan Penuh
                             </span>
                           )}
@@ -2887,7 +2887,7 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                     ))
                   )}
                 </tbody>
-                <tfoot className="bg-slate-950 font-bold border-t-2 border-slate-700 text-white print:bg-slate-100 print:text-black">
+                <tfoot className="bg-[#F8FAFC] font-bold border-t-2 border-[#DFE6EF] text-[#17324D] print:bg-slate-100 print:text-black">
                   {(() => {
                     const totalMurni = filteredHibahData.reduce((s, r) => s + r.paguMurni, 0);
                     const totalRev = filteredHibahData.reduce((s, r) => s + r.revisi, 0);
@@ -2901,25 +2901,25 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                         <td colSpan={4} className="p-3 text-right uppercase">
                           TOTAL BELANJA HIBAH ({filteredHibahData.length} REKENING):
                         </td>
-                        <td className="p-3 text-right font-mono text-slate-300">
+                        <td className="p-3 text-right font-mono text-[#17324D]">
                           Rp {totalMurni.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-right font-mono text-amber-300">
+                        <td className="p-3 text-right font-mono text-[#D99A24]">
                           {totalRev >= 0 ? '+' : ''}Rp {totalRev.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-right font-mono text-emerald-400">
+                        <td className="p-3 text-right font-mono text-[#079669]">
                           Rp {totalAkhir.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-right font-mono text-emerald-300">
+                        <td className="p-3 text-right font-mono text-emerald-700">
                           Rp {totalReal.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-right font-mono text-rose-400 font-black">
+                        <td className="p-3 text-right font-mono text-[#D94F70] font-black">
                           Rp {totalSisa.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-center text-amber-300 font-mono">
+                        <td className="p-3 text-center text-[#D99A24] font-mono font-bold">
                           {totalPct.toFixed(2)} %
                         </td>
-                        <td className="p-3 text-center text-xs text-slate-400 font-normal">
+                        <td className="p-3 text-center text-xs text-[#64748B] font-normal">
                           {filteredHibahData.filter(r => r.status === 'full').length} Terserap Penuh
                         </td>
                       </tr>
@@ -3088,9 +3088,9 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
             </div>
 
             {/* SILPA TABLE */}
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-xl border border-[#DFE6EF]">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-slate-950 print:bg-slate-200 text-slate-300 print:text-slate-900 font-bold uppercase border-b border-slate-800">
+                <thead className="bg-[#F8FAFC] text-[#17324D] font-bold uppercase border-b-2 border-[#DFE6EF] text-[11px] tracking-wider">
                   <tr>
                     <th className="p-3 w-10 text-center">No</th>
                     <th className="p-3 min-w-[220px]">Sub Kegiatan (Nama & Kode)</th>
@@ -3103,36 +3103,36 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                     <th className="p-3 text-center min-w-[140px]">Status Eksekusi</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800 print:divide-slate-300">
+                <tbody className="divide-y divide-[#DFE6EF] text-[#17324D]">
                   {filteredSilpaData.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="p-8 text-center text-slate-400">
-                        <AlertCircle className="h-8 w-8 text-amber-500/60 mx-auto mb-2" />
-                        <p className="font-semibold">Tidak ada data Rekening Belanja SiLPA yang sesuai filter.</p>
+                      <td colSpan={9} className="p-8 text-center text-[#64748B]">
+                        <AlertCircle className="h-8 w-8 text-[#D99A24] mx-auto mb-2" />
+                        <p className="font-semibold text-sm text-[#17324D]">Tidak ada data Rekening Belanja SiLPA yang sesuai filter.</p>
                       </td>
                     </tr>
                   ) : (
                     filteredSilpaData.map((r, idx) => (
-                      <tr key={r.id || `${r.kodeSub}-${r.kodeBelanja}-${idx}`} className="hover:bg-slate-800/40">
-                        <td className="p-3 text-center font-mono text-slate-400">{idx + 1}</td>
+                      <tr key={r.id || `${r.kodeSub}-${r.kodeBelanja}-${idx}`} className="hover:bg-[#F8FAFC] transition-colors">
+                        <td className="p-3 text-center font-mono text-[#64748B]">{idx + 1}</td>
                         <td className="p-3">
-                          <div className="text-white print:text-slate-900 font-bold text-xs">{r.namaSub}</div>
-                          <div className="font-mono text-[11px] font-semibold text-teal-400 print:text-slate-700 mt-0.5">
+                          <div className="text-[#17324D] font-bold text-xs">{r.namaSub}</div>
+                          <div className="font-mono text-[11px] font-semibold text-[#079669] mt-0.5">
                             Kode: {r.kodeSub}
                           </div>
                         </td>
                         <td className="p-3">
-                          <div className="text-white print:text-slate-900 font-semibold line-clamp-2">{r.namaBelanja}</div>
-                          <div className="font-mono text-[11px] font-bold text-amber-400 print:text-slate-700 mt-0.5">
+                          <div className="text-[#17324D] font-semibold line-clamp-2">{r.namaBelanja}</div>
+                          <div className="font-mono text-[11px] font-bold text-[#079669] mt-0.5">
                             Kode: {r.kodeBelanja}
                           </div>
                         </td>
                         <td className="p-3 text-center">
-                          <span className="inline-block px-2 py-0.5 rounded bg-slate-800 print:bg-slate-200 font-mono text-[10px] font-bold text-slate-300 print:text-slate-900">
+                          <span className="inline-block px-2 py-0.5 rounded bg-slate-100 border border-[#DFE6EF] font-mono text-[10px] font-bold text-[#17324D]">
                             {r.sumberDana}
                           </span>
                         </td>
-                        <td className="p-3 text-right font-mono font-bold text-white print:text-slate-900">
+                        <td className="p-3 text-right font-mono font-bold text-[#17324D] print:text-slate-900">
                           Rp {r.paguAkhir.toLocaleString('id-ID')}
                         </td>
                         <td
@@ -3144,34 +3144,34 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                               kodeSub: r.kodeSub
                             })
                           }
-                          className="p-3 text-right font-mono text-emerald-400 hover:text-emerald-200 hover:underline cursor-pointer print:text-slate-900 font-bold"
+                          className="p-3 text-right font-mono text-[#079669] hover:text-emerald-700 hover:underline cursor-pointer font-bold"
                           title="Klik untuk melihat rincian SP2D transaksi"
                         >
                           <span className="inline-flex items-center gap-1 justify-end">
                             <span>Rp {r.realisasi.toLocaleString('id-ID')}</span>
-                            <Eye className="h-3.5 w-3.5 text-emerald-400/80 print:hidden" />
+                            <Eye className="h-3.5 w-3.5 text-[#079669]/80 print:hidden" />
                           </span>
                         </td>
-                        <td className="p-3 text-right font-mono font-black text-rose-400 print:text-slate-900 bg-rose-950/30 print:bg-transparent">
+                        <td className="p-3 text-right font-mono font-bold text-[#D94F70] print:text-slate-900 bg-rose-50/50">
                           Rp {r.sisa.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-center font-bold text-slate-200 print:text-slate-900 font-mono">
+                        <td className="p-3 text-center font-bold text-[#17324D] font-mono">
                           {r.persen.toFixed(2)} %
                         </td>
                         <td className="p-3 text-center">
                           {r.status === 'unexecuted' ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-rose-950/80 text-rose-300 border border-rose-500/40 print:border-slate-800 print:text-slate-900">
-                              <XCircle className="h-3 w-3 text-rose-400 shrink-0 print:hidden" />
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-50 text-[#D94F70] border border-rose-200">
+                              <XCircle className="h-3 w-3 text-[#D94F70] shrink-0 print:hidden" />
                               100% Tidak Tereksekusi
                             </span>
                           ) : r.status === 'partial' ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-950/80 text-amber-300 border border-amber-500/40 print:border-slate-800 print:text-slate-900">
-                              <AlertTriangle className="h-3 w-3 text-amber-400 shrink-0 print:hidden" />
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-[#D99A24] border border-amber-200">
+                              <AlertTriangle className="h-3 w-3 text-[#D99A24] shrink-0 print:hidden" />
                               Tereksekusi Sebagian
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 print:border-slate-800 print:text-slate-900">
-                              <CheckCircle2 className="h-3 w-3 text-emerald-400 shrink-0 print:hidden" />
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-[#079669] border border-emerald-200">
+                              <CheckCircle2 className="h-3 w-3 text-[#079669] shrink-0 print:hidden" />
                               Terserap Penuh
                             </span>
                           )}
@@ -3180,7 +3180,7 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                     ))
                   )}
                 </tbody>
-                <tfoot className="bg-slate-950 font-bold border-t-2 border-slate-700 text-white print:bg-slate-100 print:text-black">
+                <tfoot className="bg-[#F8FAFC] font-bold border-t-2 border-[#DFE6EF] text-[#17324D] print:bg-slate-100 print:text-black">
                   {(() => {
                     const totalMurni = filteredSilpaData.reduce((s, r) => s + r.paguMurni, 0);
                     const totalRev = filteredSilpaData.reduce((s, r) => s + r.revisi, 0);
@@ -3194,19 +3194,19 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                         <td colSpan={4} className="p-3 text-right uppercase">
                           TOTAL REKENING SILPA DIPILIH ({filteredSilpaData.length} ITEM):
                         </td>
-                        <td className="p-3 text-right font-mono text-emerald-400">
+                        <td className="p-3 text-right font-mono text-[#079669]">
                           Rp {totalAkhir.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-right font-mono text-emerald-300">
+                        <td className="p-3 text-right font-mono text-emerald-700">
                           Rp {totalReal.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-right font-mono text-rose-400 font-black">
+                        <td className="p-3 text-right font-mono text-[#D94F70] font-black">
                           Rp {totalSisa.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-center text-amber-300 font-mono">
+                        <td className="p-3 text-center text-[#D99A24] font-mono font-bold">
                           {totalPct.toFixed(2)} %
                         </td>
-                        <td className="p-3 text-center text-xs text-slate-400 font-normal">
+                        <td className="p-3 text-center text-xs text-[#64748B] font-normal">
                           {filteredSilpaData.filter(r => r.status === 'unexecuted').length} Unexecuted
                         </td>
                       </tr>
@@ -3400,20 +3400,20 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
               });
 
               return (
-                <div className="mt-6 space-y-3 bg-slate-950 p-4 rounded-2xl border border-slate-800 print:bg-slate-50">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <h4 className="text-xs font-bold uppercase text-emerald-400 print:text-slate-900 flex items-center gap-2">
-                      <Info className="h-4 w-4 text-emerald-400 print:hidden" />
+                <div className="mt-6 space-y-3 bg-[#F8FAFC] p-4 rounded-2xl border border-[#DFE6EF] print:bg-slate-50">
+                  <div className="flex items-center justify-between border-b border-[#DFE6EF] pb-2">
+                    <h4 className="text-xs font-bold uppercase text-[#079669] print:text-slate-900 flex items-center gap-2">
+                      <Info className="h-4 w-4 text-[#079669] print:hidden" />
                       <span>Daftar Transaksi SP2D - Bulan {monthNames[Number(filterBulan) - 1]} TA {selectedTahun}</span>
                     </h4>
-                    <span className="text-[11px] text-slate-400 font-mono">
+                    <span className="text-[11px] text-[#64748B] font-mono">
                       {bulanSelectedTransactions.length} Transaksi Terdaftar
                     </span>
                   </div>
 
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto rounded-xl border border-[#DFE6EF]">
                     <table className="w-full text-left text-xs border-collapse">
-                      <thead className="bg-slate-900 print:bg-slate-200 text-slate-400 print:text-slate-900 font-bold uppercase">
+                      <thead className="bg-[#FFFFFF] print:bg-slate-200 text-[#17324D] font-bold uppercase border-b-2 border-[#DFE6EF] text-[11px] tracking-wider">
                         <tr>
                           <th className="p-2.5 w-8 text-center">No</th>
                           <th className="p-2.5">Tanggal</th>
@@ -3424,25 +3424,25 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                           <th className="p-2.5">Rekanan</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-800 print:divide-slate-300">
+                      <tbody className="divide-y divide-[#DFE6EF] text-[#17324D]">
                         {bulanSelectedTransactions.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="p-4 text-center text-slate-500">
+                            <td colSpan={7} className="p-4 text-center text-[#64748B]">
                               Tidak ada transaksi SP2D yang tercatat pada Bulan {monthNames[Number(filterBulan) - 1]}.
                             </td>
                           </tr>
                         ) : (
                           bulanSelectedTransactions.map((r, i) => (
-                            <tr key={r.id || i} className="hover:bg-slate-900/60">
-                              <td className="p-2.5 text-center font-mono text-slate-500">{i + 1}</td>
-                              <td className="p-2.5 font-mono text-slate-300 print:text-slate-900">{r.tanggal}</td>
-                              <td className="p-2.5 font-mono font-bold text-amber-400 print:text-slate-900">{r.noSP2D}</td>
-                              <td className="p-2.5 font-mono text-teal-400 print:text-slate-900">{r.kodeBelanja}</td>
-                              <td className="p-2.5 text-white print:text-slate-900">{r.uraian}</td>
-                              <td className="p-2.5 text-right font-mono font-bold text-emerald-400 print:text-slate-900">
+                            <tr key={r.id || i} className="hover:bg-white transition-colors">
+                              <td className="p-2.5 text-center font-mono text-[#64748B]">{i + 1}</td>
+                              <td className="p-2.5 font-mono text-[#17324D] print:text-slate-900">{r.tanggal}</td>
+                              <td className="p-2.5 font-mono font-bold text-[#079669] print:text-slate-900">{r.noSP2D}</td>
+                              <td className="p-2.5 font-mono text-[#3984E8] print:text-slate-900">{r.kodeBelanja}</td>
+                              <td className="p-2.5 font-medium text-[#17324D]">{r.uraian}</td>
+                              <td className="p-2.5 text-right font-mono font-bold text-[#079669] print:text-slate-900">
                                 Rp {r.nilai.toLocaleString('id-ID')}
                               </td>
-                              <td className="p-2.5 text-slate-400 print:text-slate-900">{r.rekanan || '-'}</td>
+                              <td className="p-2.5 text-[#64748B] print:text-slate-900">{r.rekanan || '-'}</td>
                             </tr>
                           ))
                         )}
@@ -3517,9 +3517,9 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto rounded-xl border border-[#DFE6EF]">
                 <table className="w-full text-left text-xs border-collapse">
-                  <thead className="bg-slate-950 print:bg-slate-200 text-slate-300 print:text-slate-900 font-bold uppercase border-b border-slate-800">
+                  <thead className="bg-[#F8FAFC] text-[#17324D] font-bold uppercase border-b-2 border-[#DFE6EF] text-[11px] tracking-wider">
                     <tr>
                       <th className="p-3 w-10 text-center">No</th>
                       <th className="p-3 min-w-[180px]">Periode Triwulan</th>
@@ -3531,48 +3531,48 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                       <th className="p-3 text-center">% Serapan Kumulatif</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800 print:divide-slate-300">
+                  <tbody className="divide-y divide-[#DFE6EF] text-[#17324D]">
                     {triwulanReportData.map(tw => (
-                      <tr key={tw.no} className="hover:bg-slate-800/40">
-                        <td className="p-3 text-center font-mono text-slate-400">{tw.no}</td>
-                        <td className="p-3 font-bold text-white print:text-slate-900">{tw.nama}</td>
-                        <td className="p-3 text-slate-400 print:text-slate-700 font-mono">{tw.bulanList}</td>
-                        <td className="p-3 text-right font-mono text-slate-300 print:text-slate-900">
+                      <tr key={tw.no} className="hover:bg-[#F8FAFC] transition-colors">
+                        <td className="p-3 text-center font-mono text-[#64748B]">{tw.no}</td>
+                        <td className="p-3 font-bold text-[#17324D]">{tw.nama}</td>
+                        <td className="p-3 text-[#64748B] font-mono">{tw.bulanList}</td>
+                        <td className="p-3 text-right font-mono text-[#17324D]">
                           Rp {tw.target.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                         </td>
-                        <td className="p-3 text-right font-mono font-bold text-emerald-400 print:text-slate-900">
+                        <td className="p-3 text-right font-mono font-bold text-[#079669]">
                           Rp {tw.realisasi.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-right font-mono font-bold text-cyan-300 print:text-slate-900">
+                        <td className="p-3 text-right font-mono font-bold text-[#3984E8]">
                           Rp {tw.realisasiKumulatif.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-right font-mono font-bold text-rose-400 print:text-slate-900 bg-rose-950/20 print:bg-transparent">
+                        <td className="p-3 text-right font-mono font-bold text-[#D94F70] bg-rose-50/50">
                           Rp {tw.sisa.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-center font-mono font-bold text-amber-300 print:text-slate-900">
+                        <td className="p-3 text-center font-mono font-bold text-[#D99A24]">
                           {tw.persenSerapan.toFixed(2)} %
                         </td>
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-slate-950 font-bold border-t-2 border-slate-700 text-white print:bg-slate-100 print:text-black">
+                  <tfoot className="bg-[#F8FAFC] font-bold border-t-2 border-[#DFE6EF] text-[#17324D] print:bg-slate-100 print:text-black">
                     <tr>
-                      <td colSpan={3} className="p-3 text-right uppercase tracking-wider text-xs font-bold text-white print:text-black">
+                      <td colSpan={3} className="p-3 text-right uppercase tracking-wider text-xs font-bold text-[#17324D]">
                         TOTAL AKUMULASI TRIWULAN (TA {selectedTahun}):
                       </td>
-                      <td className="p-3 text-right font-mono text-cyan-400 print:text-slate-900">
+                      <td className="p-3 text-right font-mono text-[#3984E8]">
                         Rp {totalTargetTw.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                       </td>
-                      <td className="p-3 text-right font-mono text-emerald-400 print:text-slate-900">
+                      <td className="p-3 text-right font-mono text-[#079669]">
                         Rp {totalRealTw.toLocaleString('id-ID')}
                       </td>
-                      <td className="p-3 text-right font-mono text-cyan-300 print:text-slate-900">
+                      <td className="p-3 text-right font-mono text-[#3984E8]">
                         Rp {totalRealTw.toLocaleString('id-ID')}
                       </td>
-                      <td className="p-3 text-right font-mono font-black text-rose-400 print:text-slate-900 bg-rose-950/30 print:bg-transparent">
+                      <td className="p-3 text-right font-mono font-black text-[#D94F70] bg-rose-50/70">
                         Rp {totalSisaTw.toLocaleString('id-ID')}
                       </td>
-                      <td className="p-3 text-center font-mono font-black text-amber-300 print:text-slate-900">
+                      <td className="p-3 text-center font-mono font-black text-[#D99A24]">
                         {totalPctTw.toFixed(2)} %
                       </td>
                     </tr>
@@ -3592,62 +3592,62 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
 
           return (
             <div className="space-y-6">
-              <div className="border-b border-slate-800 pb-2">
-                <h3 className="text-xs font-bold uppercase text-amber-400 print:text-slate-900 flex items-center gap-2">
-                  <CalendarDays className="h-4 w-4 text-cyan-400 print:hidden" />
+              <div className="border-b border-[#DFE6EF] pb-2">
+                <h3 className="text-xs font-bold uppercase text-[#079669] print:text-slate-900 flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4 text-[#3984E8] print:hidden" />
                   <span>VII. Laporan Semester (Target Anggaran vs Realisasi Per Semester)</span>
                 </h3>
-                <p className="text-[11px] text-slate-400 print:text-slate-700 mt-0.5">
+                <p className="text-[11px] text-[#64748B] print:text-slate-700 mt-0.5">
                   Rekapitulasi target alokasi anggaran dan realisasi SP2D per semester (Semester I - II) TA {selectedTahun}.
                 </p>
               </div>
 
               {/* KPI Summary Cards for Semester */}
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4 print:hidden">
-                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-3.5 shadow-sm">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+                <div className="rounded-2xl border border-[#DFE6EF] bg-[#FFFFFF] p-3.5 shadow-xs">
+                  <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wide">
                     Total Target Anggaran
                   </span>
-                  <p className="mt-1 text-base sm:text-lg font-black font-mono text-cyan-400">
+                  <p className="mt-1 text-base sm:text-lg font-black font-mono text-[#3984E8]">
                     Rp {totalTargetSem.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                   </p>
-                  <span className="text-[10px] text-slate-500">Akumulasi Target Semester I & II</span>
+                  <span className="text-[10px] text-[#64748B]">Akumulasi Target Semester I & II</span>
                 </div>
 
-                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-3.5 shadow-sm">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+                <div className="rounded-2xl border border-[#DFE6EF] bg-[#FFFFFF] p-3.5 shadow-xs">
+                  <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wide">
                     Total Realisasi SP2D
                   </span>
-                  <p className="mt-1 text-base sm:text-lg font-black font-mono text-emerald-400">
+                  <p className="mt-1 text-base sm:text-lg font-black font-mono text-[#079669]">
                     Rp {totalRealSem.toLocaleString('id-ID')}
                   </p>
-                  <span className="text-[10px] text-emerald-400/80">Realisasi Semua Semester</span>
+                  <span className="text-[10px] text-[#079669]">Realisasi Semua Semester</span>
                 </div>
 
-                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-3.5 shadow-sm">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+                <div className="rounded-2xl border border-[#DFE6EF] bg-[#FFFFFF] p-3.5 shadow-xs">
+                  <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wide">
                     Sisa Pagu / SiLPA
                   </span>
-                  <p className="mt-1 text-base sm:text-lg font-black font-mono text-rose-400">
+                  <p className="mt-1 text-base sm:text-lg font-black font-mono text-[#D94F70]">
                     Rp {totalSisaSem.toLocaleString('id-ID')}
                   </p>
-                  <span className="text-[10px] text-slate-500">Sisa Pagu Anggaran TA {selectedTahun}</span>
+                  <span className="text-[10px] text-[#64748B]">Sisa Pagu Anggaran TA {selectedTahun}</span>
                 </div>
 
-                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-3.5 shadow-sm">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+                <div className="rounded-2xl border border-[#DFE6EF] bg-[#FFFFFF] p-3.5 shadow-xs">
+                  <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wide">
                     % Serapan Semester
                   </span>
-                  <p className="mt-1 text-base sm:text-lg font-black font-mono text-amber-300">
+                  <p className="mt-1 text-base sm:text-lg font-black font-mono text-[#D99A24]">
                     {totalPctSem.toFixed(2)} %
                   </p>
-                  <span className="text-[10px] text-amber-400/80">Capaian Serapan Total</span>
+                  <span className="text-[10px] text-[#D99A24]">Capaian Serapan Total</span>
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto rounded-xl border border-[#DFE6EF]">
                 <table className="w-full text-left text-xs border-collapse">
-                  <thead className="bg-slate-950 print:bg-slate-200 text-slate-300 print:text-slate-900 font-bold uppercase border-b border-slate-800">
+                  <thead className="bg-[#F8FAFC] text-[#17324D] font-bold uppercase border-b-2 border-[#DFE6EF] text-[11px] tracking-wider">
                     <tr>
                       <th className="p-3 w-10 text-center">No</th>
                       <th className="p-3 min-w-[180px]">Periode Semester</th>
@@ -3659,48 +3659,48 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
                       <th className="p-3 text-center">% Serapan Kumulatif</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800 print:divide-slate-300">
+                  <tbody className="divide-y divide-[#DFE6EF] text-[#17324D]">
                     {semesterReportData.map(sem => (
-                      <tr key={sem.no} className="hover:bg-slate-800/40">
-                        <td className="p-3 text-center font-mono text-slate-400">{sem.no}</td>
-                        <td className="p-3 font-bold text-white print:text-slate-900">{sem.nama}</td>
-                        <td className="p-3 text-slate-400 print:text-slate-700 font-mono">{sem.bulanList}</td>
-                        <td className="p-3 text-right font-mono text-slate-300 print:text-slate-900">
+                      <tr key={sem.no} className="hover:bg-[#F8FAFC] transition-colors">
+                        <td className="p-3 text-center font-mono text-[#64748B]">{sem.no}</td>
+                        <td className="p-3 font-bold text-[#17324D]">{sem.nama}</td>
+                        <td className="p-3 text-[#64748B] font-mono">{sem.bulanList}</td>
+                        <td className="p-3 text-right font-mono text-[#17324D]">
                           Rp {sem.target.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                         </td>
-                        <td className="p-3 text-right font-mono font-bold text-emerald-400 print:text-slate-900">
+                        <td className="p-3 text-right font-mono font-bold text-[#079669]">
                           Rp {sem.realisasi.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-right font-mono font-bold text-cyan-300 print:text-slate-900">
+                        <td className="p-3 text-right font-mono font-bold text-[#3984E8]">
                           Rp {sem.realisasiKumulatif.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-right font-mono font-bold text-rose-400 print:text-slate-900 bg-rose-950/20 print:bg-transparent">
+                        <td className="p-3 text-right font-mono font-bold text-[#D94F70] bg-rose-50/50">
                           Rp {sem.sisa.toLocaleString('id-ID')}
                         </td>
-                        <td className="p-3 text-center font-mono font-bold text-amber-300 print:text-slate-900">
+                        <td className="p-3 text-center font-mono font-bold text-[#D99A24]">
                           {sem.persenSerapan.toFixed(2)} %
                         </td>
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-slate-950 font-bold border-t-2 border-slate-700 text-white print:bg-slate-100 print:text-black">
+                  <tfoot className="bg-[#F8FAFC] font-bold border-t-2 border-[#DFE6EF] text-[#17324D] print:bg-slate-100 print:text-black">
                     <tr>
-                      <td colSpan={3} className="p-3 text-right uppercase tracking-wider text-xs font-bold text-white print:text-black">
+                      <td colSpan={3} className="p-3 text-right uppercase tracking-wider text-xs font-bold text-[#17324D]">
                         TOTAL AKUMULASI SEMESTER (TA {selectedTahun}):
                       </td>
-                      <td className="p-3 text-right font-mono text-cyan-400 print:text-slate-900">
+                      <td className="p-3 text-right font-mono text-[#3984E8]">
                         Rp {totalTargetSem.toLocaleString('id-ID', { maximumFractionDigits: 0 })}
                       </td>
-                      <td className="p-3 text-right font-mono text-emerald-400 print:text-slate-900">
+                      <td className="p-3 text-right font-mono text-[#079669]">
                         Rp {totalRealSem.toLocaleString('id-ID')}
                       </td>
-                      <td className="p-3 text-right font-mono text-cyan-300 print:text-slate-900">
+                      <td className="p-3 text-right font-mono text-[#3984E8]">
                         Rp {totalRealSem.toLocaleString('id-ID')}
                       </td>
-                      <td className="p-3 text-right font-mono font-black text-rose-400 print:text-slate-900 bg-rose-950/30 print:bg-transparent">
+                      <td className="p-3 text-right font-mono font-black text-[#D94F70] bg-rose-50/70">
                         Rp {totalSisaSem.toLocaleString('id-ID')}
                       </td>
-                      <td className="p-3 text-center font-mono font-black text-amber-300 print:text-slate-900">
+                      <td className="p-3 text-center font-mono font-black text-[#D99A24]">
                         {totalPctSem.toFixed(2)} %
                       </td>
                     </tr>
@@ -3714,12 +3714,12 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
         {/* 8. LAPORAN TAHUNAN */}
         {activeTab === 'laporan-tahunan' && (
           <div className="space-y-6">
-            <div className="border-b border-slate-800 pb-2">
-              <h3 className="text-xs font-bold uppercase text-amber-400 print:text-slate-900 flex items-center gap-2">
-                <CalendarDays className="h-4 w-4 text-cyan-400 print:hidden" />
+            <div className="border-b border-[#DFE6EF] pb-2">
+              <h3 className="text-xs font-bold uppercase text-[#079669] print:text-slate-900 flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-[#3984E8] print:hidden" />
                 <span>VIII. Laporan Tahunan (Rekapitulasi Kinerja Keuangan TA {selectedTahun})</span>
               </h3>
-              <p className="text-[11px] text-slate-400 print:text-slate-700 mt-0.5">
+              <p className="text-[11px] text-[#64748B] print:text-slate-700 mt-0.5">
                 Ringkasan eksekutif alokasi anggaran murni, pergeseran/revisi, pagu akhir, total realisasi SP2D, dan sisa pagu anggaran (SiLPA).
               </p>
             </div>
@@ -3734,42 +3734,42 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
 
               return (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="p-5 rounded-2xl border border-slate-800 bg-slate-950 space-y-2">
-                    <span className="text-xs font-bold text-slate-400 uppercase">Pagu Murni APBD</span>
-                    <div className="text-xl font-black text-white font-mono">Rp {totalMurni.toLocaleString('id-ID')}</div>
-                    <p className="text-[10px] text-slate-500">Penetapan awal TA {selectedTahun}</p>
+                  <div className="p-5 rounded-2xl border border-[#DFE6EF] bg-[#F8FAFC] space-y-2">
+                    <span className="text-xs font-bold text-[#64748B] uppercase">Pagu Murni APBD</span>
+                    <div className="text-xl font-black text-[#17324D] font-mono">Rp {totalMurni.toLocaleString('id-ID')}</div>
+                    <p className="text-[10px] text-[#64748B]">Penetapan awal TA {selectedTahun}</p>
                   </div>
 
-                  <div className="p-5 rounded-2xl border border-slate-800 bg-slate-950 space-y-2">
-                    <span className="text-xs font-bold text-slate-400 uppercase">Pergeseran / Revisi</span>
-                    <div className="text-xl font-black text-amber-300 font-mono">
+                  <div className="p-5 rounded-2xl border border-[#DFE6EF] bg-[#F8FAFC] space-y-2">
+                    <span className="text-xs font-bold text-[#64748B] uppercase">Pergeseran / Revisi</span>
+                    <div className="text-xl font-black text-[#D99A24] font-mono">
                       {totalRev >= 0 ? '+' : ''}Rp {totalRev.toLocaleString('id-ID')}
                     </div>
-                    <p className="text-[10px] text-slate-500">Akomodasi perubahan pagu</p>
+                    <p className="text-[10px] text-[#64748B]">Akomodasi perubahan pagu</p>
                   </div>
 
-                  <div className="p-5 rounded-2xl border border-cyan-500/30 bg-slate-950 space-y-2">
-                    <span className="text-xs font-bold text-cyan-400 uppercase">Pagu Akhir DPA</span>
-                    <div className="text-xl font-black text-cyan-300 font-mono">Rp {totalAkhir.toLocaleString('id-ID')}</div>
-                    <p className="text-[10px] text-cyan-400/80">Pagu anggaran final</p>
+                  <div className="p-5 rounded-2xl border border-blue-200 bg-blue-50/40 space-y-2">
+                    <span className="text-xs font-bold text-[#3984E8] uppercase">Pagu Akhir DPA</span>
+                    <div className="text-xl font-black text-[#3984E8] font-mono">Rp {totalAkhir.toLocaleString('id-ID')}</div>
+                    <p className="text-[10px] text-[#3984E8]">Pagu anggaran final</p>
                   </div>
 
-                  <div className="p-5 rounded-2xl border border-emerald-500/30 bg-slate-950 space-y-2">
-                    <span className="text-xs font-bold text-emerald-400 uppercase">Total Realisasi SP2D</span>
-                    <div className="text-xl font-black text-emerald-300 font-mono">Rp {totalReal.toLocaleString('id-ID')}</div>
-                    <p className="text-[10px] text-emerald-400/80">{pctSerapan.toFixed(2)}% Serapan Keuangan</p>
+                  <div className="p-5 rounded-2xl border border-emerald-200 bg-emerald-50/40 space-y-2">
+                    <span className="text-xs font-bold text-[#079669] uppercase">Total Realisasi SP2D</span>
+                    <div className="text-xl font-black text-[#079669] font-mono">Rp {totalReal.toLocaleString('id-ID')}</div>
+                    <p className="text-[10px] text-[#079669]">{pctSerapan.toFixed(2)}% Serapan Keuangan</p>
                   </div>
 
-                  <div className="p-5 rounded-2xl border border-rose-500/30 bg-slate-950 space-y-2">
-                    <span className="text-xs font-bold text-rose-400 uppercase">Sisa Pagu Anggaran (SiLPA)</span>
-                    <div className="text-xl font-black text-rose-300 font-mono">Rp {totalSisa.toLocaleString('id-ID')}</div>
-                    <p className="text-[10px] text-slate-400">{(100 - pctSerapan).toFixed(2)}% Belum terserap</p>
+                  <div className="p-5 rounded-2xl border border-rose-200 bg-rose-50/40 space-y-2">
+                    <span className="text-xs font-bold text-[#D94F70] uppercase">Sisa Pagu Anggaran (SiLPA)</span>
+                    <div className="text-xl font-black text-[#D94F70] font-mono">Rp {totalSisa.toLocaleString('id-ID')}</div>
+                    <p className="text-[10px] text-[#64748B]">{(100 - pctSerapan).toFixed(2)}% Belum terserap</p>
                   </div>
 
-                  <div className="p-5 rounded-2xl border border-purple-500/30 bg-slate-950 space-y-2">
-                    <span className="text-xs font-bold text-purple-400 uppercase">Total SP2D Diterbitkan</span>
-                    <div className="text-xl font-black text-purple-300 font-mono">{currentRealisasi.length} Transaksi</div>
-                    <p className="text-[10px] text-slate-400">Verifikasi dokumen lengkap</p>
+                  <div className="p-5 rounded-2xl border border-indigo-200 bg-indigo-50/40 space-y-2">
+                    <span className="text-xs font-bold text-indigo-600 uppercase">Total SP2D Diterbitkan</span>
+                    <div className="text-xl font-black text-indigo-700 font-mono">{currentRealisasi.length} Transaksi</div>
+                    <p className="text-[10px] text-[#64748B]">Verifikasi dokumen lengkap</p>
                   </div>
                 </div>
               );
@@ -3778,13 +3778,13 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
         )}
 
         {/* SIGNATURE BLOCK FOR PRINT */}
-        <div className="mt-12 grid grid-cols-2 gap-8 text-center text-xs text-slate-300 print:text-slate-900">
+        <div className="mt-12 grid grid-cols-2 gap-8 text-center text-xs text-[#17324D] print:text-black">
           <div>
             <p>Mengetahui,</p>
             <p className="font-bold">Pejabat Pembuat Komitmen (PPK)</p>
             <div className="h-16" />
-            <p className="font-bold underline">{activePpkUser?.nama || 'Drs. Supriadi, M.M'}</p>
-            <p className="text-[10px] font-mono">
+            <p className="font-bold underline text-[#17324D]">{activePpkUser?.nama || 'Drs. Supriadi, M.M'}</p>
+            <p className="text-[10px] font-mono text-[#64748B]">
               {activePpkUser?.nip ? `NIP. ${activePpkUser.nip}` : 'NIP. -'}
             </p>
           </div>
@@ -3793,10 +3793,10 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
             <p>Mataram, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
             <p className="font-bold">Kepala Badan Kesbangpoldagri NTB</p>
             <div className="h-16" />
-            <p className="font-bold underline">
+            <p className="font-bold underline text-[#17324D]">
               {activeKabanUser?.nama || opd.kepalaBadan || 'H. Lalu Gita Ariadi, M.Si'}
             </p>
-            <p className="text-[10px] font-mono">
+            <p className="text-[10px] font-mono text-[#64748B]">
               {activeKabanUser?.nip
                 ? `NIP. ${activeKabanUser.nip}`
                 : opd.nipKepala
