@@ -2359,11 +2359,11 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                 />
               </div>
               <div>
-                <label className="font-bold text-slate-300">Jenis Belanja:</label>
+                <label className="font-bold text-[#17324D]">Jenis Belanja:</label>
                 <select
                   value={editingBelanja.jenisBelanja}
                   onChange={e => setEditingBelanja({ ...editingBelanja, jenisBelanja: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-white focus:border-amber-500 focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-[#DFE6EF] bg-[#FFFFFF] p-2.5 text-xs text-[#17324D] font-medium focus:border-[#079669] focus:outline-none cursor-pointer"
                 >
                   <option value="Belanja Pegawai">Belanja Pegawai</option>
                   <option value="Belanja Barang dan Jasa">Belanja Barang dan Jasa</option>
@@ -2867,11 +2867,11 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-slate-300">Jenis Belanja:</label>
+                  <label className="font-bold text-[#17324D]">Jenis Belanja:</label>
                   <select
                     value={formBelanja.jenisBelanja}
                     onChange={e => setFormBelanja({ ...formBelanja, jenisBelanja: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-white"
+                    className="mt-1 w-full rounded-xl border border-[#DFE6EF] bg-[#FFFFFF] p-2.5 text-xs text-[#17324D] font-medium focus:border-[#079669] focus:outline-none cursor-pointer"
                   >
                     <option value="Belanja Pegawai">Belanja Pegawai</option>
                     <option value="Belanja Barang dan Jasa">Belanja Barang dan Jasa</option>

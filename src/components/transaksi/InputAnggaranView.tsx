@@ -684,14 +684,14 @@ export const InputAnggaranView: React.FC = () => {
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="text-xs font-bold text-slate-300">Pilih Program:</label>
+              <label className="text-xs font-bold text-[#17324D]">Pilih Program:</label>
               <select
                 value={kodeProgram}
                 onChange={e => handleProgramChange(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                className="mt-1 w-full rounded-xl border border-[#DFE6EF] bg-[#FFFFFF] p-2.5 text-xs text-[#17324D] font-medium focus:border-[#079669] focus:outline-none cursor-pointer"
               >
                 {finalPrograms.map(p => (
-                  <option key={`${p.tahun}_${p.kodeProgram}`} value={p.kodeProgram}>
+                  <option key={`${p.tahun}_${p.kodeProgram}`} value={p.kodeProgram} className="text-[#17324D] bg-[#FFFFFF]">
                     {p.kodeProgram} - {p.namaProgram}
                   </option>
                 ))}
@@ -699,18 +699,18 @@ export const InputAnggaranView: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-300">Pilih Kegiatan:</label>
+              <label className="text-xs font-bold text-[#17324D]">Pilih Kegiatan:</label>
               <select
                 value={kodeKegiatan}
                 onChange={e => handleKegiatanChange(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                className="mt-1 w-full rounded-xl border border-[#DFE6EF] bg-[#FFFFFF] p-2.5 text-xs text-[#17324D] font-medium focus:border-[#079669] focus:outline-none cursor-pointer"
                 disabled={finalKegiatan.length === 0}
               >
                 {finalKegiatan.length === 0 ? (
-                  <option value="">-- Tidak Ada Kegiatan --</option>
+                  <option value="" className="text-[#64748B] bg-[#FFFFFF]">-- Tidak Ada Kegiatan --</option>
                 ) : (
                   finalKegiatan.map(k => (
-                    <option key={`${k.tahun}_${k.kodeKegiatan}`} value={k.kodeKegiatan}>
+                    <option key={`${k.tahun}_${k.kodeKegiatan}`} value={k.kodeKegiatan} className="text-[#17324D] bg-[#FFFFFF]">
                       {k.kodeKegiatan} - {k.namaKegiatan}
                     </option>
                   ))
@@ -719,18 +719,18 @@ export const InputAnggaranView: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-300">Pilih Sub Kegiatan:</label>
+              <label className="text-xs font-bold text-[#17324D]">Pilih Sub Kegiatan:</label>
               <select
                 value={kodeSub}
                 onChange={e => setKodeSub(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                className="mt-1 w-full rounded-xl border border-[#DFE6EF] bg-[#FFFFFF] p-2.5 text-xs text-[#17324D] font-medium focus:border-[#079669] focus:outline-none cursor-pointer"
                 disabled={finalSub.length === 0}
               >
                 {finalSub.length === 0 ? (
-                  <option value="">-- Tidak Ada Sub Kegiatan --</option>
+                  <option value="" className="text-[#64748B] bg-[#FFFFFF]">-- Tidak Ada Sub Kegiatan --</option>
                 ) : (
                   finalSub.map(s => (
-                    <option key={`${s.tahun}_${s.kodeSub}`} value={s.kodeSub}>
+                    <option key={`${s.tahun}_${s.kodeSub}`} value={s.kodeSub} className="text-[#17324D] bg-[#FFFFFF]">
                       {s.kodeSub} - {s.namaSub}
                     </option>
                   ))
@@ -739,14 +739,14 @@ export const InputAnggaranView: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-300">Rekening Belanja:</label>
+              <label className="text-xs font-bold text-[#17324D]">Rekening Belanja:</label>
               <select
                 value={kodeBelanja}
                 onChange={e => setKodeBelanja(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                className="mt-1 w-full rounded-xl border border-[#DFE6EF] bg-[#FFFFFF] p-2.5 text-xs text-[#17324D] font-medium focus:border-[#079669] focus:outline-none cursor-pointer"
               >
                 {belanjaList.map(b => (
-                  <option key={b.kodeBelanja} value={b.kodeBelanja}>
+                  <option key={b.kodeBelanja} value={b.kodeBelanja} className="text-[#17324D] bg-[#FFFFFF]">
                     {b.kodeBelanja} - {b.namaBelanja}
                   </option>
                 ))}
@@ -754,7 +754,7 @@ export const InputAnggaranView: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-300">Nilai Pagu Murni (Rp):</label>
+              <label className="text-xs font-bold text-[#17324D]">Nilai Pagu Murni (Rp):</label>
               <input
                 type="number"
                 required
@@ -765,12 +765,12 @@ export const InputAnggaranView: React.FC = () => {
                   setPagu(val);
                   setNilaiSPD(val + revisi);
                 }}
-                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs font-mono font-bold text-emerald-400"
+                className="mt-1 w-full rounded-xl border border-[#DFE6EF] bg-[#FFFFFF] p-2.5 text-xs font-mono font-bold text-[#079669] focus:border-[#079669] focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-300">Revisi / Pergeseran (Rp):</label>
+              <label className="text-xs font-bold text-[#17324D]">Revisi / Pergeseran (Rp):</label>
               <input
                 type="number"
                 value={revisi}
@@ -779,31 +779,31 @@ export const InputAnggaranView: React.FC = () => {
                   setRevisi(val);
                   setNilaiSPD(pagu + val);
                 }}
-                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs font-mono font-bold text-amber-400"
+                className="mt-1 w-full rounded-xl border border-[#DFE6EF] bg-[#FFFFFF] p-2.5 text-xs font-mono font-bold text-[#D99A24] focus:border-[#079669] focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-300">Nilai SPD (Surat Penyediaan Dana) (Rp):</label>
+              <label className="text-xs font-bold text-[#17324D]">Nilai SPD (Surat Penyediaan Dana) (Rp):</label>
               <input
                 type="number"
                 required
                 min={0}
                 value={nilaiSPD}
                 onChange={e => setNilaiSPD(Number(e.target.value))}
-                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs font-mono font-bold text-sky-400"
+                className="mt-1 w-full rounded-xl border border-[#DFE6EF] bg-[#FFFFFF] p-2.5 text-xs font-mono font-bold text-[#3984E8] focus:border-[#079669] focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-300">Sumber Dana:</label>
+              <label className="text-xs font-bold text-[#17324D]">Sumber Dana:</label>
               <select
                 value={sumberDana}
                 onChange={e => setSumberDana(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                className="mt-1 w-full rounded-xl border border-[#DFE6EF] bg-[#FFFFFF] p-2.5 text-xs text-[#17324D] font-medium focus:border-[#079669] focus:outline-none cursor-pointer"
               >
                 {sumberDanaList.map(sd => (
-                  <option key={sd.kodeSumber} value={sd.namaSumber || sd.kodeSumber}>
+                  <option key={sd.kodeSumber} value={sd.namaSumber || sd.kodeSumber} className="text-[#17324D] bg-[#FFFFFF]">
                     {sd.namaSumber}
                   </option>
                 ))}
@@ -1182,14 +1182,14 @@ export const InputAnggaranView: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-slate-300 font-bold block mb-1">Sumber Dana:</label>
+                <label className="text-[#17324D] font-bold block mb-1">Sumber Dana:</label>
                 <select
                   value={editSumberDana}
                   onChange={e => setEditSumberDana(e.target.value)}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                  className="w-full rounded-xl border border-[#DFE6EF] bg-[#FFFFFF] p-2.5 text-xs text-[#17324D] font-medium focus:border-[#079669] focus:outline-none cursor-pointer"
                 >
                   {sumberDanaList.map(sd => (
-                    <option key={sd.kodeSumber} value={sd.namaSumber || sd.kodeSumber}>
+                    <option key={sd.kodeSumber} value={sd.namaSumber || sd.kodeSumber} className="text-[#17324D] bg-[#FFFFFF]">
                       {sd.namaSumber}
                     </option>
                   ))}

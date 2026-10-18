@@ -1784,7 +1784,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
               <select
                 value={selectedOpdId}
                 onChange={e => setSelectedOpdId(e.target.value)}
-                className="w-full rounded-lg border border-cyan-500/40 bg-slate-950 py-1 pl-2.5 pr-7 text-xs font-semibold text-white focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                className="w-full rounded-lg border border-[#DFE6EF] bg-[#FFFFFF] py-1.5 pl-2.5 pr-7 text-xs font-bold text-[#17324D] focus:border-[#079669] focus:outline-none focus:ring-1 focus:ring-[#079669] cursor-pointer"
               >
                 <option value="ALL">🌐 KONSOLIDASI SELURUH OPD NTB (GABUNGAN 40 OPD)</option>
                 <optgroup label="Badan Daerah">
@@ -2028,7 +2028,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
               <select
                 value={kategoriFilter}
                 onChange={e => setKategoriFilter(e.target.value)}
-                className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-300 focus:border-cyan-500 focus:outline-none"
+                className="rounded-lg border border-[#DFE6EF] bg-[#FFFFFF] px-2 py-1 text-xs text-[#17324D] font-semibold focus:border-[#079669] focus:outline-none cursor-pointer"
               >
                 <option value="ALL">Semua Kategori</option>
                 <option value="Dinas Daerah">Dinas Daerah</option>
@@ -2042,7 +2042,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
               <select
                 value={statusKinerjaFilter}
                 onChange={e => setStatusKinerjaFilter(e.target.value)}
-                className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-300 focus:border-cyan-500 focus:outline-none"
+                className="rounded-lg border border-[#DFE6EF] bg-[#FFFFFF] px-2 py-1 text-xs text-[#17324D] font-semibold focus:border-[#079669] focus:outline-none cursor-pointer"
               >
                 <option value="ALL">Semua Kinerja</option>
                 <option value="Sangat Tinggi">Kinerja Sangat Tinggi</option>
@@ -2567,7 +2567,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                   <select
                     value={masterJenisBelanjaFilter}
                     onChange={e => setMasterJenisBelanjaFilter(e.target.value)}
-                    className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-300 focus:border-cyan-500 focus:outline-none"
+                    className="rounded-lg border border-[#DFE6EF] bg-[#FFFFFF] px-2.5 py-1.5 text-xs text-[#17324D] font-semibold focus:border-[#079669] focus:outline-none cursor-pointer"
                   >
                     <option value="ALL">Semua Jenis Belanja</option>
                     <option value="Belanja Pegawai">Belanja Pegawai</option>
@@ -2580,7 +2580,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                   <select
                     value={masterOpdFilter}
                     onChange={e => setMasterOpdFilter(e.target.value)}
-                    className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-300 focus:border-cyan-500 focus:outline-none max-w-[220px]"
+                    className="rounded-lg border border-[#DFE6EF] bg-[#FFFFFF] px-2.5 py-1.5 text-xs text-[#17324D] font-semibold focus:border-[#079669] focus:outline-none max-w-[220px] cursor-pointer"
                   >
                     <option value="ALL">Semua Satuan Kerja (40 OPD)</option>
                     {opdListState.map(o => (
@@ -2713,7 +2713,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                   <select
                     value={masterOpdFilter}
                     onChange={e => setMasterOpdFilter(e.target.value)}
-                    className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-300 focus:border-cyan-500 focus:outline-none"
+                    className="rounded-lg border border-[#DFE6EF] bg-[#FFFFFF] px-2.5 py-1.5 text-xs text-[#17324D] font-semibold focus:border-[#079669] focus:outline-none cursor-pointer"
                   >
                     <option value="ALL">Semua Satuan Kerja (40 OPD)</option>
                     {opdListState.map(o => (
@@ -2969,7 +2969,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                 <select
                   value={laporanOpdId}
                   onChange={e => setLaporanOpdId(e.target.value)}
-                  className="w-full rounded-xl border border-cyan-500/50 bg-slate-950 py-2.5 pl-3 pr-8 text-xs font-bold text-cyan-200 focus:border-cyan-400 focus:outline-none shadow-inner"
+                  className="w-full rounded-xl border border-[#DFE6EF] bg-[#FFFFFF] py-2.5 pl-3 pr-8 text-xs font-bold text-[#17324D] focus:border-[#079669] focus:outline-none shadow-xs cursor-pointer"
                 >
                   <option value="ALL">🌐 KONSOLIDASI SELURUH OPD PROVINSI NTB (40 OPD)</option>
                   <optgroup label="Badan Daerah">
@@ -4611,11 +4611,11 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-300">Kategori Instansi:</label>
+                  <label className="font-bold text-[#17324D]">Kategori Instansi:</label>
                   <select
                     value={newOpdForm.kategori}
                     onChange={e => setNewOpdForm({ ...newOpdForm, kategori: e.target.value as any })}
-                    className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-white focus:border-cyan-500 focus:outline-none"
+                    className="mt-1 w-full rounded-xl border border-[#DFE6EF] bg-[#FFFFFF] p-2.5 text-xs text-[#17324D] font-medium focus:border-[#079669] focus:outline-none cursor-pointer"
                   >
                     <option value="Dinas Daerah">Dinas Daerah</option>
                     <option value="Badan Daerah">Badan Daerah</option>
@@ -4957,11 +4957,11 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
               {/* Controls: Target OPD & Mode Overwrite */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl bg-slate-950/70 border border-slate-800 text-xs">
                 <div>
-                  <label className="font-bold text-slate-300 block mb-1">Target Satuan Kerja (OPD):</label>
+                  <label className="font-bold text-[#17324D] block mb-1">Target Satuan Kerja (OPD):</label>
                   <select
                     value={masterImportTargetOpd}
                     onChange={e => setMasterImportTargetOpd(e.target.value)}
-                    className="w-full rounded-lg border border-slate-700 bg-slate-900 py-1.5 px-2.5 text-xs text-white focus:border-cyan-500 focus:outline-none"
+                    className="w-full rounded-lg border border-[#DFE6EF] bg-[#FFFFFF] py-1.5 px-2.5 text-xs text-[#17324D] font-semibold focus:border-[#079669] focus:outline-none cursor-pointer"
                   >
                     <option value="ALL">🌐 Deteksi Otomatis dari File Excel (Multi-OPD NTB)</option>
                     {opdListState.map(o => (
@@ -5311,14 +5311,14 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                     </div>
                   </div>
                   <div>
-                    <label className="block font-bold text-slate-300 mb-1">Kategori Organisasi</label>
+                    <label className="block font-bold text-[#17324D] mb-1">Kategori Organisasi</label>
                     <select
                       value={editLaporanModal.data.kategori || 'Dinas'}
                       onChange={(e) => setEditLaporanModal({
                         ...editLaporanModal,
                         data: { ...editLaporanModal.data, kategori: e.target.value }
                       })}
-                      className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-white focus:border-cyan-500 focus:outline-none"
+                      className="w-full rounded-xl bg-[#FFFFFF] border border-[#DFE6EF] px-3 py-2 text-xs font-semibold text-[#17324D] focus:border-[#079669] focus:outline-none cursor-pointer"
                     >
                       <option value="Dinas">Dinas Daerah</option>
                       <option value="Badan">Badan Daerah</option>
@@ -5613,14 +5613,14 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
                       />
                     </div>
                     <div>
-                      <label className="block font-bold text-slate-300 mb-1">Kelompok Belanja</label>
+                      <label className="block font-bold text-[#17324D] mb-1">Kelompok Belanja</label>
                       <select
                         value={editLaporanModal.data.jenisBelanja || 'Belanja Operasi'}
                         onChange={(e) => setEditLaporanModal({
                           ...editLaporanModal,
                           data: { ...editLaporanModal.data, jenisBelanja: e.target.value }
                         })}
-                        className="w-full rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-white focus:border-cyan-500 focus:outline-none"
+                        className="w-full rounded-xl bg-[#FFFFFF] border border-[#DFE6EF] px-3 py-2 text-xs font-semibold text-[#17324D] focus:border-[#079669] focus:outline-none cursor-pointer"
                       >
                         <option value="Belanja Operasi">Belanja Operasi</option>
                         <option value="Belanja Pegawai">Belanja Pegawai</option>

@@ -499,11 +499,11 @@ export const PengaturanView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-slate-300">Role / Hak Akses:</label>
+                  <label className="text-xs font-bold text-[#17324D]">Role / Hak Akses:</label>
                   <select
                     value={newRole}
                     onChange={e => setNewRole(e.target.value as UserRole)}
-                    className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2 text-xs text-white font-bold"
+                    className="mt-1 w-full rounded-xl border border-[#DFE6EF] bg-[#FFFFFF] p-2 text-xs text-[#17324D] font-bold focus:border-[#079669] focus:outline-none cursor-pointer"
                   >
                     <option value="Administrator">Administrator</option>
                     <option value="Operator Program">Operator Program</option>
@@ -1479,11 +1479,11 @@ export const PengaturanView: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-300">Role / Peran Akses:</label>
+                <label className="text-xs font-bold text-[#17324D]">Role / Peran Akses:</label>
                 <select
                   value={editingUser.role}
                   onChange={e => setEditingUser({ ...editingUser, role: e.target.value as UserRole })}
-                  className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white font-bold"
+                  className="mt-1 w-full rounded-xl border border-[#DFE6EF] bg-[#FFFFFF] p-2.5 text-xs text-[#17324D] font-bold focus:border-[#079669] focus:outline-none cursor-pointer"
                 >
                   <option value="Administrator">Administrator</option>
                   <option value="Operator Program">Operator Program</option>
@@ -1494,11 +1494,11 @@ export const PengaturanView: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-300">Status Akun:</label>
+                <label className="text-xs font-bold text-[#17324D]">Status Akun:</label>
                 <select
                   value={editingUser.status}
                   onChange={e => setEditingUser({ ...editingUser, status: e.target.value as 'Aktif' | 'Nonaktif' })}
-                  className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white font-bold"
+                  className="mt-1 w-full rounded-xl border border-[#DFE6EF] bg-[#FFFFFF] p-2.5 text-xs text-[#17324D] font-bold focus:border-[#079669] focus:outline-none cursor-pointer"
                 >
                   <option value="Aktif">Aktif</option>
                   <option value="Nonaktif">Nonaktif</option>

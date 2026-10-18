@@ -10,7 +10,6 @@ import {
   Sparkles,
   ArrowRight,
   CheckCircle2,
-  KeyRound,
   ShieldAlert
 } from 'lucide-react';
 
@@ -37,12 +36,6 @@ export const LoginView: React.FC = () => {
         setLoginSuccessNotice(res.message);
       }
     }, 350);
-  };
-
-  const handleSelectQuickAccount = (uname: string, pass: string) => {
-    setUsername(uname);
-    setPassword(pass);
-    setErrorMessage(null);
   };
 
   return (
@@ -205,73 +198,8 @@ export const LoginView: React.FC = () => {
               </button>
             </form>
 
-            {/* Quick Access Account Cards */}
-            <div className="pt-3 border-t border-[#DFE6EF] space-y-2.5">
-              <div className="flex items-center justify-between text-[11px] font-semibold text-[#64748B] px-1">
-                <span className="flex items-center gap-1 text-[#17324D] font-bold">
-                  <KeyRound className="h-3.5 w-3.5 text-[#079669]" />
-                  <span>Pilih Akun Cepat:</span>
-                </span>
-                <span className="text-[10px] text-[#079669]">Klik untuk isi otomatis</span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {/* Account 1: Kepala Badan */}
-                <button
-                  type="button"
-                  onClick={() => handleSelectQuickAccount('Kepala Badan', 'Kaban123')}
-                  className={`text-left p-2.5 rounded-xl border transition ${
-                    username === 'Kepala Badan'
-                      ? 'bg-emerald-50 border-[#079669] ring-1 ring-[#079669]'
-                      : 'bg-[#F4F7FB] hover:bg-slate-100/80 border-[#DFE6EF] hover:border-[#079669]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#079669]">
-                      Kepala Badan
-                    </span>
-                    <span className="text-[9px] bg-emerald-100 text-[#079669] px-1.5 py-0.2 rounded font-bold">
-                      Kaban
-                    </span>
-                  </div>
-                  <div className="text-xs font-bold text-[#17324D]">
-                    Kepala Badan
-                  </div>
-                  <div className="text-[10px] text-[#64748B] font-mono">
-                    Pass: <span className="text-[#079669] font-bold">Kaban123</span>
-                  </div>
-                </button>
-
-                {/* Account 2: Admin */}
-                <button
-                  type="button"
-                  onClick={() => handleSelectQuickAccount('Admin', 'Admin123')}
-                  className={`text-left p-2.5 rounded-xl border transition ${
-                    username === 'Admin'
-                      ? 'bg-emerald-50 border-[#079669] ring-1 ring-[#079669]'
-                      : 'bg-[#F4F7FB] hover:bg-slate-100/80 border-[#DFE6EF] hover:border-[#079669]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#3984E8]">
-                      Administrator
-                    </span>
-                    <span className="text-[9px] bg-blue-100 text-[#3984E8] px-1.5 py-0.2 rounded font-bold">
-                      Admin
-                    </span>
-                  </div>
-                  <div className="text-xs font-bold text-[#17324D]">
-                    Admin
-                  </div>
-                  <div className="text-[10px] text-[#64748B] font-mono">
-                    Pass: <span className="text-[#3984E8] font-bold">Admin123</span>
-                  </div>
-                </button>
-              </div>
-            </div>
-
             {/* Security Badge */}
-            <div className="flex items-center justify-center gap-1.5 text-[10px] text-[#64748B] pt-1">
+            <div className="flex items-center justify-center gap-1.5 text-[10px] text-[#64748B] pt-2 border-t border-[#DFE6EF]">
               <ShieldAlert className="h-3.5 w-3.5 text-[#079669]" />
               <span>Sistem Terotentikasi &amp; Terintegrasi Kasda Pemprov NTB</span>
             </div>

@@ -191,8 +191,94 @@ body {
 }
 
 /* ========================================================
+   COMBOBOXES, SELECTS & FORM DROPDOWNS ENFORCEMENT
+   Ensures text inside all comboboxes, selects, options,
+   and optgroups is always sharp, dark, and clearly visible.
+   ======================================================== */
+
+select,
+select:focus,
+select option,
+select optgroup,
+option,
+optgroup {
+  color: #17324D !important;
+  background-color: #FFFFFF !important;
+}
+
+select {
+  border-color: #DFE6EF;
+}
+
+select:focus {
+  border-color: #079669 !important;
+  outline: none !important;
+}
+
+select.text-white,
+select .text-white,
+option.text-white,
+select.text-slate-100,
+select.text-slate-200,
+select.text-slate-300,
+select.text-slate-400 {
+  color: #17324D !important;
+}
+
+optgroup {
+  font-weight: 700 !important;
+  color: #64748B !important;
+  background-color: #F8FAFC !important;
+}
+
+/* Form inputs & textareas */
+input,
+textarea {
+  color: #17324D;
+}
+
+input.text-white,
+textarea.text-white {
+  color: #17324D !important;
+}
+
+input.bg-slate-950,
+select.bg-slate-950,
+textarea.bg-slate-950,
+input.bg-slate-900,
+select.bg-slate-900,
+textarea.bg-slate-900 {
+  background-color: #FFFFFF !important;
+  color: #17324D !important;
+  border-color: #DFE6EF !important;
+}
+
+input.bg-slate-950:focus,
+select.bg-slate-950:focus,
+textarea.bg-slate-950:focus,
+input.bg-slate-900:focus,
+select.bg-slate-900:focus,
+textarea.bg-slate-900:focus {
+  border-color: #079669 !important;
+  outline: none !important;
+}
+
+label.text-slate-300,
+label.text-slate-400,
+label.text-white {
+  color: #17324D !important;
+}
+
+/* Headings and generic containers with legacy text-white default to primary text */
+h1.text-white, h2.text-white, h3.text-white, h4.text-white, h5.text-white, h6.text-white,
+p.text-white,
+div.text-white:not(button *):not(.btn *):not(.bg-\[\#079669\] *):not(.bg-\[\#3984E8\] *):not(.bg-\[\#D99A24\] *):not(.bg-\[\#D94F70\] *),
+span.text-white:not(button *):not(.btn *):not(.bg-\[\#079669\] *):not(.bg-\[\#3984E8\] *):not(.bg-\[\#D99A24\] *):not(.bg-\[\#D94F70\] *) {
+  color: #17324D;
+}
+
+/* ========================================================
    PROFESSIONAL GOVERNMENT TABLES ENFORCEMENT
-   Ensures table rows, headers, and text have high contrast
    ======================================================== */
 
 table {
@@ -226,11 +312,12 @@ table td {
   color: #17324D;
 }
 
-/* CRITICAL: Overwrite any text-white on table cells, divs, spans inside tables */
+/* Overwrite any text-white inside tables */
 table td.text-white,
 table td .text-white,
 table th.text-white,
 table th .text-white,
+table tr.text-white,
 table tfoot td.text-white,
 table tfoot td .text-white,
 table tfoot th.text-white,
@@ -245,46 +332,61 @@ table tfoot {
 }
 
 /* Ensure buttons and colored action pills retain pure white text */
+button,
+button *,
+a.btn,
+.btn,
 button.text-white,
 button .text-white,
 a.text-white,
+.bg-emerald-600,
+.bg-emerald-600 *,
+.bg-emerald-700,
+.bg-emerald-700 *,
+.bg-blue-600,
+.bg-blue-600 *,
+.bg-amber-600,
+.bg-amber-600 *,
+.bg-rose-600,
+.bg-rose-600 *,
+.bg-rose-700,
+.bg-rose-700 *,
+.bg-teal-600,
+.bg-teal-600 *,
+.bg-\[\#079669\],
+.bg-\[\#079669\] *,
+.bg-\[\#3984E8\],
+.bg-\[\#3984E8\] *,
+.bg-\[\#D99A24\],
+.bg-\[\#D99A24\] *,
+.bg-\[\#D94F70\],
+.bg-\[\#D94F70\] * {
+  /* Retain white text on solid colored buttons & badges */
+}
+
+button.text-white,
+button .text-white,
 .bg-emerald-600.text-white,
 .bg-emerald-600 .text-white,
 .bg-blue-600.text-white,
 .bg-blue-600 .text-white,
-.bg-amber-600.text-white,
-.bg-amber-600 .text-white,
 .bg-rose-600.text-white,
 .bg-rose-600 .text-white,
-.bg-teal-600.text-white,
-.bg-teal-600 .text-white,
+.bg-amber-600.text-white,
+.bg-amber-600 .text-white,
 .bg-\[\#079669\].text-white,
 .bg-\[\#079669\] .text-white,
+.bg-\[\#079669\] span,
 .bg-\[\#3984E8\].text-white,
-.bg-\[\#3984E8\] .text-white {
+.bg-\[\#3984E8\] .text-white,
+.bg-\[\#3984E8\] span,
+.bg-\[\#D94F70\].text-white,
+.bg-\[\#D94F70\] .text-white,
+.bg-\[\#D94F70\] span,
+.bg-\[\#D99A24\].text-white,
+.bg-\[\#D99A24\] .text-white,
+.bg-\[\#D99A24\] span {
   color: #FFFFFF !important;
-}
-
-/* Form inputs & selects styled with dark classes */
-input.bg-slate-950,
-select.bg-slate-950,
-textarea.bg-slate-950,
-input.bg-slate-900,
-select.bg-slate-900,
-textarea.bg-slate-900 {
-  background-color: #FFFFFF !important;
-  color: #17324D !important;
-  border-color: #DFE6EF !important;
-}
-
-input.bg-slate-950:focus,
-select.bg-slate-950:focus,
-textarea.bg-slate-950:focus,
-input.bg-slate-900:focus,
-select.bg-slate-900:focus,
-textarea.bg-slate-900:focus {
-  border-color: #079669 !important;
-  outline: none !important;
 }
 
 /* Government theme helper classes */

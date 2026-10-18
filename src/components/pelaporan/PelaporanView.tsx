@@ -73,59 +73,59 @@ const SubKegiatanCombobox: React.FC<SubKegiatanComboboxProps> = ({
     <div ref={wrapperRef} className="relative max-w-xl w-full">
       <div
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between bg-slate-900 border border-slate-700 hover:border-amber-500 rounded-xl px-3 py-2 cursor-pointer text-xs transition-colors shadow-sm"
+        className="flex items-center justify-between bg-[#FFFFFF] border border-[#DFE6EF] hover:border-[#079669] rounded-xl px-3 py-2 cursor-pointer text-xs transition-colors shadow-xs"
       >
-        <span className="font-semibold text-white truncate mr-2">
+        <span className="font-bold text-[#17324D] truncate mr-2">
           {displayLabel}
         </span>
         <ChevronDown
-          className={`h-4 w-4 text-slate-400 transition-transform ${
-            isOpen ? 'rotate-180 text-amber-400' : ''
+          className={`h-4 w-4 text-[#64748B] transition-transform ${
+            isOpen ? 'rotate-180 text-[#079669]' : ''
           }`}
         />
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 left-0 right-0 mt-1 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden text-xs">
-          <div className="p-2 border-b border-slate-800 flex items-center gap-2 bg-slate-950">
-            <Search className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-[#FFFFFF] border border-[#DFE6EF] rounded-2xl shadow-xl overflow-hidden text-xs text-[#17324D]">
+          <div className="p-2 border-b border-[#DFE6EF] flex items-center gap-2 bg-[#F8FAFC]">
+            <Search className="h-3.5 w-3.5 text-[#079669] shrink-0" />
             <input
               type="text"
               autoFocus
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               placeholder="Ketik kode atau nama Sub Kegiatan..."
-              className="bg-transparent text-white font-medium text-xs focus:outline-none w-full placeholder:text-slate-500"
+              className="bg-transparent text-[#17324D] font-medium text-xs focus:outline-none w-full placeholder:text-[#64748B]"
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm('')}
-                className="text-slate-400 hover:text-white text-[10px] bg-slate-800 px-2 py-0.5 rounded-lg"
+                className="text-[#64748B] hover:text-[#17324D] text-[10px] bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded-lg border border-[#DFE6EF]"
               >
                 Hapus
               </button>
             )}
           </div>
 
-          <div className="max-h-60 overflow-y-auto divide-y divide-slate-800/50 scrollbar-thin">
+          <div className="max-h-60 overflow-y-auto divide-y divide-[#DFE6EF] scrollbar-thin">
             <div
               onClick={() => {
                 onChange('all');
                 setIsOpen(false);
                 setSearchTerm('');
               }}
-              className={`p-2.5 cursor-pointer font-semibold transition-colors hover:bg-amber-500/10 hover:text-amber-300 ${
+              className={`p-2.5 cursor-pointer font-bold transition-colors hover:bg-[#F8FAFC] hover:text-[#079669] ${
                 value === 'all'
-                  ? 'bg-amber-500/20 text-amber-300 font-bold'
-                  : 'text-slate-300'
+                  ? 'bg-emerald-50 text-[#079669]'
+                  : 'text-[#17324D]'
               }`}
             >
               -- Semua Sub Kegiatan (Rekapitulasi Global) --
             </div>
 
             {filteredOptions.length === 0 ? (
-              <div className="p-3 text-center text-slate-500 italic">
+              <div className="p-3 text-center text-[#64748B] italic">
                 Sub Kegiatan dengan pencarian "{searchTerm}" tidak ditemukan.
               </div>
             ) : (
@@ -139,22 +139,22 @@ const SubKegiatanCombobox: React.FC<SubKegiatanComboboxProps> = ({
                       setIsOpen(false);
                       setSearchTerm('');
                     }}
-                    className={`p-2.5 cursor-pointer transition-colors hover:bg-amber-500/10 hover:text-amber-300 flex items-center justify-between gap-2 ${
+                    className={`p-2.5 cursor-pointer transition-colors hover:bg-[#F8FAFC] flex items-center justify-between gap-2 ${
                       isSelected
-                        ? 'bg-amber-500/20 text-amber-300 font-bold'
-                        : 'text-slate-200'
+                        ? 'bg-emerald-50 text-[#079669]'
+                        : 'text-[#17324D]'
                     }`}
                   >
                     <div className="flex flex-col min-w-0 pr-2">
-                      <span className="font-semibold text-white text-xs leading-snug">
+                      <span className={`font-bold text-xs leading-snug ${isSelected ? 'text-[#079669]' : 'text-[#17324D]'}`}>
                         {s.namaSub}
                       </span>
-                      <span className="font-mono text-amber-400 text-[11px] font-bold">
+                      <span className="font-mono text-[#079669] text-[11px] font-bold">
                         {s.kodeSub}
                       </span>
                     </div>
                     {isSelected && (
-                      <Check className="h-4 w-4 text-amber-400 shrink-0" />
+                      <Check className="h-4 w-4 text-[#079669] shrink-0" />
                     )}
                   </div>
                 );
@@ -211,59 +211,59 @@ const BelanjaCombobox: React.FC<BelanjaComboboxProps> = ({
     <div ref={wrapperRef} className="relative max-w-xl w-full">
       <div
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between bg-slate-900 border border-slate-700 hover:border-amber-500 rounded-xl px-3 py-2 cursor-pointer text-xs transition-colors shadow-sm"
+        className="flex items-center justify-between bg-[#FFFFFF] border border-[#DFE6EF] hover:border-[#079669] rounded-xl px-3 py-2 cursor-pointer text-xs transition-colors shadow-xs"
       >
-        <span className="font-semibold text-white truncate mr-2">
+        <span className="font-bold text-[#17324D] truncate mr-2">
           {displayLabel}
         </span>
         <ChevronDown
-          className={`h-4 w-4 text-slate-400 transition-transform ${
-            isOpen ? 'rotate-180 text-amber-400' : ''
+          className={`h-4 w-4 text-[#64748B] transition-transform ${
+            isOpen ? 'rotate-180 text-[#079669]' : ''
           }`}
         />
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 left-0 right-0 mt-1 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden text-xs">
-          <div className="p-2 border-b border-slate-800 flex items-center gap-2 bg-slate-950">
-            <Search className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-[#FFFFFF] border border-[#DFE6EF] rounded-2xl shadow-xl overflow-hidden text-xs text-[#17324D]">
+          <div className="p-2 border-b border-[#DFE6EF] flex items-center gap-2 bg-[#F8FAFC]">
+            <Search className="h-3.5 w-3.5 text-[#079669] shrink-0" />
             <input
               type="text"
               autoFocus
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               placeholder="Ketik nama atau kode Rekening Belanja..."
-              className="bg-transparent text-white font-medium text-xs focus:outline-none w-full placeholder:text-slate-500"
+              className="bg-transparent text-[#17324D] font-medium text-xs focus:outline-none w-full placeholder:text-[#64748B]"
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm('')}
-                className="text-slate-400 hover:text-white text-[10px] bg-slate-800 px-2 py-0.5 rounded-lg"
+                className="text-[#64748B] hover:text-[#17324D] text-[10px] bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded-lg border border-[#DFE6EF]"
               >
                 Hapus
               </button>
             )}
           </div>
 
-          <div className="max-h-60 overflow-y-auto divide-y divide-slate-800/50 scrollbar-thin">
+          <div className="max-h-60 overflow-y-auto divide-y divide-[#DFE6EF] scrollbar-thin">
             <div
               onClick={() => {
                 onChange('all');
                 setIsOpen(false);
                 setSearchTerm('');
               }}
-              className={`p-2.5 cursor-pointer font-semibold transition-colors hover:bg-amber-500/10 hover:text-amber-300 ${
+              className={`p-2.5 cursor-pointer font-bold transition-colors hover:bg-[#F8FAFC] hover:text-[#079669] ${
                 value === 'all'
-                  ? 'bg-amber-500/20 text-amber-300 font-bold'
-                  : 'text-slate-300'
+                  ? 'bg-emerald-50 text-[#079669]'
+                  : 'text-[#17324D]'
               }`}
             >
               -- Semua Rekening Belanja (Rekapitulasi Global) --
             </div>
 
             {filteredOptions.length === 0 ? (
-              <div className="p-3 text-center text-slate-500 italic">
+              <div className="p-3 text-center text-[#64748B] italic">
                 Rekening Belanja dengan pencarian "{searchTerm}" tidak ditemukan.
               </div>
             ) : (
@@ -277,22 +277,22 @@ const BelanjaCombobox: React.FC<BelanjaComboboxProps> = ({
                       setIsOpen(false);
                       setSearchTerm('');
                     }}
-                    className={`p-2.5 cursor-pointer transition-colors hover:bg-amber-500/10 hover:text-amber-300 flex items-center justify-between gap-2 ${
+                    className={`p-2.5 cursor-pointer transition-colors hover:bg-[#F8FAFC] flex items-center justify-between gap-2 ${
                       isSelected
-                        ? 'bg-amber-500/20 text-amber-300 font-bold'
-                        : 'text-slate-200'
+                        ? 'bg-emerald-50 text-[#079669]'
+                        : 'text-[#17324D]'
                     }`}
                   >
                     <div className="flex flex-col min-w-0 pr-2">
-                      <span className="font-semibold text-white text-xs leading-snug">
+                      <span className={`font-bold text-xs leading-snug ${isSelected ? 'text-[#079669]' : 'text-[#17324D]'}`}>
                         {b.namaBelanja}
                       </span>
-                      <span className="font-mono text-emerald-400 text-[11px] font-bold">
+                      <span className="font-mono text-[#3984E8] text-[11px] font-bold">
                         {b.kodeBelanja}
                       </span>
                     </div>
                     {isSelected && (
-                      <Check className="h-4 w-4 text-amber-400 shrink-0" />
+                      <Check className="h-4 w-4 text-[#079669] shrink-0" />
                     )}
                   </div>
                 );
@@ -1797,16 +1797,16 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
 
         <div className="flex flex-wrap items-center gap-2">
           {/* Penandatangan Selectors (Synced with Data Pengguna) */}
-          <div className="flex flex-wrap items-center gap-2 rounded-xl bg-slate-900 border border-slate-800 p-1.5 text-xs">
+          <div className="flex flex-wrap items-center gap-2 rounded-xl bg-[#FFFFFF] border border-[#DFE6EF] p-1.5 text-xs shadow-xs">
             <div className="flex items-center gap-1.5">
-              <span className="text-slate-400 font-bold text-[11px] pl-1">PPK:</span>
+              <span className="text-[#64748B] font-bold text-[11px] pl-1">PPK:</span>
               <select
                 value={selectedPpkId}
                 onChange={e => setSelectedPpkId(e.target.value)}
-                className="bg-slate-950 text-white rounded-lg px-2 py-1 border border-slate-700 text-xs font-semibold focus:outline-none focus:border-emerald-500"
+                className="bg-[#FFFFFF] text-[#17324D] rounded-lg px-2 py-1 border border-[#DFE6EF] text-xs font-semibold focus:outline-none focus:border-[#079669] cursor-pointer"
               >
                 {users.map(u => (
-                  <option key={u.id} value={u.id}>
+                  <option key={u.id} value={u.id} className="text-[#17324D] bg-[#FFFFFF]">
                     {u.nama} ({u.role})
                   </option>
                 ))}
@@ -1814,14 +1814,14 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
             </div>
 
             <div className="flex items-center gap-1.5">
-              <span className="text-slate-400 font-bold text-[11px] pl-1">Kepala Badan:</span>
+              <span className="text-[#64748B] font-bold text-[11px] pl-1">Kepala Badan:</span>
               <select
                 value={selectedKabanId}
                 onChange={e => setSelectedKabanId(e.target.value)}
-                className="bg-slate-950 text-white rounded-lg px-2 py-1 border border-slate-700 text-xs font-semibold focus:outline-none focus:border-emerald-500"
+                className="bg-[#FFFFFF] text-[#17324D] rounded-lg px-2 py-1 border border-[#DFE6EF] text-xs font-semibold focus:outline-none focus:border-[#079669] cursor-pointer"
               >
                 {users.map(u => (
-                  <option key={u.id} value={u.id}>
+                  <option key={u.id} value={u.id} className="text-[#17324D] bg-[#FFFFFF]">
                     {u.nama} ({u.role})
                   </option>
                 ))}
@@ -3233,17 +3233,17 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
               </div>
 
               {/* Filter Month Dropdown */}
-              <div className="print:hidden flex items-center gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
-                <Filter className="h-3.5 w-3.5 text-cyan-400 ml-1" />
-                <span className="text-xs text-slate-400 font-semibold">Filter Bulan:</span>
+              <div className="print:hidden flex items-center gap-2 bg-[#FFFFFF] p-1.5 rounded-xl border border-[#DFE6EF] shadow-xs">
+                <Filter className="h-3.5 w-3.5 text-[#3984E8] ml-1" />
+                <span className="text-xs text-[#64748B] font-semibold">Filter Bulan:</span>
                 <select
                   value={filterBulan}
                   onChange={e => setFilterBulan(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                  className="bg-slate-900 border border-slate-700 rounded-lg text-xs text-white px-2 py-1 focus:outline-none focus:border-cyan-500"
+                  className="bg-[#FFFFFF] border border-[#DFE6EF] rounded-lg text-xs text-[#17324D] font-semibold px-2 py-1 focus:outline-none focus:border-[#079669] cursor-pointer"
                 >
-                  <option value="all">Semua Bulan (Jan - Des)</option>
+                  <option value="all" className="text-[#17324D] bg-[#FFFFFF]">Semua Bulan (Jan - Des)</option>
                   {monthNames.map((m, idx) => (
-                    <option key={idx + 1} value={idx + 1}>
+                    <option key={idx + 1} value={idx + 1} className="text-[#17324D] bg-[#FFFFFF]">
                       Bulan {idx + 1} - {m}
                     </option>
                   ))}
