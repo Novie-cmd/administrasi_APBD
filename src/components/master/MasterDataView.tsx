@@ -799,14 +799,14 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
 
       {/* Global Permanent Action Notification */}
       {actionNotice && (
-        <div className="rounded-2xl border border-emerald-500/60 bg-emerald-950/80 p-4 flex items-center justify-between gap-3 text-emerald-200 text-xs shadow-xl animate-fadeIn">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 flex items-center justify-between gap-3 text-emerald-800 text-xs shadow-xs animate-fadeIn">
           <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
-            <span className="font-bold text-white">{actionNotice.message}</span>
+            <CheckCircle2 className="h-5 w-5 text-[#079669] shrink-0" />
+            <span className="font-bold text-[#17324D]">{actionNotice.message}</span>
           </div>
           <button
             onClick={() => setActionNotice(null)}
-            className="p-1 text-emerald-400 hover:text-white rounded-lg transition"
+            className="p-1 text-[#079669] hover:text-[#065f46] rounded-lg transition"
             title="Tutup pemberitahuan"
           >
             <X className="h-4 w-4" />
@@ -815,7 +815,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
       )}
 
       {/* Sub Tabs Navigation */}
-      <div className="flex overflow-x-auto gap-2 border-b border-slate-800 pb-2 scrollbar-none">
+      <div className="flex overflow-x-auto gap-2 border-b border-[#DFE6EF] pb-2 scrollbar-none">
         {[
           { id: 'master-tahun', label: 'Tahun Anggaran' },
           { id: 'master-opd', label: 'OPD / Unit Kerja' },
@@ -834,8 +834,8 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
             }}
             className={`whitespace-nowrap rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
               activeTab === tab.id
-                ? 'bg-emerald-600 text-white shadow'
-                : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white'
+                ? 'bg-[#079669] text-white shadow-xs'
+                : 'bg-[#FFFFFF] text-[#64748B] border border-[#DFE6EF] hover:bg-[#F4F7FB] hover:text-[#17324D]'
             }`}
           >
             {tab.label}
@@ -845,25 +845,23 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
 
       {/* Search Bar & Quick Import Helper Banner */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="flex-1 flex items-center rounded-xl border border-slate-800 bg-slate-900 px-3 py-2">
-          <Search className="h-4 w-4 text-slate-400 mr-2" />
+        <div className="flex-1 flex items-center rounded-xl border border-[#DFE6EF] bg-[#FFFFFF] px-3 py-2 shadow-xs">
+          <Search className="h-4 w-4 text-[#64748B] mr-2" />
           <input
             type="text"
             placeholder="Cari kata kunci di master data..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full bg-transparent text-xs text-white placeholder-slate-500 focus:outline-none"
+            className="w-full bg-transparent text-xs text-[#17324D] placeholder-[#64748B] focus:outline-none"
           />
         </div>
-
-
       </div>
 
       {/* TAB CONTENT: MASTER TAHUN */}
       {activeTab === 'master-tahun' && (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden shadow-xl">
+        <div className="rounded-2xl border border-[#DFE6EF] bg-[#FFFFFF] overflow-hidden shadow-xs">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950 text-slate-300 font-bold uppercase tracking-wider border-b border-slate-800">
+            <thead className="bg-[#F8FAFC] text-[#17324D] font-bold uppercase tracking-wider border-b border-[#DFE6EF]">
               <tr>
                 <th className="px-4 py-3">ID</th>
                 <th className="px-4 py-3">Tahun Anggaran</th>
@@ -872,34 +870,34 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                 {!isReadonly && <th className="px-4 py-3 text-right">Aksi</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800 text-slate-300">
+            <tbody className="divide-y divide-[#DFE6EF] text-[#17324D]">
               {tahunList.map(t => (
-                <tr key={t.id} className="hover:bg-slate-800/50">
-                  <td className="px-4 py-3 font-mono font-bold text-emerald-400">{t.id}</td>
-                  <td className="px-4 py-3 text-sm font-bold text-white">{t.tahun}</td>
+                <tr key={t.id} className="hover:bg-[#F8FAFC]">
+                  <td className="px-4 py-3 font-mono font-bold text-[#079669]">{t.id}</td>
+                  <td className="px-4 py-3 text-sm font-bold text-[#17324D]">{t.tahun}</td>
                   <td className="px-4 py-3">
                     {t.tahun === selectedTahun ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-950 px-2.5 py-1 text-[11px] font-bold text-emerald-300 ring-1 ring-emerald-500">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-[#079669] border border-emerald-200">
                         <CheckCircle2 className="h-3 w-3" /> Sedang Dipilih
                       </span>
                     ) : (
-                      <span className="text-slate-500">Inaktif</span>
+                      <span className="text-[#64748B]">Inaktif</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-slate-400">{t.keterangan}</td>
+                  <td className="px-4 py-3 text-[#64748B]">{t.keterangan}</td>
                   {!isReadonly && (
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => setEditingTahun(t)}
-                          className="rounded-lg bg-amber-950/60 hover:bg-amber-900 border border-amber-600/40 p-1.5 text-amber-300 transition"
+                          className="rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 p-1.5 text-[#D99A24] transition"
                           title="Edit Tahun"
                         >
                           <Edit className="h-3.5 w-3.5" />
                         </button>
                         <button
                           onClick={() => setDeletingTahun(t)}
-                          className="rounded-lg bg-rose-950/60 hover:bg-rose-900 border border-rose-600/40 p-1.5 text-rose-300 transition"
+                          className="rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 p-1.5 text-rose-700 transition"
                           title="Hapus Tahun"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -1088,9 +1086,9 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
 
       {/* TAB CONTENT: PROGRAM */}
       {activeTab === 'master-program' && (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden shadow-xl">
-          <div className="flex items-center justify-between p-4 bg-slate-950 border-b border-slate-800">
-            <span className="text-xs font-bold text-slate-300">
+        <div className="rounded-2xl border border-[#DFE6EF] bg-[#FFFFFF] overflow-hidden shadow-xs">
+          <div className="flex items-center justify-between p-4 bg-[#F8FAFC] border-b border-[#DFE6EF]">
+            <span className="text-xs font-bold text-[#17324D]">
               Total Program: {programs.filter(p => p.tahun === selectedTahun).length} item (Tahun {selectedTahun})
             </span>
             {!isReadonly && (
@@ -1100,7 +1098,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                     setShowClearDbModal('program');
                     setClearTargetScope('selected');
                   }}
-                  className="flex items-center gap-1.5 rounded-xl border border-rose-900/60 bg-rose-950/40 px-3 py-1.5 text-xs font-bold text-rose-400 hover:bg-rose-900/60 hover:border-rose-700 transition"
+                  className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 transition cursor-pointer"
                   title="Kosongkan Database Master Program"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -1108,7 +1106,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                 </button>
                 <button
                   onClick={() => setShowAddModal(true)}
-                  className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 shadow"
+                  className="flex items-center gap-1.5 rounded-xl bg-[#079669] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#065f46] shadow-xs transition cursor-pointer"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   <span>Tambah Program</span>
@@ -1117,7 +1115,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
             )}
           </div>
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950/60 text-slate-300 font-bold uppercase tracking-wider border-b border-slate-800">
+            <thead className="bg-[#F8FAFC] text-[#17324D] font-bold uppercase tracking-wider border-b border-[#DFE6EF]">
               <tr>
                 <th className="px-4 py-3">Kode Program</th>
                 <th className="px-4 py-3">Nama Program</th>
@@ -1125,7 +1123,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                 {!isReadonly && <th className="px-4 py-3 text-right">Aksi</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800 text-slate-300">
+            <tbody className="divide-y divide-[#DFE6EF] text-[#17324D]">
               {programs
                 .filter(
                   p =>
@@ -1134,10 +1132,14 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                       p.namaProgram.toLowerCase().includes(searchTerm.toLowerCase()))
                 )
                 .map((p, idx) => (
-                  <tr key={idx} className="hover:bg-slate-800/50">
-                    <td className="px-4 py-3 font-mono font-bold text-emerald-400">{p.kodeProgram}</td>
-                    <td className="px-4 py-3 font-semibold text-white">{p.namaProgram}</td>
-                    <td className="px-4 py-3">{p.tahun}</td>
+                  <tr key={idx} className="hover:bg-[#F8FAFC]">
+                    <td className="px-4 py-3 font-mono font-bold text-[#079669]">{p.kodeProgram}</td>
+                    <td className="px-4 py-3 font-semibold text-[#17324D]">{p.namaProgram}</td>
+                    <td className="px-4 py-3">
+                      <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-[#3984E8] border border-blue-200">
+                        TA {p.tahun}
+                      </span>
+                    </td>
                     {!isReadonly && (
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
@@ -1146,14 +1148,14 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                               setEditingProgram({ ...p });
                               setOrigProgramKey({ kode: p.kodeProgram, tahun: p.tahun });
                             }}
-                            className="rounded-lg bg-amber-950/60 hover:bg-amber-900 border border-amber-600/40 p-1.5 text-amber-300 transition"
+                            className="rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 p-1.5 text-[#D99A24] transition cursor-pointer"
                             title="Edit Program"
                           >
                             <Edit className="h-3.5 w-3.5" />
                           </button>
                           <button
                             onClick={() => setDeletingProgram(p)}
-                            className="rounded-lg bg-rose-950/60 hover:bg-rose-900 border border-rose-600/40 p-1.5 text-rose-300 transition"
+                            className="rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 p-1.5 text-rose-700 transition cursor-pointer"
                             title="Hapus Program"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -1170,9 +1172,9 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
 
       {/* TAB CONTENT: KEGIATAN */}
       {activeTab === 'master-kegiatan' && (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden shadow-xl">
-          <div className="flex items-center justify-between p-4 bg-slate-950 border-b border-slate-800">
-            <span className="text-xs font-bold text-slate-300">
+        <div className="rounded-2xl border border-[#DFE6EF] bg-[#FFFFFF] overflow-hidden shadow-xs">
+          <div className="flex items-center justify-between p-4 bg-[#F8FAFC] border-b border-[#DFE6EF]">
+            <span className="text-xs font-bold text-[#17324D]">
               Total Kegiatan: {kegiatanList.filter(k => k.tahun === selectedTahun).length} item (Tahun {selectedTahun})
             </span>
             {!isReadonly && (
@@ -1182,7 +1184,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                     setShowClearDbModal('kegiatan');
                     setClearTargetScope('selected');
                   }}
-                  className="flex items-center gap-1.5 rounded-xl border border-rose-900/60 bg-rose-950/40 px-3 py-1.5 text-xs font-bold text-rose-400 hover:bg-rose-900/60 hover:border-rose-700 transition"
+                  className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 transition cursor-pointer"
                   title="Kosongkan Database Master Kegiatan"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -1190,7 +1192,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                 </button>
                 <button
                   onClick={() => setShowAddModal(true)}
-                  className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 shadow"
+                  className="flex items-center gap-1.5 rounded-xl bg-[#079669] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#065f46] shadow-xs transition cursor-pointer"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   <span>Tambah Kegiatan</span>
@@ -1199,7 +1201,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
             )}
           </div>
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950/60 text-slate-300 font-bold uppercase tracking-wider border-b border-slate-800">
+            <thead className="bg-[#F8FAFC] text-[#17324D] font-bold uppercase tracking-wider border-b border-[#DFE6EF]">
               <tr>
                 <th className="px-4 py-3">Kode Program</th>
                 <th className="px-4 py-3">Kode Kegiatan</th>
@@ -1208,7 +1210,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                 {!isReadonly && <th className="px-4 py-3 text-right">Aksi</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800 text-slate-300">
+            <tbody className="divide-y divide-[#DFE6EF] text-[#17324D]">
               {kegiatanList
                 .filter(
                   k =>
@@ -1217,11 +1219,15 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                       k.namaKegiatan.toLowerCase().includes(searchTerm.toLowerCase()))
                 )
                 .map((k, idx) => (
-                  <tr key={idx} className="hover:bg-slate-800/50">
-                    <td className="px-4 py-3 font-mono text-slate-400">{k.kodeProgram}</td>
-                    <td className="px-4 py-3 font-mono font-bold text-teal-400">{k.kodeKegiatan}</td>
-                    <td className="px-4 py-3 font-semibold text-white">{k.namaKegiatan}</td>
-                    <td className="px-4 py-3">{k.tahun}</td>
+                  <tr key={idx} className="hover:bg-[#F8FAFC]">
+                    <td className="px-4 py-3 font-mono text-[#64748B]">{k.kodeProgram}</td>
+                    <td className="px-4 py-3 font-mono font-bold text-[#079669]">{k.kodeKegiatan}</td>
+                    <td className="px-4 py-3 font-semibold text-[#17324D]">{k.namaKegiatan}</td>
+                    <td className="px-4 py-3">
+                      <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-[#3984E8] border border-blue-200">
+                        TA {k.tahun}
+                      </span>
+                    </td>
                     {!isReadonly && (
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
@@ -1230,14 +1236,14 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                               setEditingKegiatan({ ...k });
                               setOrigKegiatanKey({ kode: k.kodeKegiatan, tahun: k.tahun });
                             }}
-                            className="rounded-lg bg-amber-950/60 hover:bg-amber-900 border border-amber-600/40 p-1.5 text-amber-300 transition"
+                            className="rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 p-1.5 text-[#D99A24] transition cursor-pointer"
                             title="Edit Kegiatan"
                           >
                             <Edit className="h-3.5 w-3.5" />
                           </button>
                           <button
                             onClick={() => setDeletingKegiatan(k)}
-                            className="rounded-lg bg-rose-950/60 hover:bg-rose-900 border border-rose-600/40 p-1.5 text-rose-300 transition"
+                            className="rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 p-1.5 text-rose-700 transition cursor-pointer"
                             title="Hapus Kegiatan"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -1254,9 +1260,9 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
 
       {/* TAB CONTENT: SUB KEGIATAN */}
       {activeTab === 'master-subkegiatan' && (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden shadow-xl">
-          <div className="flex items-center justify-between p-4 bg-slate-950 border-b border-slate-800">
-            <span className="text-xs font-bold text-slate-300">
+        <div className="rounded-2xl border border-[#DFE6EF] bg-[#FFFFFF] overflow-hidden shadow-xs">
+          <div className="flex items-center justify-between p-4 bg-[#F8FAFC] border-b border-[#DFE6EF]">
+            <span className="text-xs font-bold text-[#17324D]">
               Total Sub Kegiatan: {subKegiatanList.filter(s => s.tahun === selectedTahun).length} item (Tahun {selectedTahun})
             </span>
             {!isReadonly && (
@@ -1266,7 +1272,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                     setShowClearDbModal('subkegiatan');
                     setClearTargetScope('selected');
                   }}
-                  className="flex items-center gap-1.5 rounded-xl border border-rose-900/60 bg-rose-950/40 px-3 py-1.5 text-xs font-bold text-rose-400 hover:bg-rose-900/60 hover:border-rose-700 transition"
+                  className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 transition cursor-pointer"
                   title="Kosongkan Database Master Sub Kegiatan"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -1274,7 +1280,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                 </button>
                 <button
                   onClick={() => setShowAddModal(true)}
-                  className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 shadow"
+                  className="flex items-center gap-1.5 rounded-xl bg-[#079669] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#065f46] shadow-xs transition cursor-pointer"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   <span>Tambah Sub Kegiatan</span>
@@ -1283,7 +1289,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
             )}
           </div>
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950/60 text-slate-300 font-bold uppercase tracking-wider border-b border-slate-800">
+            <thead className="bg-[#F8FAFC] text-[#17324D] font-bold uppercase tracking-wider border-b border-[#DFE6EF]">
               <tr>
                 <th className="px-4 py-3">Kode Kegiatan</th>
                 <th className="px-4 py-3">Kode Sub Kegiatan</th>
@@ -1292,7 +1298,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                 {!isReadonly && <th className="px-4 py-3 text-right">Aksi</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800 text-slate-300">
+            <tbody className="divide-y divide-[#DFE6EF] text-[#17324D]">
               {subKegiatanList
                 .filter(
                   s =>
@@ -1301,11 +1307,15 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                       s.namaSub.toLowerCase().includes(searchTerm.toLowerCase()))
                 )
                 .map((s, idx) => (
-                  <tr key={idx} className="hover:bg-slate-800/50">
-                    <td className="px-4 py-3 font-mono text-slate-400">{s.kodeKegiatan}</td>
-                    <td className="px-4 py-3 font-mono font-bold text-amber-400">{s.kodeSub}</td>
-                    <td className="px-4 py-3 font-semibold text-white">{s.namaSub}</td>
-                    <td className="px-4 py-3">{s.tahun}</td>
+                  <tr key={idx} className="hover:bg-[#F8FAFC]">
+                    <td className="px-4 py-3 font-mono text-[#64748B]">{s.kodeKegiatan}</td>
+                    <td className="px-4 py-3 font-mono font-bold text-[#079669]">{s.kodeSub}</td>
+                    <td className="px-4 py-3 font-semibold text-[#17324D]">{s.namaSub}</td>
+                    <td className="px-4 py-3">
+                      <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-[#3984E8] border border-blue-200">
+                        TA {s.tahun}
+                      </span>
+                    </td>
                     {!isReadonly && (
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
@@ -1314,14 +1324,14 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                               setEditingSub({ ...s });
                               setOrigSubKey({ kode: s.kodeSub, tahun: s.tahun });
                             }}
-                            className="rounded-lg bg-amber-950/60 hover:bg-amber-900 border border-amber-600/40 p-1.5 text-amber-300 transition"
+                            className="rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 p-1.5 text-[#D99A24] transition cursor-pointer"
                             title="Edit Sub Kegiatan"
                           >
                             <Edit className="h-3.5 w-3.5" />
                           </button>
                           <button
                             onClick={() => setDeletingSub(s)}
-                            className="rounded-lg bg-rose-950/60 hover:bg-rose-900 border border-rose-600/40 p-1.5 text-rose-300 transition"
+                            className="rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 p-1.5 text-rose-700 transition cursor-pointer"
                             title="Hapus Sub Kegiatan"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -1338,9 +1348,9 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
 
       {/* TAB CONTENT: BELANJA */}
       {activeTab === 'master-belanja' && (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden shadow-xl">
-          <div className="flex items-center justify-between p-4 bg-slate-950 border-b border-slate-800">
-            <span className="text-xs font-bold text-slate-300">
+        <div className="rounded-2xl border border-[#DFE6EF] bg-[#FFFFFF] overflow-hidden shadow-xs">
+          <div className="flex items-center justify-between p-4 bg-[#F8FAFC] border-b border-[#DFE6EF]">
+            <span className="text-xs font-bold text-[#17324D]">
               Total Belanja Rekening: {belanjaList.length} item
             </span>
             {!isReadonly && (
@@ -1350,7 +1360,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                     setShowClearDbModal('belanja');
                     setClearTargetScope('selected');
                   }}
-                  className="flex items-center gap-1.5 rounded-xl border border-rose-900/60 bg-rose-950/40 px-3 py-1.5 text-xs font-bold text-rose-400 hover:bg-rose-900/60 hover:border-rose-700 transition"
+                  className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 transition"
                   title="Kosongkan Database Master Belanja Rekening"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -1358,7 +1368,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                 </button>
                 <button
                   onClick={() => setShowAddModal(true)}
-                  className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 shadow"
+                  className="flex items-center gap-1.5 rounded-xl bg-[#079669] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#065f46] shadow-xs transition"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   <span>Tambah Belanja</span>
@@ -1367,15 +1377,16 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
             )}
           </div>
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950/60 text-slate-300 font-bold uppercase tracking-wider border-b border-slate-800">
+            <thead className="bg-[#F8FAFC] text-[#17324D] font-bold uppercase tracking-wider border-b border-[#DFE6EF]">
               <tr>
                 <th className="px-4 py-3">Kode Rekening</th>
                 <th className="px-4 py-3">Nama Uraian Belanja</th>
                 <th className="px-4 py-3">Jenis Belanja</th>
+                <th className="px-4 py-3">Tahun</th>
                 {!isReadonly && <th className="px-4 py-3 text-right">Aksi</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800 text-slate-300">
+            <tbody className="divide-y divide-[#DFE6EF] text-[#17324D]">
               {belanjaList
                 .filter(
                   b =>
@@ -1383,12 +1394,17 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                     b.namaBelanja.toLowerCase().includes(searchTerm.toLowerCase())
                 )
                 .map((b, idx) => (
-                  <tr key={idx} className="hover:bg-slate-800/50">
-                    <td className="px-4 py-3 font-mono font-bold text-emerald-400">{b.kodeBelanja}</td>
-                    <td className="px-4 py-3 font-semibold text-white">{b.namaBelanja}</td>
+                  <tr key={idx} className="hover:bg-[#F8FAFC]">
+                    <td className="px-4 py-3 font-mono font-bold text-[#079669]">{b.kodeBelanja}</td>
+                    <td className="px-4 py-3 font-semibold text-[#17324D]">{b.namaBelanja}</td>
                     <td className="px-4 py-3">
-                      <span className="rounded-full bg-slate-800 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-300">
+                      <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-[#079669] border border-emerald-200">
                         {b.jenisBelanja}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-bold text-[#3984E8] border border-blue-200">
+                        {b.tahun ? `TA ${b.tahun}` : 'Semua TA'}
                       </span>
                     </td>
                     {!isReadonly && (
@@ -1399,14 +1415,14 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                               setEditingBelanja({ ...b });
                               setOrigBelanjaKey({ kode: b.kodeBelanja, tahun: b.tahun });
                             }}
-                            className="rounded-lg bg-amber-950/60 hover:bg-amber-900 border border-amber-600/40 p-1.5 text-amber-300 transition"
+                            className="rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 p-1.5 text-[#D99A24] transition"
                             title="Edit Belanja"
                           >
                             <Edit className="h-3.5 w-3.5" />
                           </button>
                           <button
                             onClick={() => setDeletingBelanja(b)}
-                            className="rounded-lg bg-rose-950/60 hover:bg-rose-900 border border-rose-600/40 p-1.5 text-rose-300 transition"
+                            className="rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 p-1.5 text-rose-700 transition"
                             title="Hapus Belanja"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -1423,9 +1439,9 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
 
       {/* TAB CONTENT: SUMBER DANA */}
       {activeTab === 'master-sumberdana' && (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden shadow-xl">
-          <div className="flex items-center justify-between p-4 bg-slate-950 border-b border-slate-800">
-            <span className="text-xs font-bold text-slate-300">
+        <div className="rounded-2xl border border-[#DFE6EF] bg-[#FFFFFF] overflow-hidden shadow-xs">
+          <div className="flex items-center justify-between p-4 bg-[#F8FAFC] border-b border-[#DFE6EF]">
+            <span className="text-xs font-bold text-[#17324D]">
               Total Sumber Dana: {sumberDanaList.length} item
             </span>
             {!isReadonly && (
@@ -1434,7 +1450,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                   onClick={() => {
                     setShowClearDbModal('sumberdana');
                   }}
-                  className="flex items-center gap-1.5 rounded-xl border border-rose-900/60 bg-rose-950/40 px-3 py-1.5 text-xs font-bold text-rose-400 hover:bg-rose-900/60 hover:border-rose-700 transition"
+                  className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 transition cursor-pointer"
                   title="Kosongkan Database Master Sumber Dana"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -1442,7 +1458,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                 </button>
                 <button
                   onClick={() => setShowAddModal(true)}
-                  className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 shadow"
+                  className="flex items-center gap-1.5 rounded-xl bg-[#079669] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#065f46] shadow-xs transition cursor-pointer"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   <span>Tambah Sumber Dana</span>
@@ -1451,7 +1467,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
             )}
           </div>
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950 text-slate-300 font-bold uppercase tracking-wider border-b border-slate-800">
+            <thead className="bg-[#F8FAFC] text-[#17324D] font-bold uppercase tracking-wider border-b border-[#DFE6EF]">
               <tr>
                 <th className="px-4 py-3">Kode / ID</th>
                 <th className="px-4 py-3">Nama Sumber Dana</th>
@@ -1459,7 +1475,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                 {!isReadonly && <th className="px-4 py-3 text-right">Aksi</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800 text-slate-300">
+            <tbody className="divide-y divide-[#DFE6EF] text-[#17324D]">
               {sumberDanaList
                 .filter(
                   sd =>
@@ -1467,23 +1483,23 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                     (sd.kodeSumber || sd.id || '').toLowerCase().includes(searchTerm.toLowerCase())
                 )
                 .map(sd => (
-                  <tr key={sd.id || sd.kodeSumber} className="hover:bg-slate-800/50">
-                    <td className="px-4 py-3 font-mono font-bold text-emerald-400">{sd.kodeSumber || sd.id}</td>
-                    <td className="px-4 py-3 font-bold text-white">{sd.namaSumber || sd.nama}</td>
-                    <td className="px-4 py-3 text-slate-400">{sd.keterangan || '-'}</td>
+                  <tr key={sd.id || sd.kodeSumber} className="hover:bg-[#F8FAFC]">
+                    <td className="px-4 py-3 font-mono font-bold text-[#079669]">{sd.kodeSumber || sd.id}</td>
+                    <td className="px-4 py-3 font-bold text-[#17324D]">{sd.namaSumber || sd.nama}</td>
+                    <td className="px-4 py-3 text-[#64748B]">{sd.keterangan || '-'}</td>
                     {!isReadonly && (
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => setEditingSumberDana(sd)}
-                            className="rounded-lg bg-amber-950/60 hover:bg-amber-900 border border-amber-600/40 p-1.5 text-amber-300 transition"
+                            className="rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 p-1.5 text-[#D99A24] transition cursor-pointer"
                             title="Edit Sumber Dana"
                           >
                             <Edit className="h-3.5 w-3.5" />
                           </button>
                           <button
                             onClick={() => setDeletingSumberDana(sd)}
-                            className="rounded-lg bg-rose-950/60 hover:bg-rose-900 border border-rose-600/40 p-1.5 text-rose-300 transition"
+                            className="rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 p-1.5 text-rose-700 transition cursor-pointer"
                             title="Hapus Sumber Dana"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -1500,9 +1516,9 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
 
       {/* TAB CONTENT: REKANAN */}
       {activeTab === 'master-rekanan' && (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden shadow-xl">
-          <div className="flex items-center justify-between p-4 bg-slate-950 border-b border-slate-800">
-            <span className="text-xs font-bold text-slate-300">
+        <div className="rounded-2xl border border-[#DFE6EF] bg-[#FFFFFF] overflow-hidden shadow-xs">
+          <div className="flex items-center justify-between p-4 bg-[#F8FAFC] border-b border-[#DFE6EF]">
+            <span className="text-xs font-bold text-[#17324D]">
               Total Rekanan: {rekananList.length} item
             </span>
             {!isReadonly && (
@@ -1511,7 +1527,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                   onClick={() => {
                     setShowClearDbModal('rekanan');
                   }}
-                  className="flex items-center gap-1.5 rounded-xl border border-rose-900/60 bg-rose-950/40 px-3 py-1.5 text-xs font-bold text-rose-400 hover:bg-rose-900/60 hover:border-rose-700 transition"
+                  className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100 transition cursor-pointer"
                   title="Kosongkan Database Master Data Rekanan"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -1519,7 +1535,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                 </button>
                 <button
                   onClick={() => setShowAddModal(true)}
-                  className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 shadow"
+                  className="flex items-center gap-1.5 rounded-xl bg-[#079669] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#065f46] shadow-xs transition cursor-pointer"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   <span>Tambah Rekanan</span>
@@ -1528,7 +1544,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
             )}
           </div>
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950 text-slate-300 font-bold uppercase tracking-wider border-b border-slate-800">
+            <thead className="bg-[#F8FAFC] text-[#17324D] font-bold uppercase tracking-wider border-b border-[#DFE6EF]">
               <tr>
                 <th className="px-4 py-3">Nama Rekanan / Penyedia</th>
                 <th className="px-4 py-3">NPWP</th>
@@ -1538,7 +1554,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                 {!isReadonly && <th className="px-4 py-3 text-right">Aksi</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800 text-slate-300">
+            <tbody className="divide-y divide-[#DFE6EF] text-[#17324D]">
               {rekananList
                 .filter(
                   r =>
@@ -1546,10 +1562,10 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
                     r.npwp.includes(searchTerm)
                 )
                 .map(r => (
-                  <tr key={r.id} className="hover:bg-slate-800/50">
-                    <td className="px-4 py-3 font-bold text-white">{r.namaRekanan}</td>
-                    <td className="px-4 py-3 font-mono text-amber-300">{r.npwp}</td>
-                    <td className="px-4 py-3 font-mono text-emerald-400">
+                  <tr key={r.id} className="hover:bg-[#F8FAFC]">
+                    <td className="px-4 py-3 font-bold text-[#17324D]">{r.namaRekanan}</td>
+                    <td className="px-4 py-3 font-mono text-[#D99A24]">{r.npwp}</td>
+                    <td className="px-4 py-3 font-mono text-[#079669]">
                       {r.bank} - {r.noRekening}
                     </td>
                     <td className="px-4 py-3 text-slate-400">{r.alamat}</td>

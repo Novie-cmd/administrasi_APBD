@@ -46,22 +46,22 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
   const scriptCode = getGoogleAppsScriptCode();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-2xl rounded-2xl border border-emerald-500/40 bg-slate-900 p-6 shadow-2xl space-y-5 my-8 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#17324D]/40 p-4 backdrop-blur-xs overflow-y-auto animate-fadeIn">
+      <div className="relative w-full max-w-2xl rounded-2xl border border-[#DFE6EF] bg-[#FFFFFF] p-6 shadow-xl space-y-5 my-8 max-h-[90vh] overflow-y-auto text-[#17324D]">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="flex items-center justify-between border-b border-[#DFE6EF] pb-3">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400">
+            <div className="p-2 rounded-xl bg-emerald-50 text-[#079669] border border-emerald-200">
               <FileSpreadsheet className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Sinkronisasi Google Spreadsheet</h3>
-              <p className="text-xs text-slate-400">Simpan otomatis atau tarik data transaksi keuangan kapan saja</p>
+              <h3 className="text-base font-bold text-[#17324D]">Sinkronisasi Google Spreadsheet</h3>
+              <p className="text-xs text-[#64748B]">Simpan otomatis atau tarik data transaksi keuangan kapan saja</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition"
+            className="rounded-lg p-1.5 text-[#64748B] hover:bg-[#F4F7FB] hover:text-[#17324D] transition cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
@@ -72,32 +72,32 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
           <div
             className={`flex items-start justify-between rounded-xl border p-3.5 text-xs font-semibold ${
               sheetMessage.type === 'success'
-                ? 'border-emerald-700 bg-emerald-950/70 text-emerald-300'
-                : 'border-rose-700 bg-rose-950/70 text-rose-300'
+                ? 'border-emerald-200 bg-emerald-50 text-[#079669]'
+                : 'border-rose-200 bg-rose-50 text-rose-700'
             }`}
           >
             <div className="flex items-center gap-2">
               {sheetMessage.type === 'success' ? (
-                <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                <CheckCircle2 className="h-4 w-4 text-[#079669] shrink-0" />
               ) : (
-                <AlertTriangle className="h-4 w-4 text-rose-400 shrink-0" />
+                <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
               )}
               <span>{sheetMessage.text}</span>
             </div>
-            <button onClick={() => setSheetMessage(null)} className="text-slate-400 hover:text-white">✕</button>
+            <button onClick={() => setSheetMessage(null)} className="text-[#64748B] hover:text-[#17324D] cursor-pointer">✕</button>
           </div>
         )}
 
         {/* 2 Primary Action Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Push Card */}
-          <div className="rounded-xl border border-emerald-700/60 bg-emerald-950/30 p-4 space-y-3 flex flex-col justify-between">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 space-y-3 flex flex-col justify-between">
             <div className="space-y-1">
-              <div className="flex items-center gap-2 text-emerald-300 font-bold text-xs">
+              <div className="flex items-center gap-2 text-[#079669] font-bold text-xs">
                 <Upload className="h-4 w-4" />
                 <span>Simpan ke Spreadsheet</span>
               </div>
-              <p className="text-[11px] text-slate-300">
+              <p className="text-[11px] text-[#64748B]">
                 Kirim seluruh <strong>{realisasiList.length}</strong> transaksi, <strong>{anggaranList.length}</strong> pagu, serta 4 Master Sheet (Program, Kegiatan, Sub Kegiatan, Rekening Belanja) ke Google Sheet.
               </p>
             </div>
@@ -119,7 +119,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
                 });
               }}
               disabled={isPushing || syncStatus === 'syncing'}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 py-2.5 px-3 text-xs font-bold text-white shadow-lg transition"
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#079669] hover:bg-[#065f46] py-2.5 px-3 text-xs font-bold text-white shadow-xs transition cursor-pointer"
             >
               <RefreshCw className={`h-4 w-4 ${isPushing ? 'animate-spin' : ''}`} />
               <span>{isPushing ? 'Sedang Mengirim...' : 'Kirim Seluruh Data ke Google Sheet'}</span>
@@ -127,27 +127,27 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
           </div>
 
           {/* Pull Card */}
-          <div className="rounded-xl border border-sky-700/60 bg-sky-950/30 p-4 space-y-3 flex flex-col justify-between">
+          <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4 space-y-3 flex flex-col justify-between">
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2 text-sky-300 font-bold text-xs">
+              <div className="flex items-center gap-2 text-[#3984E8] font-bold text-xs">
                 <Download className="h-4 w-4" />
                 <span>Tarik Data ke Aplikasi</span>
               </div>
-              <p className="text-[11px] text-slate-300">
+              <p className="text-[11px] text-[#64748B]">
                 Sinkronkan data di aplikasi dengan isi Google Spreadsheet terkini.
               </p>
               
               {/* Sync Mode Selector */}
               <div className="pt-1">
-                <label className="text-[10px] font-bold text-sky-200 block mb-1">Mode Tarik Data:</label>
-                <div className="grid grid-cols-2 gap-1.5 bg-slate-900/90 p-1 rounded-lg border border-slate-700 text-[10px]">
+                <label className="text-[10px] font-bold text-[#17324D] block mb-1">Mode Tarik Data:</label>
+                <div className="grid grid-cols-2 gap-1.5 bg-[#FFFFFF] p-1 rounded-lg border border-[#DFE6EF] text-[10px]">
                   <button
                     type="button"
                     onClick={() => setSyncMode('replace')}
-                    className={`py-1 px-1.5 rounded font-bold text-center transition ${
+                    className={`py-1 px-1.5 rounded font-bold text-center transition cursor-pointer ${
                       syncMode === 'replace'
-                        ? 'bg-sky-600 text-white shadow'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-[#3984E8] text-white shadow-xs'
+                        : 'text-[#64748B] hover:text-[#17324D]'
                     }`}
                   >
                     Timpa Penuh (Sesuai Sheet)
@@ -155,16 +155,16 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
                   <button
                     type="button"
                     onClick={() => setSyncMode('merge')}
-                    className={`py-1 px-1.5 rounded font-bold text-center transition ${
+                    className={`py-1 px-1.5 rounded font-bold text-center transition cursor-pointer ${
                       syncMode === 'merge'
-                        ? 'bg-sky-600 text-white shadow'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-[#3984E8] text-white shadow-xs'
+                        : 'text-[#64748B] hover:text-[#17324D]'
                     }`}
                   >
                     Gabungkan Saja
                   </button>
                 </div>
-                <p className="text-[9.5px] text-slate-400 mt-1">
+                <p className="text-[9.5px] text-[#64748B] mt-1">
                   {syncMode === 'replace' 
                     ? '✓ Data yang dihapus di aplikasi/sheet tidak akan muncul kembali.' 
                     : 'Menggabungkan data sheet tanpa menghapus data lokal.'}
@@ -189,7 +189,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
                 });
               }}
               disabled={isPulling || syncStatus === 'syncing'}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 hover:bg-sky-500 py-2.5 px-3 text-xs font-bold text-white shadow-lg transition"
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#3984E8] hover:bg-blue-600 py-2.5 px-3 text-xs font-bold text-white shadow-xs transition cursor-pointer"
             >
               <Download className={`h-4 w-4 ${isPulling ? 'animate-spin' : ''}`} />
               <span>{isPulling ? 'Sedang Menarik Data...' : 'Tarik & Sinkronkan Data'}</span>
@@ -198,14 +198,14 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
         </div>
 
         {/* Zona Pengosongan Spreadsheet */}
-        <div className="rounded-xl border border-rose-900/60 bg-rose-950/20 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-0.5">
-            <div className="flex items-center gap-1.5 text-rose-300 font-bold text-xs">
-              <Trash2 className="h-4 w-4 text-rose-400 shrink-0" />
+            <div className="flex items-center gap-1.5 text-rose-700 font-bold text-xs">
+              <Trash2 className="h-4 w-4 text-rose-600 shrink-0" />
               <span>Kosongkan Seluruh Data di Google Spreadsheet</span>
             </div>
-            <p className="text-[11px] text-slate-400">
-              Menghapus seluruh baris data di sheet <code className="text-emerald-400">Realisasi_SP2D</code> &amp; <code className="text-sky-400">Pagu_Anggaran</code> sehingga spreadsheet bersih (hanya menyisakan header).
+            <p className="text-[11px] text-[#64748B]">
+              Menghapus seluruh baris data di sheet <code className="text-[#079669] font-bold">Realisasi_SP2D</code> &amp; <code className="text-[#3984E8] font-bold">Pagu_Anggaran</code> sehingga spreadsheet bersih (hanya menyisakan header).
             </p>
           </div>
           <button
@@ -229,7 +229,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
               }
             }}
             disabled={isClearing || isPushing || isPulling || syncStatus === 'syncing'}
-            className="flex items-center justify-center gap-1.5 rounded-xl border border-rose-800 bg-rose-950/80 hover:bg-rose-900 px-3.5 py-2 text-xs font-bold text-rose-200 hover:text-white transition shadow shrink-0"
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-600 hover:bg-rose-700 px-3.5 py-2 text-xs font-bold text-white transition shadow-xs shrink-0 cursor-pointer"
           >
             <Trash2 className={`h-3.5 w-3.5 ${isClearing ? 'animate-spin' : ''}`} />
             <span>{isClearing ? 'Mengosongkan Sheet...' : 'Kosongkan Spreadsheet'}</span>
@@ -237,12 +237,12 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
         </div>
 
         {/* Input Web App URL & Spreadsheet ID */}
-        <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-3">
+        <div className="rounded-xl border border-[#DFE6EF] bg-[#F4F7FB] p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <label className="text-xs font-bold text-slate-300">Google Apps Script Web App URL (Aktif):</label>
-              <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded-full font-medium">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <label className="text-xs font-bold text-[#17324D]">Google Apps Script Web App URL (Aktif):</label>
+              <span className="inline-flex items-center gap-1 text-[10px] text-[#079669] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#079669] animate-pulse"></span>
                 Auto-Sync Semua Perangkat
               </span>
             </div>
@@ -259,7 +259,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
                   text: '✓ URL WebApp dan Spreadsheet ID resmi berhasil ditetapkan & langsung disinkronkan ke seluruh perangkat!'
                 });
               }}
-              className="text-[11px] text-amber-400 hover:text-amber-300 underline font-semibold"
+              className="text-[11px] text-[#079669] hover:text-[#065f46] underline font-bold cursor-pointer"
             >
               Gunakan URL &amp; ID Resmi
             </button>
@@ -274,18 +274,18 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
                 updateSheetConfig({ webAppUrl: sheetConfig.webAppUrl.trim(), spreadsheetId: sheetConfig.spreadsheetId.trim() }, true);
               }
             }}
-            className="w-full rounded-xl border border-slate-700 bg-slate-900 p-2.5 text-xs text-emerald-300 font-mono focus:border-emerald-500 focus:outline-none"
+            className="w-full rounded-xl border border-[#DFE6EF] bg-[#FFFFFF] p-2.5 text-xs text-[#079669] font-mono focus:border-[#079669] focus:outline-none"
           />
 
           <div className="pt-1">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-300">Spreadsheet ID:</label>
+              <label className="text-xs font-bold text-[#17324D]">Spreadsheet ID:</label>
               {sheetConfig.spreadsheetId && (
                 <a
                   href={`https://docs.google.com/spreadsheets/d/${sheetConfig.spreadsheetId}/edit`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 hover:underline font-medium"
+                  className="text-[11px] text-[#079669] hover:text-[#065f46] flex items-center gap-1 hover:underline font-bold"
                 >
                   <span>Buka Spreadsheet ↗</span>
                 </a>
@@ -301,20 +301,20 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
                   updateSheetConfig({ webAppUrl: sheetConfig.webAppUrl.trim(), spreadsheetId: sheetConfig.spreadsheetId.trim() }, true);
                 }
               }}
-              className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-2.5 text-xs text-slate-300 font-mono focus:border-emerald-500 focus:outline-none"
+              className="mt-1 w-full rounded-xl border border-[#DFE6EF] bg-[#FFFFFF] p-2.5 text-xs text-[#17324D] font-mono focus:border-[#079669] focus:outline-none"
             />
           </div>
 
-          <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-            <span>Terakhir Sync: <strong className="text-white">{sheetConfig.lastSyncedAt || 'Belum pernah'}</strong></span>
-            <span>Status: <span className="text-emerald-400 font-bold">{sheetConfig.status || 'Connected'}</span></span>
+          <div className="flex items-center justify-between text-[11px] text-[#64748B] pt-1">
+            <span>Terakhir Sync: <strong className="text-[#17324D]">{sheetConfig.lastSyncedAt || 'Belum pernah'}</strong></span>
+            <span>Status: <span className="text-[#079669] font-bold">{sheetConfig.status || 'Connected'}</span></span>
           </div>
         </div>
 
         {/* Script Code Collapsible */}
-        <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-3">
+        <div className="rounded-xl border border-[#DFE6EF] bg-[#F4F7FB] p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+            <div className="flex items-center gap-2 text-xs font-bold text-[#D99A24]">
               <Code className="h-4 w-4" />
               <span>Kode Google Apps Script (Code.gs)</span>
             </div>
@@ -325,14 +325,14 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
                   setCopiedScript(true);
                   setTimeout(() => setCopiedScript(false), 2500);
                 }}
-                className="flex items-center gap-1 rounded-lg bg-amber-600 hover:bg-amber-500 px-3 py-1 text-xs font-bold text-white transition"
+                className="flex items-center gap-1 rounded-lg bg-[#D99A24] hover:bg-amber-600 px-3 py-1 text-xs font-bold text-white transition cursor-pointer"
               >
                 {copiedScript ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                 <span>{copiedScript ? 'Tersalin!' : 'Salin Kode'}</span>
               </button>
               <button
                 onClick={() => setShowScriptDetails(!showScriptDetails)}
-                className="text-xs text-slate-400 hover:text-white underline"
+                className="text-xs text-[#64748B] hover:text-[#17324D] underline cursor-pointer"
               >
                 {showScriptDetails ? 'Sembunyikan' : 'Lihat Kode'}
               </button>
@@ -340,7 +340,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
           </div>
 
           {showScriptDetails && (
-            <div className="relative rounded-lg border border-slate-800 bg-slate-900 p-3 overflow-x-auto max-h-48 font-mono text-[11px] text-emerald-300">
+            <div className="relative rounded-lg border border-[#DFE6EF] bg-[#FFFFFF] p-3 overflow-x-auto max-h-48 font-mono text-[11px] text-[#079669]">
               <pre>{scriptCode}</pre>
             </div>
           )}
@@ -350,7 +350,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({ isOp
         <div className="flex justify-end pt-2">
           <button
             onClick={onClose}
-            className="rounded-xl bg-slate-800 hover:bg-slate-700 px-5 py-2 text-xs font-bold text-white transition"
+            className="rounded-xl bg-[#079669] hover:bg-[#065f46] px-5 py-2 text-xs font-bold text-white transition cursor-pointer shadow-xs"
           >
             Tutup
           </button>

@@ -87,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   interfaceMode = 'bakesbang',
   setInterfaceMode
 }) => {
-  const { currentUser, switchRole, logout, resetAllData } = useApp();
+  const { currentUser, switchRole, logout } = useApp();
 
   // Accordion state for sidebar sub-menus
   const [openMaster, setOpenMaster] = useState(true);
@@ -130,21 +130,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-slate-800 bg-slate-950 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
+      className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-[#DFE6EF] bg-[#FFFFFF] transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
       }`}
     >
       {/* Sidebar Header Brand Badge */}
-      <div className="flex h-20 items-center justify-between border-b border-slate-800/80 px-5">
+      <div className="flex h-20 items-center justify-between border-b border-[#DFE6EF] px-5 bg-[#FFFFFF]">
         <div className="flex items-center gap-3">
-          <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 border border-amber-500/50 shadow-lg shadow-red-950/40 overflow-hidden">
-            <img src="/app-logo.jpg" alt="Rusa Logo NTB" className="h-full w-full object-cover" />
+          <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-[#F4F7FB] border border-[#DFE6EF] shadow-xs overflow-hidden p-0.5">
+            <img src="/app-logo.jpg" alt="Rusa Logo NTB" className="h-full w-full object-cover rounded-lg" />
           </div>
           <div className="flex flex-col">
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
+            <span className="text-xs font-black uppercase tracking-wider text-[#079669]">
               NTB MAKMUR MENDUNIA
             </span>
-            <span className="text-[10px] text-slate-400 font-medium">
+            <span className="text-[10px] text-[#64748B] font-bold">
               BANGKIT BERSAMA!
             </span>
           </div>
@@ -152,14 +152,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Navigation Links Area */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2 scrollbar-thin scrollbar-thumb-slate-800">
+      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5 scrollbar-thin scrollbar-thumb-slate-300">
         
         {/* Antarmuka Mode Switcher Card */}
         {setInterfaceMode && (
-          <div className="rounded-2xl bg-slate-900/90 p-2.5 border border-slate-800 shadow-md">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 px-1 flex items-center justify-between">
+          <div className="rounded-xl bg-[#F4F7FB] p-2.5 border border-[#DFE6EF] mb-2">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-[#64748B] mb-1.5 px-1 flex items-center justify-between">
               <span>Mode Antarmuka:</span>
-              <span className="text-[9px] font-bold text-cyan-400 bg-cyan-950/80 px-1.5 py-0.5 rounded border border-cyan-800/60">
+              <span className="text-[9px] font-bold text-[#079669] bg-emerald-100 px-1.5 py-0.5 rounded">
                 PROV NTB
               </span>
             </div>
@@ -170,13 +170,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   setInterfaceMode('bakesbang');
                   if (window.innerWidth < 1024) setIsOpen(false);
                 }}
-                className={`flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-bold transition text-left ${
+                className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-bold transition text-left ${
                   interfaceMode === 'bakesbang'
-                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950 font-bold'
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                    ? 'bg-[#079669] text-white shadow-xs'
+                    : 'text-[#64748B] hover:bg-[#FFFFFF] hover:text-[#17324D]'
                 }`}
               >
-                <Building className="h-3.5 w-3.5 shrink-0 text-emerald-300" />
+                <Building className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">BAKESBANGPOLDAGRI</span>
               </button>
               <button
@@ -185,13 +185,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   setInterfaceMode('seluruh-opd');
                   if (window.innerWidth < 1024) setIsOpen(false);
                 }}
-                className={`flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-bold transition text-left ${
+                className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-bold transition text-left ${
                   interfaceMode === 'seluruh-opd'
-                    ? 'bg-cyan-600 text-white shadow-md shadow-cyan-950 font-bold'
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                    ? 'bg-[#3984E8] text-white shadow-xs'
+                    : 'text-[#64748B] hover:bg-[#FFFFFF] hover:text-[#17324D]'
                 }`}
               >
-                <Building2 className="h-3.5 w-3.5 shrink-0 text-cyan-300" />
+                <Building2 className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">Seluruh OPD NTB (40 OPD)</span>
               </button>
             </div>
@@ -206,12 +206,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           }}
           className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all ${
             activeTab === 'dashboard'
-              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/60 font-bold'
-              : 'text-slate-300 hover:bg-slate-900 hover:text-white'
+              ? 'bg-[#079669] text-white shadow-xs font-bold'
+              : 'text-[#64748B] hover:bg-[#F4F7FB] hover:text-[#17324D]'
           }`}
           id="menu-dashboard"
         >
-          <LayoutDashboard className="h-4 w-4 text-emerald-400" />
+          <LayoutDashboard className="h-4 w-4" />
           <span>Dashboard Utama</span>
         </button>
 
@@ -227,24 +227,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }}
               className={`flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-semibold transition ${
                 activeTab.startsWith('master-')
-                  ? 'bg-emerald-950/80 text-emerald-300 font-bold border border-emerald-700/50'
-                  : 'text-slate-300 hover:bg-slate-900 hover:text-white'
+                  ? 'bg-emerald-50 text-[#079669] font-bold border border-emerald-200'
+                  : 'text-[#64748B] hover:bg-[#F4F7FB] hover:text-[#17324D]'
               }`}
               id="accordion-master-data"
             >
               <span className="flex items-center gap-3">
-                <Database className="h-4 w-4 text-emerald-400" />
+                <Database className="h-4 w-4 text-[#079669]" />
                 <span>Master Data</span>
               </span>
               {openMaster ? (
-                <ChevronDown className="h-4 w-4 text-slate-500" />
+                <ChevronDown className="h-4 w-4 text-[#64748B]" />
               ) : (
-                <ChevronRight className="h-4 w-4 text-slate-500" />
+                <ChevronRight className="h-4 w-4 text-[#64748B]" />
               )}
             </button>
 
             {openMaster && (
-              <div className="ml-4 mt-1 space-y-1 border-l-2 border-slate-800 pl-3">
+              <div className="ml-4 mt-1 space-y-1 border-l-2 border-[#DFE6EF] pl-3">
                 {[
                   { id: 'master-tahun', label: 'Tahun Anggaran' },
                   { id: 'master-opd', label: 'OPD / Unit Kerja' },
@@ -261,10 +261,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       setActiveTab(sub.id as ActiveTab);
                       if (window.innerWidth < 1024) setIsOpen(false);
                     }}
-                    className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs transition ${
+                    className={`flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-xs transition ${
                       activeTab === sub.id
-                        ? 'bg-emerald-900/60 text-emerald-200 font-bold border-l-2 border-emerald-400'
-                        : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                        ? 'bg-emerald-100 text-[#079669] font-bold'
+                        : 'text-[#64748B] hover:bg-[#F4F7FB] hover:text-[#17324D]'
                     }`}
                   >
                     <span>{sub.label}</span>
@@ -280,22 +280,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div>
             <button
               onClick={() => setOpenTransaksi(!openTransaksi)}
-              className="flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-300 hover:bg-slate-900 hover:text-white"
+              className="flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-semibold text-[#64748B] hover:bg-[#F4F7FB] hover:text-[#17324D]"
               id="accordion-transaksi"
             >
               <span className="flex items-center gap-3">
-                <FileSpreadsheet className="h-4 w-4 text-teal-400" />
+                <FileSpreadsheet className="h-4 w-4 text-[#079669]" />
                 <span>Transaksi Keuangan</span>
               </span>
               {openTransaksi ? (
-                <ChevronDown className="h-4 w-4 text-slate-500" />
+                <ChevronDown className="h-4 w-4 text-[#64748B]" />
               ) : (
-                <ChevronRight className="h-4 w-4 text-slate-500" />
+                <ChevronRight className="h-4 w-4 text-[#64748B]" />
               )}
             </button>
 
             {openTransaksi && (
-              <div className="ml-4 mt-1 space-y-1 border-l-2 border-slate-800 pl-3">
+              <div className="ml-4 mt-1 space-y-1 border-l-2 border-[#DFE6EF] pl-3">
                 {[
                   { id: 'transaksi-anggaran', label: 'Input Anggaran Pagu', icon: DollarSign },
                   { id: 'transaksi-realisasi', label: 'Input Realisasi (SP2D)', icon: FileText },
@@ -310,28 +310,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         setActiveTab(sub.id as ActiveTab);
                         if (window.innerWidth < 1024) setIsOpen(false);
                       }}
-                      className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs transition ${
+                      className={`flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs transition ${
                         activeTab === sub.id
-                          ? 'bg-emerald-900/60 text-emerald-200 font-bold border-l-2 border-emerald-400'
-                          : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                          ? 'bg-emerald-100 text-[#079669] font-bold'
+                          : 'text-[#64748B] hover:bg-[#F4F7FB] hover:text-[#17324D]'
                       }`}
                     >
-                      <Icon className="h-3.5 w-3.5 text-teal-400" />
+                      <Icon className="h-3.5 w-3.5 text-[#079669]" />
                       <span>{sub.label}</span>
                     </button>
                   );
                 })}
 
-                <div className="pt-2 border-t border-slate-800/80 mt-1 space-y-1">
+                <div className="pt-2 border-t border-[#DFE6EF] mt-1 space-y-1">
                   <button
                     onClick={() => {
                       setActiveTab('transaksi-excel');
                       if (window.innerWidth < 1024) setIsOpen(false);
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-950/70 hover:text-white transition"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition"
                     title="Menu Pembersihan & Kosongkan Data Transaksi/Database"
                   >
-                    <Trash2 className="h-3.5 w-3.5 text-rose-400" />
+                    <Trash2 className="h-3.5 w-3.5 text-rose-600" />
                     <span>Kosongkan Transaksi / DB</span>
                   </button>
                 </div>
@@ -344,22 +344,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div>
           <button
             onClick={() => setOpenPelaporan(!openPelaporan)}
-            className="flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-300 hover:bg-slate-900 hover:text-white"
+            className="flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-semibold text-[#64748B] hover:bg-[#F4F7FB] hover:text-[#17324D]"
             id="accordion-pelaporan"
           >
             <span className="flex items-center gap-3">
-              <BookOpen className="h-4 w-4 text-amber-400" />
+              <BookOpen className="h-4 w-4 text-[#3984E8]" />
               <span>Pelaporan (Reports)</span>
             </span>
             {openPelaporan ? (
-              <ChevronDown className="h-4 w-4 text-slate-500" />
+              <ChevronDown className="h-4 w-4 text-[#64748B]" />
             ) : (
-              <ChevronRight className="h-4 w-4 text-slate-500" />
+              <ChevronRight className="h-4 w-4 text-[#64748B]" />
             )}
           </button>
 
           {openPelaporan && (
-            <div className="ml-4 mt-1 space-y-1 border-l-2 border-slate-800 pl-3">
+            <div className="ml-4 mt-1 space-y-1 border-l-2 border-[#DFE6EF] pl-3">
               {[
                 { id: 'laporan-program', label: 'Realisasi Program' },
                 { id: 'laporan-kegiatan', label: 'Realisasi Kegiatan' },
@@ -380,8 +380,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   }}
                   className={`flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-xs transition ${
                     activeTab === sub.id
-                      ? 'bg-amber-950/60 text-amber-200 font-bold border-l-2 border-amber-400'
-                      : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                      ? 'bg-blue-50 text-[#3984E8] font-bold'
+                      : 'text-[#64748B] hover:bg-[#F4F7FB] hover:text-[#17324D]'
                   }`}
                 >
                   <span>{sub.label}</span>
@@ -395,22 +395,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div>
           <button
             onClick={() => setOpenAnalisis(!openAnalisis)}
-            className="flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-300 hover:bg-slate-900 hover:text-white"
+            className="flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-semibold text-[#64748B] hover:bg-[#F4F7FB] hover:text-[#17324D]"
             id="accordion-analisis"
           >
             <span className="flex items-center gap-3">
-              <BarChart3 className="h-4 w-4 text-cyan-400" />
-              <span>Analisis & Grafik</span>
+              <BarChart3 className="h-4 w-4 text-[#3984E8]" />
+              <span>Analisis &amp; Grafik</span>
             </span>
             {openAnalisis ? (
-              <ChevronDown className="h-4 w-4 text-slate-500" />
+              <ChevronDown className="h-4 w-4 text-[#64748B]" />
             ) : (
-              <ChevronRight className="h-4 w-4 text-slate-500" />
+              <ChevronRight className="h-4 w-4 text-[#64748B]" />
             )}
           </button>
 
           {openAnalisis && (
-            <div className="ml-4 mt-1 space-y-1 border-l-2 border-slate-800 pl-3">
+            <div className="ml-4 mt-1 space-y-1 border-l-2 border-[#DFE6EF] pl-3">
               {[
                 { id: 'analisis-grafik', label: 'Grafik Interaktif' },
                 { id: 'analisis-target', label: 'Target vs Realisasi' },
@@ -425,8 +425,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   }}
                   className={`flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-xs transition ${
                     activeTab === sub.id
-                      ? 'bg-cyan-950/60 text-cyan-200 font-bold border-l-2 border-cyan-400'
-                      : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                      ? 'bg-blue-50 text-[#3984E8] font-bold'
+                      : 'text-[#64748B] hover:bg-[#F4F7FB] hover:text-[#17324D]'
                   }`}
                 >
                   <span>{sub.label}</span>
@@ -445,54 +445,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
             }}
             className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all ${
               activeTab === 'pengaturan'
-                ? 'bg-emerald-600 text-white font-bold'
-                : 'text-slate-300 hover:bg-slate-900 hover:text-white'
+                ? 'bg-[#079669] text-white font-bold'
+                : 'text-[#64748B] hover:bg-[#F4F7FB] hover:text-[#17324D]'
             }`}
             id="menu-pengaturan"
           >
-            <Settings className="h-4 w-4 text-slate-400" />
-            <span>Pengaturan & Audit</span>
+            <Settings className="h-4 w-4" />
+            <span>Pengaturan &amp; Audit</span>
           </button>
         )}
 
         {/* PWA App Install Banner Card */}
-        <div className="mx-2 my-3 p-3.5 rounded-2xl bg-gradient-to-b from-slate-900 to-emerald-950/40 border border-emerald-500/30 text-white shadow-xl relative overflow-hidden group">
-          <div className="flex items-center gap-3">
-            <div className="relative h-11 w-11 shrink-0 rounded-xl bg-slate-950 border border-amber-400/50 overflow-hidden shadow-md flex items-center justify-center p-0.5">
-              <NTBLogo size={36} />
+        <div className="mx-1 my-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-[#17324D]">
+          <div className="flex items-center gap-2.5">
+            <div className="relative h-9 w-9 shrink-0 rounded-lg bg-[#FFFFFF] border border-[#DFE6EF] flex items-center justify-center p-0.5">
+              <NTBLogo size={28} />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-[10px] font-black uppercase text-amber-400 truncate">
-                {isInstalled ? 'Aplikasi Terpasang' : 'Instal Di HP & Laptop'}
+              <span className="text-[10px] font-black uppercase text-[#079669] truncate">
+                {isInstalled ? 'Aplikasi Terpasang' : 'Instal Aplikasi'}
               </span>
-              <span className="text-xs font-bold text-white truncate">
+              <span className="text-xs font-bold text-[#17324D] truncate">
                 {isInstalled ? 'BFMS NTB Aktif' : 'Aplikasi Layar Utama'}
-              </span>
-              <span className="text-[9px] text-slate-300 font-medium">
-                {isInstalled ? 'Siap digunakan offline' : 'PWA Fast Access'}
               </span>
             </div>
           </div>
           <button
             onClick={handleSidebarInstallClick}
-            className={`mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl py-2 px-3 text-[11px] font-black text-white shadow transition active:scale-95 ${
-              isInstalled
-                ? 'bg-emerald-800 hover:bg-emerald-700 text-emerald-100 border border-emerald-600'
-                : isInstallable
-                ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-amber-600 hover:brightness-110 shadow-emerald-950/60 ring-2 ring-amber-400/40 animate-pulse'
-                : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:brightness-110'
-            }`}
+            className="mt-2 w-full flex items-center justify-center gap-1.5 rounded-lg py-1.5 px-2.5 text-xs font-bold text-white bg-[#079669] hover:bg-[#065f46] shadow-xs transition"
             id="btn-sidebar-pwa-install"
           >
             {isInstalled ? (
               <>
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300" />
-                <span>Buka Petunjuk Aplikasi</span>
+                <CheckCircle2 className="h-3.5 w-3.5 text-white" />
+                <span>Buka Petunjuk</span>
               </>
             ) : (
               <>
-                <Download className="h-3.5 w-3.5 text-amber-200" />
-                <span>{isInstallable ? 'Pasang Sekarang (1-Klik)' : 'Pasang ke HP / Laptop'}</span>
+                <Download className="h-3.5 w-3.5 text-white" />
+                <span>{isInstallable ? 'Pasang Sekarang' : 'Pasang ke HP / Laptop'}</span>
               </>
             )}
           </button>
@@ -500,24 +491,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* User Session Footer & Quick Switch */}
-      <div className="border-t border-slate-800 p-4 bg-slate-900/60">
+      <div className="border-t border-[#DFE6EF] p-3.5 bg-[#F4F7FB]">
         <div className="flex items-center justify-between">
           <div className="flex flex-col">
-            <span className="text-[11px] font-bold text-white truncate max-w-[150px]">
+            <span className="text-xs font-bold text-[#17324D] truncate max-w-[150px]">
               {currentUser.nama}
             </span>
-            <span className="text-[10px] text-emerald-400 font-medium">
+            <span className="text-[10px] text-[#079669] font-bold">
               Role: {currentUser.role}
             </span>
           </div>
 
           <button
             onClick={logout}
-            className="flex items-center gap-1 rounded-lg bg-slate-800/80 hover:bg-rose-950/80 hover:text-rose-300 p-2 text-slate-400 border border-slate-700/60 transition shadow-sm"
+            className="flex items-center gap-1 rounded-lg bg-[#FFFFFF] hover:bg-rose-50 hover:text-rose-700 p-1.5 text-[#64748B] border border-[#DFE6EF] transition"
             title="Keluar dari Aplikasi (Logout)"
             id="btn-logout-sidebar"
           >
-            <LogOut className="h-4 w-4 text-rose-400" />
+            <LogOut className="h-3.5 w-3.5 text-rose-600" />
             <span className="text-[10px] font-bold">Keluar</span>
           </button>
         </div>

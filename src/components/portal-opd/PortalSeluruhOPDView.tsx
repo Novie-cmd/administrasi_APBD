@@ -1891,7 +1891,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
       )}
 
       {/* 2. Navigasi Tab Menu Utama (Ukuran Ringkas) */}
-      <div className="sticky top-16 z-20 flex overflow-x-auto gap-1.5 border-b border-slate-800/90 bg-slate-950/90 backdrop-blur-md pb-1.5 pt-0.5 scrollbar-none">
+      <div className="sticky top-16 z-20 flex overflow-x-auto gap-1.5 border-b border-[#DFE6EF] bg-[#F4F7FB]/95 backdrop-blur-xs pb-1.5 pt-0.5 scrollbar-none">
         {[
           { id: 'dashboard', label: 'Dashboard Eksekutif', icon: LayoutDashboard, badge: `${filteredOpds.length} OPD` },
           { id: 'master', label: 'Master OPD', icon: Database, badge: '40 SKPD' },
@@ -1906,18 +1906,18 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id as PortalTab)}
-              className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[11px] font-bold transition whitespace-nowrap ${
+              className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[11px] font-bold transition whitespace-nowrap cursor-pointer ${
                 isActive
-                  ? 'bg-cyan-600 text-white shadow-md shadow-cyan-950 border border-cyan-400'
-                  : 'bg-slate-900/80 text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-slate-800'
+                  ? 'bg-[#079669] text-white shadow-xs border border-emerald-700'
+                  : 'bg-[#FFFFFF] text-[#64748B] hover:text-[#17324D] hover:bg-[#F8FAFC] border border-[#DFE6EF]'
               }`}
             >
-              <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-cyan-400'}`} />
+              <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-[#079669]'}`} />
               <span>{item.label}</span>
               {item.badge && (
                 <span
                   className={`rounded-full px-1.5 py-0.2 text-[9px] font-semibold ${
-                    isActive ? 'bg-cyan-700/80 text-cyan-100' : 'bg-slate-800 text-slate-400'
+                    isActive ? 'bg-emerald-800 text-emerald-100' : 'bg-slate-100 text-[#64748B]'
                   }`}
                 >
                   {item.badge}
