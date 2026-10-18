@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --gov-bg: #F4F7FB;
+  --gov-bg: #E9EEF5;
   --gov-card: #FFFFFF;
   --gov-text-primary: #17324D;
   --gov-text-secondary: #64748B;
@@ -17,7 +17,7 @@
 }
 
 body {
-  background-color: #F4F7FB;
+  background-color: #E9EEF5;
   color: #17324D;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   margin: 0;
@@ -409,4 +409,66 @@ button .text-white,
 
 .gov-table-row:hover {
   background-color: #F8FAFC;
+}
+
+/* ========================================================
+   LOGIN VIEW COLOR THEME - MATCHES OFFICIAL NTB LOGO IMAGE
+   Dominant image background: #212B36
+   Deep navy base: #171F2A
+   Royal blue shield: #234493
+   ======================================================== */
+.login-card-dark {
+  background-color: #212B36 !important;
+  border-color: #2D3A4B !important;
+}
+
+.login-card-dark input {
+  background-color: #171F2A !important;
+  color: #FFFFFF !important;
+  border-color: #2D3A4B !important;
+}
+
+.login-card-dark input::placeholder {
+  color: #94A3B8 !important;
+}
+
+.login-card-dark input:focus {
+  border-color: #3984E8 !important;
+}
+
+.login-card-dark label,
+.login-card-dark label.text-slate-300,
+.login-card-dark label.text-slate-400,
+.login-card-dark label.text-white {
+  color: #E2E8F0 !important;
+}
+
+.login-card-dark h1,
+.login-card-dark h1.text-white {
+  color: #FFFFFF !important;
+}
+
+.login-card-dark p,
+.login-card-dark p.text-white {
+  color: #CBD5E1 !important;
+}
+
+.login-card-dark span.text-slate-300,
+.login-card-dark span.text-slate-400 {
+  color: #94A3B8 !important;
+}
+
+.login-card-dark .bg-\[\#234493\],
+.login-card-dark .bg-\[\#234493\] * {
+  color: #FFFFFF !important;
+}
+
+/* Enforce pure white text for login header & footer branding */
+.login-page-header .text-white,
+.login-page-footer .text-white,
+.login-identity-title,
+.login-identity-subtitle,
+.login-footer-slogan,
+.login-footer-copy {
+  color: #FFFFFF !important;
 }

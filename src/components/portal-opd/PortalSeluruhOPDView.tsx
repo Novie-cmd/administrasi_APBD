@@ -1891,7 +1891,7 @@ export const PortalSeluruhOPDView: React.FC<PortalSeluruhOPDViewProps> = ({ onSw
       )}
 
       {/* 2. Navigasi Tab Menu Utama (Ukuran Ringkas) */}
-      <div className="sticky top-16 z-20 flex overflow-x-auto gap-1.5 border-b border-[#DFE6EF] bg-[#F4F7FB]/95 backdrop-blur-xs pb-1.5 pt-0.5 scrollbar-none">
+      <div className="sticky top-16 z-20 flex overflow-x-auto gap-1.5 border-b border-[#DFE6EF] bg-[#E9EEF5]/95 backdrop-blur-xs pb-1.5 pt-0.5 scrollbar-none">
         {[
           { id: 'dashboard', label: 'Dashboard Eksekutif', icon: LayoutDashboard, badge: `${filteredOpds.length} OPD` },
           { id: 'master', label: 'Master OPD', icon: Database, badge: '40 SKPD' },

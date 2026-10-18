@@ -156,7 +156,7 @@ export function safeDownloadExcel(wb: XLSX.WorkBook, filename: string) {
             <head>
               <title>${cleanFilename}</title>
               <style>
-                body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; background: #F4F7FB; color: #17324D; }
+                body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; background: #E9EEF5; color: #17324D; }
                 h2 { color: #079669; }
                 p { font-size: 13px; color: #64748B; }
                 table { border-collapse: collapse; width: 100%; margin-top: 16px; font-size: 12px; background: #ffffff; border: 1px solid #DFE6EF; }

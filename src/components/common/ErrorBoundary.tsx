@@ -55,7 +55,7 @@ export class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen w-full bg-[#F4F7FB] text-[#17324D] flex flex-col justify-between p-4 sm:p-8 font-sans selection:bg-[#079669] selection:text-white">
+        <div className="min-h-screen w-full bg-[#E9EEF5] text-[#17324D] flex flex-col justify-between p-4 sm:p-8 font-sans selection:bg-[#079669] selection:text-white">
           {/* Header Identity */}
           <header className="w-full max-w-4xl mx-auto flex items-center justify-between border-b border-[#DFE6EF] pb-4">
             <div className="flex items-center gap-3">

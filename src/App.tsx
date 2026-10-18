@@ -28,7 +28,7 @@ const MainContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F7FB] text-[#17324D] font-sans antialiased flex flex-col">
+    <div className="min-h-screen bg-[#E9EEF5] text-[#17324D] font-sans antialiased flex flex-col">
       {/* Top Navbar */}
       <Navbar
         sidebarOpen={sidebarOpen}
@@ -58,7 +58,7 @@ const MainContent: React.FC = () => {
         )}
 
         {/* Main Operational Container */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[#F4F7FB]">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[#E9EEF5]">
           <div className="mx-auto max-w-7xl space-y-4">
             {/* Global Friendly Quota Banner */}
             {cloudSync.status === 'quota_exceeded' && !dismissQuotaBanner && (
