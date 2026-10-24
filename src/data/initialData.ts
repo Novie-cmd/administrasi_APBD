@@ -21,45 +21,60 @@ export const INITIAL_USERS: User[] = [
     nama: 'Dr. H. Ruslan, M.Si',
     nip: '19710312 199603 1 002',
     username: 'admin',
+    password: 'Admin123',
     role: 'Administrator',
     status: 'Aktif',
-    lastLogin: '2026-07-27 08:30:00'
+    lastLogin: '2026-07-27 08:30:00',
+    uraian: 'TA 2026 - Administrator Sistem Keuangan Daerah',
+    tahun: 2026
   },
   {
     id: 'USR-002',
     nama: 'Ahmad Subadri, S.STP',
     nip: '19850614 200802 1 001',
     username: 'operator',
+    password: 'Operator123',
     role: 'Operator Program',
     status: 'Aktif',
-    lastLogin: '2026-07-27 09:15:20'
+    lastLogin: '2026-07-27 09:15:20',
+    uraian: 'TA 2026 - Operator Sub Kegiatan & SPJ',
+    tahun: 2026
   },
   {
     id: 'USR-003',
     nama: 'Drs. Supriadi, M.M',
     nip: '19680920 199403 1 005',
     username: 'ppk',
+    password: 'Ppk123',
     role: 'PPK',
     status: 'Aktif',
-    lastLogin: '2026-07-26 16:45:00'
+    lastLogin: '2026-07-26 16:45:00',
+    uraian: 'TA 2026 - Pejabat Pembuat Komitmen',
+    tahun: 2026
   },
   {
     id: 'USR-004',
     nama: 'H. Lalu Gita Ariadi, M.Si',
     nip: '19651001 199003 1 008',
     username: 'kaban',
+    password: 'Kaban123',
     role: 'Kepala Badan',
     status: 'Aktif',
-    lastLogin: '2026-07-27 10:00:12'
+    lastLogin: '2026-07-27 10:00:12',
+    uraian: 'TA 2026 - Pengguna Anggaran / Kepala Badan',
+    tahun: 2026
   },
   {
     id: 'USR-005',
     nama: 'Siti Rahmah, S.E., Ak.',
     nip: '19821125 200604 2 011',
     username: 'auditor',
+    password: 'Auditor123',
     role: 'Auditor',
     status: 'Aktif',
-    lastLogin: '2026-07-25 14:20:00'
+    lastLogin: '2026-07-25 14:20:00',
+    uraian: 'TA 2026 - Inspektorat / Pengawas Internal',
+    tahun: 2026
   }
 ];
 

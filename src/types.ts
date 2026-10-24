@@ -9,6 +9,8 @@ export interface User {
   role: UserRole;
   status: 'Aktif' | 'Nonaktif';
   lastLogin: string;
+  uraian?: string;
+  tahun?: number;
 }
 
 export interface TahunAnggaran {

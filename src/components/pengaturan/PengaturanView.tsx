@@ -661,7 +661,7 @@ export const PengaturanView: React.FC = () => {
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-white">1. Kirim & Simpan Data ke Spreadsheet</h4>
-                  <p className="text-xs text-slate-400">Mencadangkan {realisasiList.length} transaksi realisasi, {anggaranList.length} pagu, serta 4 Master Sheet (Program, Kegiatan, Sub Kegiatan, Rekening) ke Google Sheet Anda.</p>
+                  <p className="text-xs text-slate-400">Mencadangkan {realisasiList.length} transaksi realisasi, {anggaranList.length} pagu, 4 Master Sheet, serta sheet User (Pengguna & Akses) ke Google Sheet Anda.</p>
                 </div>
               </div>
               <button

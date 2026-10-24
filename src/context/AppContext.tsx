@@ -469,9 +469,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const storedData = loadStoredData();
 
-  // Authentication state: Always require explicit login upon fresh browser visit or session
+  // Authentication state: Ensure login form displays upon fresh visits/reloads and on logout
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    const session = safeSessionStorageGet(AUTH_SESSION_KEY) || safeLocalStorageGet(AUTH_SESSION_KEY);
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('login') === 'true' || urlParams.get('logout') === 'true') {
+        safeLocalStorageRemove(AUTH_SESSION_KEY);
+        safeSessionStorageRemove(AUTH_SESSION_KEY);
+        return false;
+      }
+    }
+    // Only check active sessionStorage; remove legacy persistent localStorage auth to ensure login form shows
+    const session = safeSessionStorageGet(AUTH_SESSION_KEY);
     if (session) {
       try {
         const parsed = JSON.parse(session);
@@ -480,6 +489,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return false;
       }
     }
+    // Clear any old permanent localStorage session so user sees the login form
+    safeLocalStorageRemove(AUTH_SESSION_KEY);
     return false;
   });
 
@@ -1246,7 +1257,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logActivity(`Beralih peran (Role Switch) ke: ${role}`);
   };
 
-  // Authentication Login: Kepala Badan (pass: Kaban123) and Admin (pass: Admin123)
+  // Authentication Login: Checks users list (including accounts from Spreadsheet sheet 'User')
   const login = (usernameInput: string, passwordInput: string): { success: boolean; message: string; user?: User } => {
     const u = usernameInput.trim();
     const p = passwordInput.trim();
@@ -1255,57 +1266,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, message: 'Harap masukkan Username dan Password.' };
     }
 
-    // Check Kepala Badan (Username: "Kepala Badan", "kaban", case-insensitive; Password: "Kaban123")
-    const isKaban = u.toLowerCase() === 'kepala badan' || u.toLowerCase() === 'kaban';
-    if (isKaban) {
-      if (p === 'Kaban123' || p.toLowerCase() === 'kaban123') {
-        const kabanUser = users.find(user => user.role === 'Kepala Badan') || INITIAL_USERS[3];
+    // 1. Check against active users list (synced from Spreadsheet or initialized)
+    const userPool = (users && users.length > 0) ? users : INITIAL_USERS;
+    const matchedUser = userPool.find(user => 
+      (user.username && user.username.toLowerCase() === u.toLowerCase()) ||
+      (user.role && user.role.toLowerCase() === u.toLowerCase()) ||
+      (u.toLowerCase() === 'kaban' && user.role === 'Kepala Badan') ||
+      (u.toLowerCase() === 'admin' && user.role === 'Administrator')
+    );
+
+    if (matchedUser) {
+      const expectedPassword = matchedUser.password || (
+        matchedUser.role === 'Administrator' ? 'Admin123' :
+        matchedUser.role === 'Kepala Badan' ? 'Kaban123' :
+        matchedUser.role === 'PPK' ? 'Ppk123' :
+        matchedUser.role === 'Operator Program' ? 'Operator123' :
+        matchedUser.role === 'Auditor' ? 'Auditor123' : 'Admin123'
+      );
+
+      if (p === expectedPassword || p.toLowerCase() === expectedPassword.toLowerCase()) {
         const updatedUser: User = {
-          ...kabanUser,
+          ...matchedUser,
           lastLogin: new Date().toISOString().replace('T', ' ').substring(0, 19)
         };
         setCurrentUser(updatedUser);
         setIsAuthenticated(true);
         const sessionData = JSON.stringify({
           userId: updatedUser.id,
-          username: 'Kepala Badan',
+          username: updatedUser.username,
           nama: updatedUser.nama,
           role: updatedUser.role,
           loginAt: updatedUser.lastLogin
         });
-        safeLocalStorageSet(AUTH_SESSION_KEY, sessionData);
         safeSessionStorageSet(AUTH_SESSION_KEY, sessionData);
-        logActivity(`Pengguna "${updatedUser.nama}" (${updatedUser.role}) berhasil masuk ke sistem (Login)`);
-        return { success: true, message: 'Login berhasil sebagai Kepala Badan', user: updatedUser };
+        logActivity(`Pengguna "${updatedUser.nama}" (${updatedUser.role}) berhasil masuk ke sistem`);
+        return { success: true, message: `Login berhasil sebagai ${updatedUser.role}`, user: updatedUser };
       } else {
-        return { success: false, message: 'Password untuk Kepala Badan tidak valid.' };
+        return { success: false, message: `Kata sandi (password) untuk username "${u}" tidak valid.` };
       }
     }
 
-    // Check Admin (Username: "Admin", "admin", "administrator", case-insensitive; Password: "Admin123")
-    const isAdmin = u.toLowerCase() === 'admin' || u.toLowerCase() === 'administrator';
-    if (isAdmin) {
+    // 2. Fallbacks for standard Administrator and Kepala Badan
+    if (u.toLowerCase() === 'admin' || u.toLowerCase() === 'administrator') {
       if (p === 'Admin123' || p.toLowerCase() === 'admin123') {
-        const adminUser = users.find(user => user.role === 'Administrator') || INITIAL_USERS[0];
-        const updatedUser: User = {
-          ...adminUser,
-          lastLogin: new Date().toISOString().replace('T', ' ').substring(0, 19)
-        };
-        setCurrentUser(updatedUser);
+        const adminUser = INITIAL_USERS[0];
+        setCurrentUser(adminUser);
         setIsAuthenticated(true);
-        const sessionData = JSON.stringify({
-          userId: updatedUser.id,
-          username: 'Admin',
-          nama: updatedUser.nama,
-          role: updatedUser.role,
-          loginAt: updatedUser.lastLogin
-        });
-        safeLocalStorageSet(AUTH_SESSION_KEY, sessionData);
-        safeSessionStorageSet(AUTH_SESSION_KEY, sessionData);
-        logActivity(`Pengguna "${updatedUser.nama}" (${updatedUser.role}) berhasil masuk ke sistem (Login)`);
-        return { success: true, message: 'Login berhasil sebagai Administrator', user: updatedUser };
-      } else {
-        return { success: false, message: 'Password untuk Administrator tidak valid.' };
+        safeSessionStorageSet(AUTH_SESSION_KEY, JSON.stringify(adminUser));
+        return { success: true, message: 'Login berhasil sebagai Administrator', user: adminUser };
+      }
+    }
+    if (u.toLowerCase() === 'kaban' || u.toLowerCase() === 'kepala badan') {
+      if (p === 'Kaban123' || p.toLowerCase() === 'kaban123') {
+        const kabanUser = INITIAL_USERS[3];
+        setCurrentUser(kabanUser);
+        setIsAuthenticated(true);
+        safeSessionStorageSet(AUTH_SESSION_KEY, JSON.stringify(kabanUser));
+        return { success: true, message: 'Login berhasil sebagai Kepala Badan', user: kabanUser };
       }
     }
 
@@ -2414,7 +2431,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const currentSubKegiatan = latestStateRef.current?.subKegiatanList || subKegiatanList || [];
       const currentBelanja = latestStateRef.current?.belanjaList || belanjaList || [];
 
-      // Normalized Master Data (Program, Kegiatan, Sub Kegiatan, Rekening Belanja)
+      // Normalized Master Data (User, Program, Kegiatan, Sub Kegiatan, Rekening Belanja)
+      const currentUsers = latestStateRef.current?.users || users || INITIAL_USERS;
+      const normalizedUsers = (currentUsers || []).map((u, idx) => ({
+        id: u.id || `USR-00${idx + 1}`,
+        username: u.username || `user${idx + 1}`,
+        password: u.password || (
+          u.role === 'Administrator' ? 'Admin123' :
+          u.role === 'Kepala Badan' ? 'Kaban123' :
+          u.role === 'PPK' ? 'Ppk123' :
+          u.role === 'Operator Program' ? 'Operator123' : 'Admin123'
+        ),
+        role: u.role || 'Operator Program',
+        uraian: u.uraian || `TA ${u.tahun || selectedTahun} - ${u.role}`
+      }));
+
       const normalizedPrograms = (currentPrograms || []).map(p => ({
         kodeProgram: String(p.kodeProgram || '').trim(),
         namaProgram: String(p.namaProgram || '').trim(),
@@ -2508,6 +2539,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         action: isClear ? 'clearAll' : 'saveAll',
         spreadsheetId: targetSpreadsheetId,
         timestamp: new Date().toISOString(),
+        userList: normalizedUsers,
         programList: normalizedPrograms,
         kegiatanList: normalizedKegiatan,
         subKegiatanList: normalizedSubKegiatan,
@@ -2610,6 +2642,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       let rCount = 0;
       let aCount = 0;
+
+      // 0. Process Sheet User from Spreadsheet
+      let finalUsers = latestStateRef.current?.users || users || INITIAL_USERS;
+      if (data.userList && Array.isArray(data.userList) && data.userList.length > 0) {
+        const sheetUsers: User[] = data.userList.map((u: any, idx: number) => {
+          const roleRaw = String(u.role || u.Role || 'Operator Program').trim();
+          const roleValid: UserRole = 
+            roleRaw.toLowerCase().includes('admin') ? 'Administrator' :
+            roleRaw.toLowerCase().includes('kepala') || roleRaw.toLowerCase() === 'kaban' ? 'Kepala Badan' :
+            roleRaw.toLowerCase() === 'ppk' ? 'PPK' :
+            roleRaw.toLowerCase().includes('audit') ? 'Auditor' : 'Operator Program';
+
+          return {
+            id: String(u.id || u.ID || `USR-00${idx + 1}`),
+            nama: u.nama || `User ${u.username || roleValid}`,
+            nip: u.nip || '',
+            username: String(u.username || u.Username || `user${idx + 1}`).trim(),
+            password: String(u.password || u.Password || '').trim(),
+            role: roleValid,
+            status: 'Aktif' as const,
+            lastLogin: new Date().toISOString().replace('T', ' ').substring(0, 19),
+            uraian: String(u.uraian || u['Uraian (Tahun Anggaran)'] || u.Uraian || '')
+          };
+        }).filter(u => u.username);
+
+        if (sheetUsers.length > 0) {
+          finalUsers = sheetUsers;
+          setUsers(sheetUsers);
+        }
+      }
 
       // 1. Process Master Program from Spreadsheet
       let finalPrograms = latestStateRef.current?.programs || programs || [];
@@ -2849,7 +2911,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const nextState = {
         ...(latestStateRef.current || {}),
         currentUser,
-        users,
+        users: finalUsers,
         selectedTahun,
         tahunList,
         opdList,
