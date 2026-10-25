@@ -556,11 +556,11 @@ export const InputRealisasiView: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setShowSheetModal(true)}
-            className="flex items-center gap-2 rounded-xl border border-emerald-600/70 bg-emerald-950/40 px-3.5 py-2.5 text-xs font-bold text-emerald-300 hover:bg-emerald-900/60 hover:border-emerald-500 transition shadow-sm"
+            className="flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 px-3.5 py-2.5 text-xs font-bold text-emerald-800 transition shadow-xs cursor-pointer"
             id="btn-open-spreadsheet-sync"
             title="Kirim / Tarik Data Google Spreadsheet"
           >
-            <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
             <span>Google Spreadsheet Sync</span>
           </button>
 
@@ -572,11 +572,11 @@ export const InputRealisasiView: React.FC = () => {
               }
               setShowClearModal(true);
             }}
-            className="flex items-center gap-2 rounded-xl border border-rose-600/80 bg-rose-950/70 px-3.5 py-2.5 text-xs font-bold text-rose-200 hover:bg-rose-900 hover:border-rose-500 hover:text-white transition shadow-sm"
+            className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 px-3.5 py-2.5 text-xs font-bold text-rose-700 transition shadow-xs cursor-pointer"
             id="btn-clear-db-realisasi"
             title="Kosongkan Seluruh Data Transaksi Realisasi SP2D"
           >
-            <Trash2 className="h-4 w-4 text-rose-400" />
+            <Trash2 className="h-4 w-4 text-rose-600" />
             <span>Kosongkan Transaksi</span>
           </button>
 
@@ -588,11 +588,11 @@ export const InputRealisasiView: React.FC = () => {
               }
               setShowClearDbModal(true);
             }}
-            className="flex items-center gap-2 rounded-xl border border-red-700/80 bg-red-950/80 px-3.5 py-2.5 text-xs font-bold text-red-200 hover:bg-red-900 hover:border-red-500 hover:text-white transition shadow-sm"
+            className="flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-100 hover:bg-rose-200 px-3.5 py-2.5 text-xs font-bold text-rose-800 transition shadow-xs cursor-pointer"
             id="btn-clear-all-database-realisasi"
             title="Kosongkan Seluruh Database Transaksi (Realisasi & Pagu)"
           >
-            <Database className="h-4 w-4 text-rose-400" />
+            <Database className="h-4 w-4 text-rose-600" />
             <span>Kosongkan Database</span>
           </button>
 
@@ -606,20 +606,22 @@ export const InputRealisasiView: React.FC = () => {
                   setPreviewData([]);
                   setImportedFileName('');
                 }}
-                className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-xs font-bold text-teal-400 hover:border-teal-500 hover:bg-slate-800 transition"
+                className="flex items-center gap-2 rounded-xl bg-teal-600 hover:bg-teal-500 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-teal-900/20 transition cursor-pointer"
                 id="btn-import-excel-realisasi"
+                title="Import Realisasi SP2D dari File Excel"
               >
-                <FileSpreadsheet className="h-4 w-4" />
-                <span>Import File Excel</span>
+                <FileSpreadsheet className="h-4 w-4 text-white" />
+                <span className="text-white font-bold">Import File Excel</span>
               </button>
 
               <button
                 onClick={() => setShowForm(!showForm)}
-                className="flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-teal-500 shadow-lg shadow-teal-950/50"
+                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 shadow-md shadow-emerald-950/30 transition cursor-pointer"
                 id="btn-toggle-add-realisasi"
+                title="Input Transaksi Realisasi SP2D Manual"
               >
-                <Plus className="h-4 w-4" />
-                <span>Input Transaksi Realisasi</span>
+                <Plus className="h-4 w-4 text-white" />
+                <span className="text-white font-bold">Input Transaksi Realisasi</span>
               </button>
             </>
           )}

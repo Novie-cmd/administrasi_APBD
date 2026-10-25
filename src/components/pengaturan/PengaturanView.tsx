@@ -584,8 +584,8 @@ export const PengaturanView: React.FC = () => {
                             }
                             className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition shadow-xs cursor-pointer ${
                               u.status === 'Aktif'
-                                ? 'bg-slate-900 hover:bg-slate-800 text-white border border-slate-700'
-                                : 'bg-emerald-950 hover:bg-emerald-900 text-white border border-emerald-600/40'
+                                ? 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
+                                : 'bg-emerald-700 hover:bg-emerald-600 text-white border border-emerald-600'
                             }`}
                             title="Ubah Status Aktif/Inaktif"
                           >

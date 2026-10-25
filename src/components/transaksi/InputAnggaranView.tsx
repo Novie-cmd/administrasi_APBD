@@ -589,11 +589,11 @@ export const InputAnggaranView: React.FC = () => {
               }
               setShowClearModal(true);
             }}
-            className="flex items-center gap-2 rounded-xl border border-rose-600/80 bg-rose-950/70 px-3.5 py-2.5 text-xs font-bold text-rose-200 hover:bg-rose-900 hover:border-rose-500 hover:text-white transition shadow-sm"
+            className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 px-3.5 py-2.5 text-xs font-bold text-rose-700 transition shadow-xs cursor-pointer"
             id="btn-clear-db-anggaran"
             title="Kosongkan Seluruh Data Pagu Anggaran"
           >
-            <Trash2 className="h-4 w-4 text-rose-400" />
+            <Trash2 className="h-4 w-4 text-rose-600" />
             <span>Kosongkan Anggaran</span>
           </button>
 
@@ -605,11 +605,11 @@ export const InputAnggaranView: React.FC = () => {
               }
               setShowClearDbModal(true);
             }}
-            className="flex items-center gap-2 rounded-xl border border-red-700/80 bg-red-950/80 px-3.5 py-2.5 text-xs font-bold text-red-200 hover:bg-red-900 hover:border-red-500 hover:text-white transition shadow-sm"
+            className="flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-100 hover:bg-rose-200 px-3.5 py-2.5 text-xs font-bold text-rose-800 transition shadow-xs cursor-pointer"
             id="btn-clear-all-database-anggaran"
             title="Kosongkan Seluruh Database Transaksi (Realisasi & Pagu)"
           >
-            <Database className="h-4 w-4 text-rose-400" />
+            <Database className="h-4 w-4 text-rose-600" />
             <span>Kosongkan Database</span>
           </button>
 
@@ -623,20 +623,22 @@ export const InputAnggaranView: React.FC = () => {
                   setPreviewData([]);
                   setImportedFileName('');
                 }}
-                className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-xs font-bold text-emerald-400 hover:border-emerald-500 hover:bg-slate-800 transition"
+                className="flex items-center gap-2 rounded-xl bg-teal-600 hover:bg-teal-500 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-teal-900/20 transition cursor-pointer"
                 id="btn-import-excel-anggaran"
+                title="Import Pagu Anggaran dari File Excel"
               >
-                <FileSpreadsheet className="h-4 w-4" />
-                <span>Import File Excel</span>
+                <FileSpreadsheet className="h-4 w-4 text-white" />
+                <span className="text-white font-bold">Import File Excel</span>
               </button>
 
               <button
                 onClick={() => setShowForm(!showForm)}
-                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 shadow-lg shadow-emerald-950/50"
+                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 shadow-md shadow-emerald-950/30 transition cursor-pointer"
                 id="btn-toggle-add-anggaran"
+                title="Tambah Pagu Anggaran Manual"
               >
-                <Plus className="h-4 w-4" />
-                <span>Tambah Pagu Anggaran</span>
+                <Plus className="h-4 w-4 text-white" />
+                <span className="text-white font-bold">Tambah Pagu Anggaran</span>
               </button>
             </>
           )}

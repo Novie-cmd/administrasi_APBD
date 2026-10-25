@@ -778,11 +778,12 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({ initialSubTab = 
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => openImportModalForTab()}
-              className="flex items-center gap-2 rounded-xl bg-teal-600/90 hover:bg-teal-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-teal-950/50 transition"
+              className="flex items-center gap-2 rounded-xl bg-teal-600 hover:bg-teal-500 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-teal-900/20 transition cursor-pointer"
               id="btn-import-master-excel"
+              title="Import Data Master dari File Excel"
             >
-              <FileSpreadsheet className="h-4 w-4" />
-              <span>Import File Excel</span>
+              <FileSpreadsheet className="h-4 w-4 text-white" />
+              <span className="text-white font-bold">Import File Excel</span>
             </button>
 
             <button
