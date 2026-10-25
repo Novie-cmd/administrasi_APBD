@@ -1,12 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import {
   extractCode,
+  cleanBudgetCode,
+  cleanDateValue,
   isCodeEqual,
   parseExcelDate,
   makeRealisasiCompositeKey,
   sanitizeRealisasiList,
   extractMonthFromText
 } from '../utils/codeUtils';
+import { fetchCompleteSpreadsheetData } from '../services/spreadsheetService';
 import {
   User,
   UserRole,
@@ -443,20 +446,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       if (!primary && backup) primary = backup;
 
+      const rawPrograms = Array.isArray(primary?.programs) ? primary.programs : (hasEverInitialized ? [] : INITIAL_PROGRAMS);
+      const cleanPrograms = rawPrograms.map((p: any) => ({
+        ...p,
+        kodeProgram: cleanBudgetCode(p.kodeProgram)
+      }));
+
+      const rawKegiatan = Array.isArray(primary?.kegiatanList) ? primary.kegiatanList : (hasEverInitialized ? [] : INITIAL_KEGIATAN);
+      const cleanKegiatan = rawKegiatan.map((k: any) => ({
+        ...k,
+        kodeProgram: cleanBudgetCode(k.kodeProgram),
+        kodeKegiatan: cleanBudgetCode(k.kodeKegiatan)
+      }));
+
+      const rawSub = Array.isArray(primary?.subKegiatanList) ? primary.subKegiatanList : (hasEverInitialized ? [] : INITIAL_SUBKEGIATAN);
+      const cleanSub = rawSub.map((s: any) => ({
+        ...s,
+        kodeProgram: cleanBudgetCode(s.kodeProgram),
+        kodeKegiatan: cleanBudgetCode(s.kodeKegiatan),
+        kodeSub: cleanBudgetCode(s.kodeSub)
+      }));
+
+      const rawAnggaran = Array.isArray(primary?.anggaranList) ? primary.anggaranList : (hasEverInitialized ? [] : INITIAL_ANGGARAN);
+      const cleanAnggaran = rawAnggaran.map((a: any) => ({
+        ...a,
+        kodeProgram: cleanBudgetCode(a.kodeProgram),
+        kodeKegiatan: cleanBudgetCode(a.kodeKegiatan),
+        kodeSub: cleanBudgetCode(a.kodeSub),
+        kodeBelanja: extractCode(a.kodeBelanja)
+      }));
+
+      const rawRealisasi = sanitizeRealisasiList(Array.isArray(primary?.realisasiList) ? primary.realisasiList : (hasEverInitialized ? [] : INITIAL_REALISASI));
+      const cleanRealisasi = rawRealisasi.map((r: any) => ({
+        ...r,
+        kodeProgram: cleanBudgetCode(r.kodeProgram),
+        kodeKegiatan: cleanBudgetCode(r.kodeKegiatan),
+        kodeSub: cleanBudgetCode(r.kodeSub),
+        kodeBelanja: extractCode(r.kodeBelanja),
+        tanggal: cleanDateValue(r.tanggal),
+        noSPM: cleanDateValue(r.noSPM) || r.noSPM
+      }));
+
       // When primary exists, return it respecting explicit empty arrays
       return {
         ...primary,
         users: primary?.users && Array.isArray(primary.users) && primary.users.length > 0 ? primary.users : INITIAL_USERS,
         tahunList: primary?.tahunList && Array.isArray(primary.tahunList) && primary.tahunList.length > 0 ? primary.tahunList : INITIAL_TAHUN,
         opdList: primary?.opdList && Array.isArray(primary.opdList) && primary.opdList.length > 0 ? primary.opdList : (primary?.opd ? [primary.opd] : [INITIAL_OPD]),
-        programs: Array.isArray(primary?.programs) ? primary.programs : (hasEverInitialized ? [] : INITIAL_PROGRAMS),
-        kegiatanList: Array.isArray(primary?.kegiatanList) ? primary.kegiatanList : (hasEverInitialized ? [] : INITIAL_KEGIATAN),
-        subKegiatanList: Array.isArray(primary?.subKegiatanList) ? primary.subKegiatanList : (hasEverInitialized ? [] : INITIAL_SUBKEGIATAN),
+        programs: cleanPrograms,
+        kegiatanList: cleanKegiatan,
+        subKegiatanList: cleanSub,
         belanjaList: filterOutBelanjaTombstones(Array.isArray(primary?.belanjaList) ? primary.belanjaList : (hasEverInitialized ? [] : INITIAL_BELANJA)),
         sumberDanaList: Array.isArray(primary?.sumberDanaList) ? primary.sumberDanaList : (hasEverInitialized ? [] : INITIAL_SUMBER_DANA),
         rekananList: Array.isArray(primary?.rekananList) ? primary.rekananList : (hasEverInitialized ? [] : INITIAL_REKANAN),
-        anggaranList: Array.isArray(primary?.anggaranList) ? primary.anggaranList : (hasEverInitialized ? [] : INITIAL_ANGGARAN),
-        realisasiList: Array.isArray(primary?.realisasiList) ? primary.realisasiList : (hasEverInitialized ? [] : INITIAL_REALISASI),
+        anggaranList: cleanAnggaran,
+        realisasiList: cleanRealisasi,
         importLogs: Array.isArray(primary?.importLogs) ? primary.importLogs : [],
         activityLogs: Array.isArray(primary?.activityLogs) ? primary.activityLogs : [],
         sheetConfig: primary?.sheetConfig || INITIAL_SHEET_CONFIG
@@ -468,6 +512,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const storedData = loadStoredData();
+  latestStateRef.current = storedData;
 
   // Authentication state: Ensure login form displays upon fresh visits/reloads and on logout
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -2618,287 +2663,81 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     message: string;
   }> => {
     const targetUrl = (customUrl || sheetConfig.webAppUrl || '').trim();
-    if (!targetUrl) {
-      return {
-        success: false,
-        realisasiCount: 0,
-        anggaranCount: 0,
-        message: 'URL Web App Google Apps Script belum diisi. Silakan masukkan URL di pengaturan.'
-      };
-    }
+    const targetSpreadsheetId = sheetConfig.spreadsheetId || '1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY';
 
     setSyncStatus('syncing');
     logActivity(`Menarik data dari Google Spreadsheet (Mode: ${syncMode === 'replace' ? 'Timpa/Sinkron Penuh' : 'Gabungkan'})`);
 
     try {
-      const targetSpreadsheetId = sheetConfig.spreadsheetId || '1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY';
-      const sep = targetUrl.includes('?') ? '&' : '?';
-      const fetchUrl = `${targetUrl}${sep}action=getAll&spreadsheetId=${encodeURIComponent(targetSpreadsheetId)}`;
-      const res = await fetch(fetchUrl);
-      if (!res.ok) {
-        throw new Error(`HTTP Error ${res.status}: ${res.statusText}`);
-      }
-      const data = await res.json();
-
-      let rCount = 0;
-      let aCount = 0;
-
-      // 0. Process Sheet User from Spreadsheet
-      let finalUsers = latestStateRef.current?.users || users || INITIAL_USERS;
-      if (data.userList && Array.isArray(data.userList) && data.userList.length > 0) {
-        const sheetUsers: User[] = data.userList.map((u: any, idx: number) => {
-          const roleRaw = String(u.role || u.Role || 'Operator Program').trim();
-          const roleValid: UserRole = 
-            roleRaw.toLowerCase().includes('admin') ? 'Administrator' :
-            roleRaw.toLowerCase().includes('kepala') || roleRaw.toLowerCase() === 'kaban' ? 'Kepala Badan' :
-            roleRaw.toLowerCase() === 'ppk' ? 'PPK' :
-            roleRaw.toLowerCase().includes('audit') ? 'Auditor' : 'Operator Program';
-
-          return {
-            id: String(u.id || u.ID || `USR-00${idx + 1}`),
-            nama: u.nama || `User ${u.username || roleValid}`,
-            nip: u.nip || '',
-            username: String(u.username || u.Username || `user${idx + 1}`).trim(),
-            password: String(u.password || u.Password || '').trim(),
-            role: roleValid,
-            status: 'Aktif' as const,
-            lastLogin: new Date().toISOString().replace('T', ' ').substring(0, 19),
-            uraian: String(u.uraian || u['Uraian (Tahun Anggaran)'] || u.Uraian || '')
-          };
-        }).filter(u => u.username);
-
-        if (sheetUsers.length > 0) {
-          finalUsers = sheetUsers;
-          setUsers(sheetUsers);
-        }
+      const extracted = await fetchCompleteSpreadsheetData(targetSpreadsheetId, targetUrl);
+      if (!extracted.success) {
+        throw new Error(extracted.message || 'Gagal mengekstrak data dari Google Spreadsheet');
       }
 
-      // 1. Process Master Program from Spreadsheet
-      let finalPrograms = latestStateRef.current?.programs || programs || [];
-      if (data.programList && Array.isArray(data.programList) && data.programList.length > 0) {
-        const sheetPrograms: Program[] = data.programList.map((p: any) => ({
-          kodeProgram: String(p.kodeProgram || p.Kode_Program || '').trim(),
-          namaProgram: String(p.namaProgram || p.Nama_Program || '').trim(),
-          tahun: Number(p.tahun || p.Tahun) || selectedTahun
-        })).filter(p => p.kodeProgram && p.namaProgram);
-
-        if (sheetPrograms.length > 0) {
-          const progMap = new Map<string, Program>();
-          finalPrograms.forEach(p => progMap.set(`${p.kodeProgram}_${p.tahun}`, p));
-          sheetPrograms.forEach(p => progMap.set(`${p.kodeProgram}_${p.tahun}`, p));
-          finalPrograms = Array.from(progMap.values());
-          setPrograms(finalPrograms);
-        }
-      }
-
-      // 2. Process Master Kegiatan from Spreadsheet
-      let finalKegiatan = latestStateRef.current?.kegiatanList || kegiatanList || [];
-      if (data.kegiatanList && Array.isArray(data.kegiatanList) && data.kegiatanList.length > 0) {
-        const sheetKegiatan: Kegiatan[] = data.kegiatanList.map((k: any) => ({
-          kodeProgram: String(k.kodeProgram || k.Kode_Program || '').trim(),
-          kodeKegiatan: String(k.kodeKegiatan || k.Kode_Kegiatan || '').trim(),
-          namaKegiatan: String(k.namaKegiatan || k.Nama_Kegiatan || '').trim(),
-          tahun: Number(k.tahun || k.Tahun) || selectedTahun
-        })).filter(k => k.kodeKegiatan && k.namaKegiatan);
-
-        if (sheetKegiatan.length > 0) {
-          const kegMap = new Map<string, Kegiatan>();
-          finalKegiatan.forEach(k => kegMap.set(`${k.kodeKegiatan}_${k.tahun}`, k));
-          sheetKegiatan.forEach(k => kegMap.set(`${k.kodeKegiatan}_${k.tahun}`, k));
-          finalKegiatan = Array.from(kegMap.values());
-          setKegiatanList(finalKegiatan);
-        }
-      }
-
-      // 3. Process Master Sub Kegiatan from Spreadsheet
-      let finalSubKegiatan = latestStateRef.current?.subKegiatanList || subKegiatanList || [];
-      if (data.subKegiatanList && Array.isArray(data.subKegiatanList) && data.subKegiatanList.length > 0) {
-        const sheetSub: SubKegiatan[] = data.subKegiatanList.map((s: any) => ({
-          kodeProgram: String(s.kodeProgram || s.Kode_Program || '').trim(),
-          kodeKegiatan: String(s.kodeKegiatan || s.Kode_Kegiatan || '').trim(),
-          kodeSub: String(s.kodeSub || s.Kode_Sub_Kegiatan || s.Kode_Sub || '').trim(),
-          namaSub: String(s.namaSub || s.Nama_Sub_Kegiatan || s.Nama_Sub || '').trim(),
-          tahun: Number(s.tahun || s.Tahun) || selectedTahun
-        })).filter(s => s.kodeSub && s.namaSub);
-
-        if (sheetSub.length > 0) {
-          const subMap = new Map<string, SubKegiatan>();
-          finalSubKegiatan.forEach(s => subMap.set(`${s.kodeSub}_${s.tahun}`, s));
-          sheetSub.forEach(s => subMap.set(`${s.kodeSub}_${s.tahun}`, s));
-          finalSubKegiatan = Array.from(subMap.values());
-          setSubKegiatanList(finalSubKegiatan);
-        }
-      }
-
-      // 4. Process Master Rekening Belanja from Spreadsheet
-      let finalBelanja = latestStateRef.current?.belanjaList || belanjaList || [];
-      if (data.belanjaList && Array.isArray(data.belanjaList) && data.belanjaList.length > 0) {
-        const sheetBelanja: Belanja[] = data.belanjaList.map((b: any) => ({
-          kodeBelanja: String(b.kodeBelanja || b.Kode_Rekening_Belanja || b.Kode_Belanja || '').trim(),
-          namaBelanja: String(b.namaBelanja || b.Nama_Rekening_Belanja || b.Nama_Belanja || '').trim(),
-          jenisBelanja: String(b.jenisBelanja || b.Jenis_Belanja || 'Belanja Barang dan Jasa').trim(),
-          tahun: Number(b.tahun || b.Tahun) || selectedTahun
-        })).filter(b => b.kodeBelanja && b.namaBelanja);
-
-        if (sheetBelanja.length > 0) {
-          const belMap = new Map<string, Belanja>();
-          finalBelanja.forEach(b => belMap.set(`${b.kodeBelanja}_${b.tahun}`, b));
-          sheetBelanja.forEach(b => belMap.set(`${b.kodeBelanja}_${b.tahun}`, b));
-          finalBelanja = Array.from(belMap.values());
-          setBelanjaList(finalBelanja);
-        }
-      }
-
-      // 5. Process Realisasi SP2D
-      let finalRealisasiList: Realisasi[] = [];
-      if (data.realisasiList && Array.isArray(data.realisasiList)) {
-        const parsedRealisasi: Realisasi[] = data.realisasiList.map((r: any) => {
-          const tgl = r.tanggal || new Date().toISOString().split('T')[0];
-          const parsedDate = new Date(tgl);
-          const bln = !isNaN(parsedDate.getMonth()) ? parsedDate.getMonth() + 1 : 1;
-          const sub = finalSubKegiatan.find(s => s.kodeSub === r.kodeSub);
-          const bel = finalBelanja.find(b => b.kodeBelanja === r.kodeBelanja);
-          const kdProg = r.kodeProgram || sub?.kodeProgram || (r.kodeSub ? r.kodeSub.split('.').slice(0, 3).join('.') : '5.01.01');
-          const kdKeg = r.kodeKegiatan || sub?.kodeKegiatan || (r.kodeSub ? r.kodeSub.split('.').slice(0, 5).join('.') : '5.01.01.2.01');
-
-          // Auto-insert to master if newly encountered
-          if (r.kodeSub && r.namaSub && !finalSubKegiatan.some(s => s.kodeSub === r.kodeSub)) {
-            finalSubKegiatan.push({
-              kodeProgram: kdProg,
-              kodeKegiatan: kdKeg,
-              kodeSub: r.kodeSub,
-              namaSub: r.namaSub,
-              tahun: Number(r.tahun) || selectedTahun
-            });
-          }
-          if (r.kodeBelanja && r.namaBelanja && !finalBelanja.some(b => b.kodeBelanja === r.kodeBelanja)) {
-            finalBelanja.push({
-              kodeBelanja: r.kodeBelanja,
-              namaBelanja: r.namaBelanja,
-              jenisBelanja: 'Belanja Barang dan Jasa',
-              tahun: Number(r.tahun) || selectedTahun
-            });
-          }
-
-          const stableId = r.id || `REAL-${r.tahun || selectedTahun}-${(r.noSP2D || 'SP2D').replace(/[^a-zA-Z0-9]/g, '')}-${(r.kodeBelanja || '').replace(/\./g, '')}-${Number(r.nilai) || 0}`;
-
-          return {
-            id: stableId,
-            tahun: Number(r.tahun) || selectedTahun,
-            tanggal: tgl,
-            bulan: Number(r.bulan) || bln,
-            kodeProgram: kdProg,
-            kodeKegiatan: kdKeg,
-            kodeSub: r.kodeSub || (sub ? sub.kodeSub : '5.01.01.2.01.01'),
-            kodeBelanja: r.kodeBelanja || '',
-            uraian: r.uraian || '',
-            nilai: Number(r.nilai) || 0,
-            noSP2D: r.noSP2D || '',
-            noSPM: r.noSPM || '',
-            rekanan: r.rekanan || '',
-            operator: r.operator || 'Spreadsheet Import',
-            statusValidation: r.statusValidation || 'Disetujui PPK',
-            catatanValidation: r.catatanValidation || '',
-            buktiUrl: r.buktiUrl || ''
-          };
-        });
-
-        if (syncMode === 'replace') {
-          // Replace mode: Spreadsheet is source of truth. If empty in sheet, list is empty in app.
-          finalRealisasiList = parsedRealisasi;
-        } else {
-          // Merge mode: Add or update records, preserving other local entries
-          const map = new Map<string, Realisasi>();
-          const currentList = latestStateRef.current?.realisasiList || realisasiList;
-          currentList.forEach(r => {
-            const key = makeRealisasiCompositeKey(r.noSP2D, r.kodeBelanja, r.kodeSub, r.nilai, r.uraian, r.tahun) || r.id;
-            map.set(key, r);
-          });
-          parsedRealisasi.forEach(item => {
-            const key = makeRealisasiCompositeKey(item.noSP2D, item.kodeBelanja, item.kodeSub, item.nilai, item.uraian, item.tahun) || item.id;
-            map.set(key, item);
-          });
-          finalRealisasiList = Array.from(map.values());
-        }
-        rCount = finalRealisasiList.length;
-        setRealisasiList(finalRealisasiList);
-      } else {
-        finalRealisasiList = latestStateRef.current?.realisasiList || realisasiList;
-      }
-
-      // 6. Process Pagu Anggaran
+      let finalPrograms = extracted.programs;
+      let finalKegiatan = extracted.kegiatanList;
+      let finalSubKegiatan = extracted.subKegiatanList;
+      let finalBelanja = extracted.belanjaList;
       let finalAnggaranList: Anggaran[] = [];
-      if (data.anggaranList && Array.isArray(data.anggaranList)) {
-        const parsedAnggaran: Anggaran[] = data.anggaranList.map((a: any) => {
-          const sub = finalSubKegiatan.find(s => s.kodeSub === a.kodeSub);
-          const bel = finalBelanja.find(b => b.kodeBelanja === a.kodeBelanja);
-          const kdProg = a.kodeProgram || sub?.kodeProgram || (a.kodeSub ? a.kodeSub.split('.').slice(0, 3).join('.') : '5.01.01');
-          const kdKeg = a.kodeKegiatan || sub?.kodeKegiatan || (a.kodeSub ? a.kodeSub.split('.').slice(0, 5).join('.') : '5.01.01.2.01');
-          const pagu = Number(a.pagu) || Number(a.nilaiMurni) || Number(a.nilai) || 0;
-          const revisi = Number(a.revisi) || (a.nilaiPerubahan !== undefined ? Number(a.nilaiPerubahan) : 0);
-          const paguAkhir = Number(a.paguAkhir) || (pagu + revisi) || Number(a.nilai) || 0;
+      let finalRealisasiList: Realisasi[] = [];
 
-          if (a.kodeSub && a.namaSub && !finalSubKegiatan.some(s => s.kodeSub === a.kodeSub)) {
-            finalSubKegiatan.push({
-              kodeProgram: kdProg,
-              kodeKegiatan: kdKeg,
-              kodeSub: a.kodeSub,
-              namaSub: a.namaSub,
-              tahun: Number(a.tahun) || selectedTahun
-            });
-          }
-          if (a.kodeBelanja && a.namaBelanja && !finalBelanja.some(b => b.kodeBelanja === a.kodeBelanja)) {
-            finalBelanja.push({
-              kodeBelanja: a.kodeBelanja,
-              namaBelanja: a.namaBelanja,
-              jenisBelanja: 'Belanja Barang dan Jasa',
-              tahun: Number(a.tahun) || selectedTahun
-            });
-          }
-
-          const stableId = a.id || `ANG-${a.tahun || selectedTahun}-${(a.kodeBelanja || '').replace(/\./g, '')}-${(a.kodeSub || '').replace(/\./g, '')}`;
-
-          return {
-            id: stableId,
-            tahun: Number(a.tahun) || selectedTahun,
-            kodeProgram: kdProg,
-            kodeKegiatan: kdKeg,
-            kodeSub: a.kodeSub || (sub ? sub.kodeSub : '5.01.01.2.01.01'),
-            kodeBelanja: a.kodeBelanja || '',
-            namaBelanja: a.namaBelanja || bel?.namaBelanja || `Belanja Rekening ${a.kodeBelanja || ''}`,
-            pagu: pagu,
-            revisi: revisi,
-            nilaiSPD: Number(a.nilaiSPD) || paguAkhir,
-            paguAkhir: paguAkhir,
-            tanggalInput: a.tanggalInput || new Date().toISOString().split('T')[0],
-            operator: a.operator || 'Spreadsheet Import',
-            sumberDana: a.sumberDana || 'PAD'
-          };
-        });
-
-        if (syncMode === 'replace') {
-          // Replace mode: Spreadsheet is source of truth.
-          finalAnggaranList = parsedAnggaran;
-        } else {
-          // Merge mode: Add or update records
-          const map = new Map<string, Anggaran>();
-          const currentList = latestStateRef.current?.anggaranList || anggaranList;
-          currentList.forEach(a => map.set(`${a.kodeBelanja}_${a.kodeSub}_${a.tahun}`, a));
-          parsedAnggaran.forEach(item => {
-            map.set(`${item.kodeBelanja}_${item.kodeSub}_${item.tahun}`, item);
-          });
-          finalAnggaranList = Array.from(map.values());
-        }
-        aCount = finalAnggaranList.length;
-        setAnggaranList(finalAnggaranList);
+      if (syncMode === 'replace') {
+        finalAnggaranList = extracted.anggaranList;
+        finalRealisasiList = extracted.realisasiList;
       } else {
-        finalAnggaranList = latestStateRef.current?.anggaranList || anggaranList;
+        // Merge mode for Anggaran
+        const angMap = new Map<string, Anggaran>();
+        (latestStateRef.current?.anggaranList || anggaranList).forEach(a => {
+          angMap.set(`${a.kodeBelanja}_${a.kodeSub}_${a.tahun}`, a);
+        });
+        extracted.anggaranList.forEach(a => {
+          angMap.set(`${a.kodeBelanja}_${a.kodeSub}_${a.tahun}`, a);
+        });
+        finalAnggaranList = Array.from(angMap.values());
+
+        // Merge mode for Realisasi
+        const realMap = new Map<string, Realisasi>();
+        (latestStateRef.current?.realisasiList || realisasiList).forEach(r => {
+          const key = makeRealisasiCompositeKey(r.noSP2D, r.kodeBelanja, r.kodeSub, r.nilai, r.uraian, r.tahun) || r.id;
+          realMap.set(key, r);
+        });
+        extracted.realisasiList.forEach(r => {
+          const key = makeRealisasiCompositeKey(r.noSP2D, r.kodeBelanja, r.kodeSub, r.nilai, r.uraian, r.tahun) || r.id;
+          realMap.set(key, r);
+        });
+        finalRealisasiList = Array.from(realMap.values());
+
+        // Merge masters
+        const progMap = new Map<string, Program>();
+        (latestStateRef.current?.programs || programs).forEach(p => progMap.set(`${p.kodeProgram}_${p.tahun}`, p));
+        finalPrograms.forEach(p => progMap.set(`${p.kodeProgram}_${p.tahun}`, p));
+        finalPrograms = Array.from(progMap.values());
+
+        const kegMap = new Map<string, Kegiatan>();
+        (latestStateRef.current?.kegiatanList || kegiatanList).forEach(k => kegMap.set(`${k.kodeKegiatan}_${k.tahun}`, k));
+        finalKegiatan.forEach(k => kegMap.set(`${k.kodeKegiatan}_${k.tahun}`, k));
+        finalKegiatan = Array.from(kegMap.values());
+
+        const subMap = new Map<string, SubKegiatan>();
+        (latestStateRef.current?.subKegiatanList || subKegiatanList).forEach(s => subMap.set(`${s.kodeSub}_${s.tahun}`, s));
+        finalSubKegiatan.forEach(s => subMap.set(`${s.kodeSub}_${s.tahun}`, s));
+        finalSubKegiatan = Array.from(subMap.values());
+
+        const belMap = new Map<string, Belanja>();
+        (latestStateRef.current?.belanjaList || belanjaList).forEach(b => belMap.set(`${b.kodeBelanja}_${b.tahun}`, b));
+        finalBelanja.forEach(b => belMap.set(`${b.kodeBelanja}_${b.tahun}`, b));
+        finalBelanja = Array.from(belMap.values());
       }
 
       setPrograms(finalPrograms);
       setKegiatanList(finalKegiatan);
       setSubKegiatanList(finalSubKegiatan);
       setBelanjaList(finalBelanja);
+      setAnggaranList(finalAnggaranList);
+      setRealisasiList(finalRealisasiList);
+
+      const rCount = finalRealisasiList.length;
+      const aCount = finalAnggaranList.length;
 
       const updatedSheetConfig = {
         ...sheetConfig,
@@ -2911,7 +2750,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const nextState = {
         ...(latestStateRef.current || {}),
         currentUser,
-        users: finalUsers,
+        users: latestStateRef.current?.users || users || INITIAL_USERS,
         selectedTahun,
         tahunList,
         opdList,
@@ -2928,7 +2767,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         sheetConfig: updatedSheetConfig
       };
       latestStateRef.current = nextState;
-      persistToLocalStorage(nextState);
+      persistToLocalStorage(nextState, true);
       saveStateBundleToCloud(nextState);
 
       setSyncStatus('success');
@@ -2938,7 +2777,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         success: true,
         realisasiCount: rCount,
         anggaranCount: aCount,
-        message: `Berhasil menyinkronkan data dari Google Spreadsheet! Tersinkronisasi ${finalPrograms.length} program, ${finalKegiatan.length} kegiatan, ${finalSubKegiatan.length} sub kegiatan, ${finalBelanja.length} rekening, ${rCount} transaksi realisasi, dan ${aCount} rekening pagu anggaran tanpa mengubah referensi data.`
+        message: `Berhasil menyinkronkan data dari Google Spreadsheet! Tersinkronisasi ${finalPrograms.length} program, ${finalKegiatan.length} kegiatan, ${finalSubKegiatan.length} sub kegiatan, ${finalBelanja.length} rekening, ${rCount} transaksi realisasi, dan ${aCount} rekening pagu anggaran.`
       };
     } catch (err: any) {
       console.error('Pull from Google Sheet error:', err);
@@ -2948,7 +2787,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         success: false,
         realisasiCount: 0,
         anggaranCount: 0,
-        message: `Gagal menarik data dari Google Spreadsheet: ${err?.message || 'Pastikan Apps Script telah di-deploy sebagai Web App dengan akses "Anyone".'}`
+        message: `Gagal menarik data dari Google Spreadsheet: ${err?.message || 'Pastikan spreadsheet dapat diakses.'}`
       };
     } finally {
       setTimeout(() => setSyncStatus('idle'), 3000);
@@ -2959,6 +2798,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const syncWithSpreadsheet = async () => {
     return await pushToGoogleSheet();
   };
+
+  // Auto-pull complete dataset from Google Spreadsheet if both realisasi and anggaran are empty on startup
+  useEffect(() => {
+    const hasRealisasi = (latestStateRef.current?.realisasiList?.length || 0) > 0;
+    const hasAnggaran = (latestStateRef.current?.anggaranList?.length || 0) > 0;
+    if (!hasRealisasi && !hasAnggaran) {
+      console.info('No existing records found in local state. Pulling complete dataset from Google Spreadsheet...');
+      pullFromGoogleSheet(undefined, 'replace').catch(err => {
+        console.warn('Initial spreadsheet sync deferred:', err);
+      });
+    }
+  }, []);
 
   const resetFilters = () => {
     setFilters({

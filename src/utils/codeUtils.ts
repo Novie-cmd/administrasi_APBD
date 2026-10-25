@@ -1,13 +1,74 @@
-export const extractCode = (val: any): string => {
+export const cleanBudgetCode = (val: any): string => {
   if (val === undefined || val === null) return '';
   const str = String(val).trim();
   if (!str) return '';
-  // Regex to extract budget codes like 5.1.02.01.01.0024 (4 digits) or 5.1.05.01.01.00001 (5 digits) or 5.01.01.2.01.01
+
+  // 1. Check if format like Date(2001,0,8) (GViz date object)
+  const m = str.match(/Date\((\d{4}),\s*(\d{1,2}),\s*(\d{1,2})\)/);
+  if (m) {
+    const year = parseInt(m[1], 10);
+    const month = parseInt(m[2], 10) + 1;
+    const day = parseInt(m[3], 10);
+    const yrSuffix = String(year % 100).padStart(2, '0');
+    return `${day}.${String(month).padStart(2, '0')}.${yrSuffix}`;
+  }
+
+  // 2. Check if English date string like "Mon Jan 08 2001" or "Fri Jan 05 2001"
+  const months: Record<string, number> = {
+    jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+    jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12
+  };
+  const m2 = str.match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\s+(\d{1,2})\s+(\d{4})/i);
+  if (m2) {
+    const monStr = m2[1].toLowerCase();
+    const day = parseInt(m2[2], 10);
+    const year = parseInt(m2[3], 10);
+    const month = months[monStr] || 1;
+    const yrSuffix = String(year % 100).padStart(2, '0');
+    return `${day}.${String(month).padStart(2, '0')}.${yrSuffix}`;
+  }
+
+  // 3. Regex to extract budget codes like 5.1.02.01.01.0024, 8.01.01.1.02.0001, 8.01.01, 5.01.01
   const match = str.match(/\b\d+(\.\d+)+\b/);
   if (match) {
     return match[0];
   }
   return str;
+};
+
+export const cleanDateValue = (val: any): string => {
+  if (val === undefined || val === null) return '';
+  const str = String(val).trim();
+  if (!str) return '';
+
+  // GViz Date format: Date(2025,0,2)
+  const m = str.match(/Date\((\d{4}),\s*(\d{1,2}),\s*(\d{1,2})\)/);
+  if (m) {
+    const year = parseInt(m[1], 10);
+    const month = String(parseInt(m[2], 10) + 1).padStart(2, '0');
+    const day = String(parseInt(m[3], 10)).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  // Full date string format: Thu Jan 02 2025 ...
+  const months: Record<string, number> = {
+    jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+    jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12
+  };
+  const m2 = str.match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\s+(\d{1,2})\s+(\d{4})/i);
+  if (m2) {
+    const monStr = m2[1].toLowerCase();
+    const day = String(parseInt(m2[2], 10)).padStart(2, '0');
+    const year = m2[3];
+    const month = String(months[monStr] || 1).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  return str;
+};
+
+export const extractCode = (val: any): string => {
+  return cleanBudgetCode(val);
 };
 
 export const normalizeCode = (val: any): string => {

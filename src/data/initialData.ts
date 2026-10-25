@@ -100,6 +100,69 @@ export const INITIAL_OPD: OPD = {
 export const INITIAL_OPD_LIST: OPD[] = [INITIAL_OPD];
 
 export const INITIAL_PROGRAMS: Program[] = [
+  // 2025 (8.01 Series - Standard Kesbangpol NTB)
+  {
+    kodeProgram: '8.01.01',
+    namaProgram: 'PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH PROVINSI',
+    tahun: 2025
+  },
+  {
+    kodeProgram: '8.01.02',
+    namaProgram: 'PROGRAM PENGUATAN IDEOLOGI PANCASILA DAN KARAKTER KEBANGSAAN',
+    tahun: 2025
+  },
+  {
+    kodeProgram: '8.01.03',
+    namaProgram: 'PROGRAM PENINGKATAN PERAN PARTAI POLITIK DAN LEMBAGA PENDIDIKAN MELALUI PENDIDIKAN POLITIK DAN PENGEMBANGAN ETIKA SERTA BUDAYA POLITIK',
+    tahun: 2025
+  },
+  {
+    kodeProgram: '8.01.04',
+    namaProgram: 'PROGRAM PEMBERDAYAAN DAN PENGAWASAN ORGANISASI KEMASYARAKATAN',
+    tahun: 2025
+  },
+  {
+    kodeProgram: '8.01.05',
+    namaProgram: 'PROGRAM PEMBINAAN DAN PENGEMBANGAN KETAHANAN EKONOMI, SOSIAL, DAN BUDAYA',
+    tahun: 2025
+  },
+  {
+    kodeProgram: '8.01.06',
+    namaProgram: 'PROGRAM PENINGKATAN KEWASPADAAN NASIONAL DAN PENANGANAN KONFLIK SOSIAL',
+    tahun: 2025
+  },
+  // 2026 (8.01 Series - Standard Kesbangpol NTB)
+  {
+    kodeProgram: '8.01.01',
+    namaProgram: 'PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH PROVINSI',
+    tahun: 2026
+  },
+  {
+    kodeProgram: '8.01.02',
+    namaProgram: 'PROGRAM PENGUATAN IDEOLOGI PANCASILA DAN KARAKTER KEBANGSAAN',
+    tahun: 2026
+  },
+  {
+    kodeProgram: '8.01.03',
+    namaProgram: 'PROGRAM PENINGKATAN PERAN PARTAI POLITIK DAN LEMBAGA PENDIDIKAN MELALUI PENDIDIKAN POLITIK DAN PENGEMBANGAN ETIKA SERTA BUDAYA POLITIK',
+    tahun: 2026
+  },
+  {
+    kodeProgram: '8.01.04',
+    namaProgram: 'PROGRAM PEMBERDAYAAN DAN PENGAWASAN ORGANISASI KEMASYARAKATAN',
+    tahun: 2026
+  },
+  {
+    kodeProgram: '8.01.05',
+    namaProgram: 'PROGRAM PEMBINAAN DAN PENGEMBANGAN KETAHANAN EKONOMI, SOSIAL, DAN BUDAYA',
+    tahun: 2026
+  },
+  {
+    kodeProgram: '8.01.06',
+    namaProgram: 'PROGRAM PENINGKATAN KEWASPADAAN NASIONAL DAN PENANGANAN KONFLIK SOSIAL',
+    tahun: 2026
+  },
+  // Legacy 5.01 series for backwards compatibility
   {
     kodeProgram: '5.01.01',
     namaProgram: 'PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH PROVINSI',
@@ -112,11 +175,6 @@ export const INITIAL_PROGRAMS: Program[] = [
   },
   {
     kodeProgram: '5.01.03',
-    namaProgram: 'PROGRAM PENYELENGGARAAN POLITIK DALAM NEGERI DAN KEWASPADAAN DINI',
-    tahun: 2025
-  },
-  {
-    kodeProgram: '8.01.03',
     namaProgram: 'PROGRAM PENYELENGGARAAN POLITIK DALAM NEGERI DAN KEWASPADAAN DINI',
     tahun: 2025
   },
@@ -125,7 +183,6 @@ export const INITIAL_PROGRAMS: Program[] = [
     namaProgram: 'PROGRAM PEMBINAAN KERUKUNAN UMAT BERAGAMA DAN ORGANISASI MASYARAKAT',
     tahun: 2025
   },
-  // 2026
   {
     kodeProgram: '5.01.01',
     namaProgram: 'PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH PROVINSI',
@@ -138,11 +195,6 @@ export const INITIAL_PROGRAMS: Program[] = [
   },
   {
     kodeProgram: '5.01.03',
-    namaProgram: 'PROGRAM PENYELENGGARAAN POLITIK DALAM NEGERI DAN KEWASPADAAN DINI',
-    tahun: 2026
-  },
-  {
-    kodeProgram: '8.01.03',
     namaProgram: 'PROGRAM PENYELENGGARAAN POLITIK DALAM NEGERI DAN KEWASPADAAN DINI',
     tahun: 2026
   },

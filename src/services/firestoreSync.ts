@@ -10,6 +10,7 @@ import {
   disableNetwork,
   enableNetwork
 } from 'firebase/firestore';
+import { cleanBudgetCode, cleanDateValue, extractCode } from '../utils/codeUtils';
 
 export const SHARED_DATA_COLLECTION = 'bfms_shared_state';
 export const SHARED_DATA_DOC_ID = 'app_data_v1';
@@ -245,6 +246,8 @@ export const subscribeToSharedData = (
         const rawData = snapshot.data() as FirestoreAppData;
         let finalRealisasi = rawData.realisasiList || [];
         let finalAnggaran = rawData.anggaranList || [];
+        let isRealisasiComplete = true;
+        let isAnggaranComplete = true;
 
         // Check chunks and resolve accurate realisasi list
         try {
@@ -254,14 +257,16 @@ export const subscribeToSharedData = (
             const chunkedItems = await loadRealisasiChunks(rawData.realisasiChunkCount);
             if (chunkedItems.length > 0) {
               finalRealisasi = chunkedItems;
-            } else if (rawData.realisasiChunkCount && rawData.realisasiChunkCount > 0) {
-              // Chunks were expected but none found
-              finalRealisasi = [];
+            } else if (rawData.realisasiChunkCount && rawData.realisasiChunkCount > 1) {
+              isRealisasiComplete = false;
             }
           }
         } catch (e) {
           if (isQuotaError(e)) {
             await markFirestoreQuotaExceeded();
+          }
+          if (rawData.realisasiChunkCount && rawData.realisasiChunkCount > 1) {
+            isRealisasiComplete = false;
           }
           console.warn('Error loading realisasi chunks in listener:', e);
         }
@@ -273,22 +278,77 @@ export const subscribeToSharedData = (
             const chunkedAnggaran = await loadAnggaranChunks(rawData.anggaranChunkCount);
             if (chunkedAnggaran.length > 0) {
               finalAnggaran = chunkedAnggaran;
-            } else if (rawData.anggaranChunkCount && rawData.anggaranChunkCount > 0) {
-              finalAnggaran = [];
+            } else if (rawData.anggaranChunkCount && rawData.anggaranChunkCount > 1) {
+              isAnggaranComplete = false;
             }
           }
         } catch (e) {
           if (isQuotaError(e)) {
             await markFirestoreQuotaExceeded();
           }
+          if (rawData.anggaranChunkCount && rawData.anggaranChunkCount > 1) {
+            isAnggaranComplete = false;
+          }
           console.warn('Error loading anggaran chunks in listener:', e);
         }
 
-        onData({
+        const sanitizedPrograms = Array.isArray(rawData.programs)
+          ? rawData.programs.map(p => ({
+              ...p,
+              kodeProgram: cleanBudgetCode(p.kodeProgram)
+            }))
+          : rawData.programs;
+
+        const sanitizedKegiatan = Array.isArray(rawData.kegiatanList)
+          ? rawData.kegiatanList.map(k => ({
+              ...k,
+              kodeProgram: cleanBudgetCode(k.kodeProgram),
+              kodeKegiatan: cleanBudgetCode(k.kodeKegiatan)
+            }))
+          : rawData.kegiatanList;
+
+        const sanitizedSub = Array.isArray(rawData.subKegiatanList)
+          ? rawData.subKegiatanList.map(s => ({
+              ...s,
+              kodeProgram: cleanBudgetCode(s.kodeProgram),
+              kodeKegiatan: cleanBudgetCode(s.kodeKegiatan),
+              kodeSub: cleanBudgetCode(s.kodeSub)
+            }))
+          : rawData.subKegiatanList;
+
+        const sanitizedRealisasi = finalRealisasi.map(r => ({
+          ...r,
+          kodeProgram: cleanBudgetCode(r.kodeProgram),
+          kodeKegiatan: cleanBudgetCode(r.kodeKegiatan),
+          kodeSub: cleanBudgetCode(r.kodeSub),
+          kodeBelanja: extractCode(r.kodeBelanja),
+          tanggal: cleanDateValue(r.tanggal),
+          noSPM: cleanDateValue(r.noSPM) || r.noSPM
+        }));
+
+        const sanitizedAnggaran = finalAnggaran.map(a => ({
+          ...a,
+          kodeProgram: cleanBudgetCode(a.kodeProgram),
+          kodeKegiatan: cleanBudgetCode(a.kodeKegiatan),
+          kodeSub: cleanBudgetCode(a.kodeSub),
+          kodeBelanja: extractCode(a.kodeBelanja)
+        }));
+
+        const emittedData: any = {
           ...rawData,
-          realisasiList: finalRealisasi,
-          anggaranList: finalAnggaran
-        });
+          programs: sanitizedPrograms,
+          kegiatanList: sanitizedKegiatan,
+          subKegiatanList: sanitizedSub
+        };
+
+        if (isRealisasiComplete) {
+          emittedData.realisasiList = sanitizedRealisasi;
+        }
+        if (isAnggaranComplete) {
+          emittedData.anggaranList = sanitizedAnggaran;
+        }
+
+        onData(emittedData);
       }
     },
     async error => {
@@ -314,6 +374,9 @@ export const fetchSharedDataOnce = async (): Promise<FirestoreAppData | null> =>
       let finalRealisasi = rawData.realisasiList || [];
       let finalAnggaran = rawData.anggaranList || [];
 
+      let isRealisasiComplete = true;
+      let isAnggaranComplete = true;
+
       try {
         if (rawData.realisasiCount === 0 || (rawData.realisasiChunkCount === 0 && (!rawData.realisasiList || rawData.realisasiList.length === 0))) {
           finalRealisasi = [];
@@ -321,11 +384,17 @@ export const fetchSharedDataOnce = async (): Promise<FirestoreAppData | null> =>
           const chunkedItems = await loadRealisasiChunks(rawData.realisasiChunkCount);
           if (chunkedItems.length > 0) {
             finalRealisasi = chunkedItems;
-          } else if (rawData.realisasiChunkCount && rawData.realisasiChunkCount > 0) {
-            finalRealisasi = [];
+          } else if (rawData.realisasiChunkCount && rawData.realisasiChunkCount > 1) {
+            isRealisasiComplete = false;
           }
         }
       } catch (e) {
+        if (isQuotaError(e)) {
+          await markFirestoreQuotaExceeded();
+        }
+        if (rawData.realisasiChunkCount && rawData.realisasiChunkCount > 1) {
+          isRealisasiComplete = false;
+        }
         console.warn('Error loading realisasi chunks in fetchOnce:', e);
       }
 
@@ -336,19 +405,77 @@ export const fetchSharedDataOnce = async (): Promise<FirestoreAppData | null> =>
           const chunkedAnggaran = await loadAnggaranChunks(rawData.anggaranChunkCount);
           if (chunkedAnggaran.length > 0) {
             finalAnggaran = chunkedAnggaran;
-          } else if (rawData.anggaranChunkCount && rawData.anggaranChunkCount > 0) {
-            finalAnggaran = [];
+          } else if (rawData.anggaranChunkCount && rawData.anggaranChunkCount > 1) {
+            isAnggaranComplete = false;
           }
         }
       } catch (e) {
+        if (isQuotaError(e)) {
+          await markFirestoreQuotaExceeded();
+        }
+        if (rawData.anggaranChunkCount && rawData.anggaranChunkCount > 1) {
+          isAnggaranComplete = false;
+        }
         console.warn('Error loading anggaran chunks in fetchOnce:', e);
       }
 
-      return {
+      const sanitizedPrograms = Array.isArray(rawData.programs)
+        ? rawData.programs.map(p => ({
+            ...p,
+            kodeProgram: cleanBudgetCode(p.kodeProgram)
+          }))
+        : rawData.programs;
+
+      const sanitizedKegiatan = Array.isArray(rawData.kegiatanList)
+        ? rawData.kegiatanList.map(k => ({
+            ...k,
+            kodeProgram: cleanBudgetCode(k.kodeProgram),
+            kodeKegiatan: cleanBudgetCode(k.kodeKegiatan)
+          }))
+        : rawData.kegiatanList;
+
+      const sanitizedSub = Array.isArray(rawData.subKegiatanList)
+        ? rawData.subKegiatanList.map(s => ({
+            ...s,
+            kodeProgram: cleanBudgetCode(s.kodeProgram),
+            kodeKegiatan: cleanBudgetCode(s.kodeKegiatan),
+            kodeSub: cleanBudgetCode(s.kodeSub)
+          }))
+        : rawData.subKegiatanList;
+
+      const sanitizedRealisasi = finalRealisasi.map(r => ({
+        ...r,
+        kodeProgram: cleanBudgetCode(r.kodeProgram),
+        kodeKegiatan: cleanBudgetCode(r.kodeKegiatan),
+        kodeSub: cleanBudgetCode(r.kodeSub),
+        kodeBelanja: extractCode(r.kodeBelanja),
+        tanggal: cleanDateValue(r.tanggal),
+        noSPM: cleanDateValue(r.noSPM) || r.noSPM
+      }));
+
+      const sanitizedAnggaran = finalAnggaran.map(a => ({
+        ...a,
+        kodeProgram: cleanBudgetCode(a.kodeProgram),
+        kodeKegiatan: cleanBudgetCode(a.kodeKegiatan),
+        kodeSub: cleanBudgetCode(a.kodeSub),
+        kodeBelanja: extractCode(a.kodeBelanja)
+      }));
+
+      const returnData: any = {
         ...rawData,
-        realisasiList: finalRealisasi,
-        anggaranList: finalAnggaran
+        programs: sanitizedPrograms,
+        kegiatanList: sanitizedKegiatan,
+        subKegiatanList: sanitizedSub
       };
+
+      if (isRealisasiComplete) {
+        returnData.realisasiList = sanitizedRealisasi;
+      }
+      if (isAnggaranComplete) {
+        returnData.anggaranList = sanitizedAnggaran;
+      }
+
+      return returnData;
     }
     return null;
   } catch (error) {
