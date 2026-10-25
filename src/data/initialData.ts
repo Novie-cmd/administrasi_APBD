@@ -1398,7 +1398,7 @@ export const INITIAL_ACTIVITY_LOGS: ActivityLog[] = [
 
 export const INITIAL_SHEET_CONFIG: GoogleSheetConfig = {
   spreadsheetId: '1q-ZorXYniIzVy2h6b-WJVGvGanqqn6SBNlhu_upN-DY',
-  webAppUrl: 'https://script.google.com/macros/s/AKfycbxt-sWb1tWsnBmUXaflIgBArl_KIqPnEBUJBxbr-XRhbeTmvRfbuce5QWaz1fsQ4Nw9LQ/exec',
+  webAppUrl: 'https://script.google.com/macros/s/AKfycbxfdB6M1eLT63BrOIkTI0LxcyWQBpqLfQw4nr8YgGigzw-t4i9hLYNX3FZQk2CfKsFJrg/exec',
   autoSync: true,
   lastSyncedAt: '',
   status: 'Connected'
