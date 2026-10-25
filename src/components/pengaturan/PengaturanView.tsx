@@ -523,7 +523,7 @@ export const PengaturanView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowAddUser(false)}
-                  className="rounded-xl bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-700"
+                  className="rounded-xl bg-slate-800 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-700 cursor-pointer"
                 >
                   Batal
                 </button>
@@ -582,14 +582,14 @@ export const PengaturanView: React.FC = () => {
                             onClick={() =>
                               updateUserStatus(u.id, u.status === 'Aktif' ? 'Nonaktif' : 'Aktif')
                             }
-                            className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition ${
+                            className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition shadow-xs cursor-pointer ${
                               u.status === 'Aktif'
-                                ? 'bg-slate-800 hover:bg-slate-700 text-slate-300'
-                                : 'bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-600/40'
+                                ? 'bg-slate-900 hover:bg-slate-800 text-white border border-slate-700'
+                                : 'bg-emerald-950 hover:bg-emerald-900 text-white border border-emerald-600/40'
                             }`}
                             title="Ubah Status Aktif/Inaktif"
                           >
-                            {u.status === 'Aktif' ? 'Nonaktifkan' : 'Aktifkan'}
+                            <span className="text-white font-bold">{u.status === 'Aktif' ? 'Nonaktifkan' : 'Aktifkan'}</span>
                           </button>
 
                           {!isReadonly && (
@@ -1510,7 +1510,7 @@ export const PengaturanView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setEditingUser(null)}
-                className="rounded-xl bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-700"
+                className="rounded-xl bg-slate-800 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-700 cursor-pointer"
               >
                 Batal
               </button>
@@ -1546,7 +1546,7 @@ export const PengaturanView: React.FC = () => {
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
               <button
                 onClick={() => setDeletingUser(null)}
-                className="rounded-xl bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-700"
+                className="rounded-xl bg-slate-800 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-700 cursor-pointer"
               >
                 Batal
               </button>
@@ -1582,7 +1582,7 @@ export const PengaturanView: React.FC = () => {
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
               <button
                 onClick={() => setShowClearLogsModal(false)}
-                className="rounded-xl bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-700"
+                className="rounded-xl bg-slate-800 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-700 cursor-pointer"
               >
                 Batal
               </button>
