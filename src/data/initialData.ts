@@ -18,8 +18,8 @@ import {
 export const INITIAL_USERS: User[] = [
   {
     id: 'USR-001',
-    nama: 'Dr. H. Ruslan, M.Si',
-    nip: '19710312 199603 1 002',
+    nama: 'Novi Haryanto',
+    nip: '19711120 199103 1 003',
     username: 'admin',
     password: 'Admin123',
     role: 'Administrator',
@@ -54,8 +54,8 @@ export const INITIAL_USERS: User[] = [
   },
   {
     id: 'USR-004',
-    nama: 'H. Lalu Gita Ariadi, M.Si',
-    nip: '19651001 199003 1 008',
+    nama: 'Drs. H. Surya Bahari, M.MPd',
+    nip: '19680219 198811 1 001',
     username: 'kaban',
     password: 'Kaban123',
     role: 'Kepala Badan',
@@ -79,12 +79,12 @@ export const INITIAL_USERS: User[] = [
 ];
 
 export const INITIAL_TAHUN: TahunAnggaran[] = [
-  { id: 'THN-2025', tahun: 2025, statusAktif: true, keterangan: 'Tahun Anggaran Berjalan Murni & APBD-P' },
-  { id: 'THN-2026', tahun: 2026, statusAktif: false, keterangan: 'Tahun Anggaran Perencanaan' },
-  { id: 'THN-2027', tahun: 2027, statusAktif: false, keterangan: 'Tahun Anggaran Proyeksi' },
-  { id: 'THN-2028', tahun: 2028, statusAktif: false, keterangan: 'Tahun Anggaran Proyeksi' },
-  { id: 'THN-2029', tahun: 2029, statusAktif: false, keterangan: 'Tahun Anggaran Proyeksi' },
-  { id: 'THN-2030', tahun: 2030, statusAktif: false, keterangan: 'Tahun Anggaran Proyeksi' }
+  { id: 'THN-2025', tahun: 2025, statusAktif: true, keterangan: 'Tahun Anggaran' },
+  { id: 'THN-2026', tahun: 2026, statusAktif: false, keterangan: 'Tahun Anggaran' },
+  { id: 'THN-2027', tahun: 2027, statusAktif: false, keterangan: 'Tahun Anggaran' },
+  { id: 'THN-2028', tahun: 2028, statusAktif: false, keterangan: 'Tahun Anggaran' },
+  { id: 'THN-2029', tahun: 2029, statusAktif: false, keterangan: 'Tahun Anggaran' },
+  { id: 'THN-2030', tahun: 2030, statusAktif: false, keterangan: 'Tahun Anggaran' }
 ];
 
 export const INITIAL_OPD: OPD = {
@@ -92,8 +92,8 @@ export const INITIAL_OPD: OPD = {
   kodeOPD: '5.01.0.00.0.00.01.0000',
   namaOPD: 'Badan Kesatuan Bangsa dan Politik Dalam Negeri Provinsi Nusa Tenggara Barat',
   singkatan: 'BAKESBANGPOLDAGRI NTB',
-  kepalaBadan: 'H. Lalu Gita Ariadi, M.Si',
-  nipKepala: '196803121993031008',
+  kepalaBadan: 'Drs. H. Surya Bahari, M.MPd',
+  nipKepala: '19680219 198811 1 001',
   logoUrl: ''
 };
 
