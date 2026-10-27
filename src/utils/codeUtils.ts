@@ -28,12 +28,55 @@ export const cleanBudgetCode = (val: any): string => {
     return `${day}.${String(month).padStart(2, '0')}.${yrSuffix}`;
   }
 
-  // 3. Regex to extract budget codes like 5.1.02.01.01.0024, 8.01.01.1.02.0001, 8.01.01, 5.01.01
+  // 3. Normalize anomalous/stray codes from spreadsheet imports
+  if (str === '5464806' || str === '5.464.806' || str === '8.01.00') {
+    return '8.01.01';
+  }
+  if (str === '5.464.806.2.01.01') {
+    return '8.01.01.1.06.0008';
+  }
+  if (str === '5.464.806.2.01') {
+    return '8.01.01.1.06';
+  }
+  if (str === '8.01.0.00.0.00') {
+    return '8.01.01.1.02.0001';
+  }
+  if (str === '8.01.0.00.0') {
+    return '8.01.01.1.02';
+  }
+
+  // 4. Regex to extract budget codes like 5.1.02.01.01.0024, 8.01.01.1.02.0001, 8.01.01, 5.01.01
   const match = str.match(/\b\d+(\.\d+)+\b/);
   if (match) {
     return match[0];
   }
   return str;
+};
+
+export const resolveCanonicalProgramCode = (val: any): string => {
+  if (val === undefined || val === null) return '';
+  const c = cleanBudgetCode(val).trim();
+  if (!c) return '';
+  if (c === '8.01.00' || c === '5464806' || c === '5.464.806' || c.startsWith('8.01.0.00') || c.startsWith('5.464.806')) {
+    return '8.01.01';
+  }
+  let normalized = c;
+  if (normalized.startsWith('5.01.')) {
+    normalized = normalized.replace('5.01.', '8.01.');
+  }
+  const parts = normalized.split('.');
+  if (parts.length >= 3) {
+    return parts.slice(0, 3).join('.');
+  }
+  return normalized;
+};
+
+export const resolveCanonicalSubCode = (val: any): string => {
+  const c = cleanBudgetCode(val).trim();
+  if (c === '5.464.806.2.01.01') return '8.01.01.1.06.0008';
+  if (c === '8.01.0.00.0.00' || c === '8.01.0.00.0') return '8.01.01.1.02.0001';
+  if (c.startsWith('5.01.')) return c.replace('5.01.', '8.01.');
+  return c;
 };
 
 export const cleanDateValue = (val: any): string => {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { isCodeEqual, isHibahAccount } from '../../utils/codeUtils';
+import { isCodeEqual, isHibahAccount, resolveCanonicalProgramCode } from '../../utils/codeUtils';
 import { NTBLogo } from '../common/NTBLogo';
 import * as XLSX from 'xlsx';
 import { safeDownloadExcel } from '../../utils/downloadHelper';
@@ -962,35 +962,61 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
   const currentAnggaran = anggaranList.filter(a => Number(a.tahun) === Number(selectedTahun));
   const currentRealisasi = realisasiList.filter(r => !r.tahun || Number(r.tahun) === Number(selectedTahun));
 
-  // Helper calculation for Laporan Per Program (Syced with Input Anggaran Pagu & Realisasi)
-  const allProgramKodes = Array.from(
-    new Set([
-      ...programs.filter(p => Number(p.tahun) === Number(selectedTahun)).map(p => p.kodeProgram.trim()),
-      ...currentAnggaran.map(a => a.kodeProgram.trim()),
-      ...currentRealisasi.map(r => r.kodeProgram.trim())
-    ])
-  );
+  // Helper calculation for Laporan Per Program (100% Synced with Input Anggaran Pagu & Realisasi)
+  const programMap = new Map<string, string>();
+
+  // 1. Seed official Kesbangpol NTB programs (8.01.01 - 8.01.06)
+  const defaultProgramNames: Record<string, string> = {
+    '8.01.01': 'PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH PROVINSI',
+    '8.01.02': 'PROGRAM PENGUATAN IDEOLOGI PANCASILA DAN KARAKTER KEBANGSAAN',
+    '8.01.03': 'PROGRAM PENINGKATAN PERAN PARTAI POLITIK DAN LEMBAGA PENDIDIKAN MELALUI PENDIDIKAN POLITIK DAN PENGEMBANGAN ETIKA SERTA BUDAYA POLITIK',
+    '8.01.04': 'PROGRAM PEMBERDAYAAN DAN PENGAWASAN ORGANISASI KEMASYARAKATAN',
+    '8.01.05': 'PROGRAM PEMBINAAN DAN PENGEMBANGAN KETAHANAN EKONOMI, SOSIAL, DAN BUDAYA',
+    '8.01.06': 'PROGRAM PENINGKATAN KEWASPADAAN NASIONAL DAN PENANGANAN KONFLIK SOSIAL'
+  };
+  Object.entries(defaultProgramNames).forEach(([code, name]) => {
+    programMap.set(code, name);
+  });
+
+  // 2. Override with custom names from master program list if defined for selectedTahun
+  programs
+    .filter(p => Number(p.tahun) === Number(selectedTahun))
+    .forEach(p => {
+      const canonical = resolveCanonicalProgramCode(p.kodeProgram);
+      if (canonical && p.namaProgram) {
+        programMap.set(canonical, p.namaProgram);
+      }
+    });
+
+  // 3. Include any extra programs found in currentAnggaran or currentRealisasi
+  [...currentAnggaran, ...currentRealisasi].forEach(item => {
+    const canonical = resolveCanonicalProgramCode(item.kodeProgram || item.kodeSub);
+    if (canonical && !programMap.has(canonical)) {
+      programMap.set(canonical, `PROGRAM ${canonical}`);
+    }
+  });
+
+  const allProgramKodes = Array.from(programMap.keys()).sort();
 
   const programReportData = allProgramKodes.map(kode => {
-    const pObj = programs.find(p => isCodeEqual(p.kodeProgram, kode));
     const paguMurni = currentAnggaran
-      .filter(a => isCodeEqual(a.kodeProgram, kode))
+      .filter(a => resolveCanonicalProgramCode(a.kodeProgram || a.kodeSub) === kode)
       .reduce((s, a) => s + a.pagu, 0);
 
     const revisi = currentAnggaran
-      .filter(a => isCodeEqual(a.kodeProgram, kode))
+      .filter(a => resolveCanonicalProgramCode(a.kodeProgram || a.kodeSub) === kode)
       .reduce((s, a) => s + a.revisi, 0);
 
     const nilaiSPD = currentAnggaran
-      .filter(a => isCodeEqual(a.kodeProgram, kode))
+      .filter(a => resolveCanonicalProgramCode(a.kodeProgram || a.kodeSub) === kode)
       .reduce((s, a) => s + (a.nilaiSPD !== undefined ? a.nilaiSPD : a.paguAkhir), 0);
 
     const paguAkhir = currentAnggaran
-      .filter(a => isCodeEqual(a.kodeProgram, kode))
+      .filter(a => resolveCanonicalProgramCode(a.kodeProgram || a.kodeSub) === kode)
       .reduce((s, a) => s + a.paguAkhir, 0);
 
     const real = currentRealisasi
-      .filter(r => isCodeEqual(r.kodeProgram, kode))
+      .filter(r => resolveCanonicalProgramCode(r.kodeProgram || r.kodeSub) === kode)
       .reduce((s, r) => s + r.nilai, 0);
 
     const sisa = paguAkhir - real;
@@ -998,7 +1024,7 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
 
     return {
       kode,
-      nama: pObj?.namaProgram || `PROGRAM ${kode}`,
+      nama: programMap.get(kode) || `PROGRAM ${kode}`,
       paguMurni,
       revisi,
       nilaiSPD,

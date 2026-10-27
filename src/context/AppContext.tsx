@@ -540,17 +540,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [currentUser, setCurrentUser] = useState<User>(() => {
+    const userPool = (storedData?.users && storedData.users.length > 0) ? storedData.users : INITIAL_USERS;
     const session = safeSessionStorageGet(AUTH_SESSION_KEY) || safeLocalStorageGet(AUTH_SESSION_KEY);
     if (session) {
       try {
         const parsed = JSON.parse(session);
-        if (parsed && parsed.role) {
-          const matched = INITIAL_USERS.find(u => u.role === parsed.role || u.id === parsed.userId);
+        if (parsed) {
+          const matched = userPool.find(
+            u => (parsed.userId && u.id === parsed.userId) ||
+                 (parsed.username && u.username.toLowerCase() === parsed.username.toLowerCase()) ||
+                 (parsed.role && u.role === parsed.role)
+          );
           if (matched) return matched;
         }
       } catch {}
     }
-    return storedData?.currentUser || INITIAL_USERS[0];
+    return storedData?.currentUser || userPool[0];
   });
   const [users, setUsers] = useState<User[]>(
     storedData?.users || INITIAL_USERS
@@ -998,6 +1003,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         if (remoteData.users && Array.isArray(remoteData.users) && remoteData.users.length > 0) {
           setUsers(remoteData.users);
+          setCurrentUser(prevUser => {
+            if (!prevUser) return prevUser;
+            const updated = remoteData.users!.find(u => u.id === prevUser.id || (u.username && prevUser.username && u.username.toLowerCase() === prevUser.username.toLowerCase()));
+            if (updated) {
+              const merged = { ...prevUser, ...updated };
+              safeSessionStorageSet(AUTH_SESSION_KEY, JSON.stringify(merged));
+              return merged;
+            }
+            return prevUser;
+          });
         }
         if (remoteData.tahunList && Array.isArray(remoteData.tahunList) && remoteData.tahunList.length > 0) {
           setTahunList(remoteData.tahunList);
@@ -1354,7 +1369,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 2. Fallbacks for standard Administrator and Kepala Badan
     if (u.toLowerCase() === 'admin' || u.toLowerCase() === 'administrator') {
       if (p === 'Admin123' || p.toLowerCase() === 'admin123') {
-        const adminUser = INITIAL_USERS[0];
+        const curUsers = latestStateRef.current?.users || users || INITIAL_USERS;
+        const adminUser = curUsers.find(userItem => userItem.username.toLowerCase() === 'admin' || userItem.role === 'Administrator') || INITIAL_USERS[0];
         setCurrentUser(adminUser);
         setIsAuthenticated(true);
         safeSessionStorageSet(AUTH_SESSION_KEY, JSON.stringify(adminUser));
@@ -1363,7 +1379,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     if (u.toLowerCase() === 'kaban' || u.toLowerCase() === 'kepala badan') {
       if (p === 'Kaban123' || p.toLowerCase() === 'kaban123') {
-        const kabanUser = INITIAL_USERS[3];
+        const curUsers = latestStateRef.current?.users || users || INITIAL_USERS;
+        const kabanUser = curUsers.find(userItem => userItem.username.toLowerCase() === 'kaban' || userItem.role === 'Kepala Badan') || INITIAL_USERS[3];
         setCurrentUser(kabanUser);
         setIsAuthenticated(true);
         safeSessionStorageSet(AUTH_SESSION_KEY, JSON.stringify(kabanUser));
@@ -2427,7 +2444,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const curList = latestStateRef.current?.users !== undefined ? latestStateRef.current.users : users;
     const nextList = curList.map((u: User) => (u.id === id ? { ...u, ...updated } : u));
     setUsers(nextList);
-    applyAndPersistState({ users: nextList });
+
+    // If active logged-in user was updated, update currentUser state & session immediately
+    if (currentUser && (currentUser.id === id || (updated.username && currentUser.username === updated.username))) {
+      const updatedCurUser: User = { ...currentUser, ...updated };
+      setCurrentUser(updatedCurUser);
+      safeSessionStorageSet(AUTH_SESSION_KEY, JSON.stringify(updatedCurUser));
+    }
+
+    // If edited user is Kepala Badan, sync OPD Kepala Badan name & NIP
+    let nextOpdList = latestStateRef.current?.opdList !== undefined ? latestStateRef.current.opdList : opdList;
+    const targetUser = nextList.find(u => u.id === id);
+    if (targetUser && (targetUser.role === 'Kepala Badan' || updated.role === 'Kepala Badan')) {
+      nextOpdList = nextOpdList.map((opdItem, idx) => idx === 0 ? {
+        ...opdItem,
+        kepalaBadan: targetUser.nama || opdItem.kepalaBadan,
+        nipKepala: targetUser.nip || opdItem.nipKepala
+      } : opdItem);
+      setOpdList(nextOpdList);
+    }
+
+    applyAndPersistState({ users: nextList, opdList: nextOpdList });
     logActivity(`Memperbarui Data User ID ${id}: ${updated.nama || updated.username || ''}`);
   };
 
