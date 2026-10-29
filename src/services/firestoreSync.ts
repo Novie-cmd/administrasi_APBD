@@ -10,7 +10,7 @@ import {
   disableNetwork,
   enableNetwork
 } from 'firebase/firestore';
-import { cleanBudgetCode, cleanDateValue, extractCode } from '../utils/codeUtils';
+import { cleanBudgetCode, cleanDateValue, extractCode, resolveCanonicalProgramCode, resolveCanonicalSubCode } from '../utils/codeUtils';
 
 export const SHARED_DATA_COLLECTION = 'bfms_shared_state';
 export const SHARED_DATA_DOC_ID = 'app_data_v1';
@@ -281,14 +281,14 @@ export const subscribeToSharedData = (
         const sanitizedPrograms = Array.isArray(rawData.programs)
           ? rawData.programs.map(p => ({
               ...p,
-              kodeProgram: cleanBudgetCode(p.kodeProgram)
+              kodeProgram: resolveCanonicalProgramCode(p.kodeProgram)
             }))
           : rawData.programs;
 
         const sanitizedKegiatan = Array.isArray(rawData.kegiatanList)
           ? rawData.kegiatanList.map(k => ({
               ...k,
-              kodeProgram: cleanBudgetCode(k.kodeProgram),
+              kodeProgram: resolveCanonicalProgramCode(k.kodeProgram),
               kodeKegiatan: cleanBudgetCode(k.kodeKegiatan)
             }))
           : rawData.kegiatanList;
@@ -296,17 +296,17 @@ export const subscribeToSharedData = (
         const sanitizedSub = Array.isArray(rawData.subKegiatanList)
           ? rawData.subKegiatanList.map(s => ({
               ...s,
-              kodeProgram: cleanBudgetCode(s.kodeProgram),
+              kodeProgram: resolveCanonicalProgramCode(s.kodeProgram),
               kodeKegiatan: cleanBudgetCode(s.kodeKegiatan),
-              kodeSub: cleanBudgetCode(s.kodeSub)
+              kodeSub: resolveCanonicalSubCode(s.kodeSub)
             }))
           : rawData.subKegiatanList;
 
         const sanitizedRealisasi = finalRealisasi.map(r => ({
           ...r,
-          kodeProgram: cleanBudgetCode(r.kodeProgram),
+          kodeProgram: resolveCanonicalProgramCode(r.kodeProgram || (r.kodeSub ? r.kodeSub.split('.').slice(0, 3).join('.') : '')),
           kodeKegiatan: cleanBudgetCode(r.kodeKegiatan),
-          kodeSub: cleanBudgetCode(r.kodeSub),
+          kodeSub: resolveCanonicalSubCode(r.kodeSub),
           kodeBelanja: extractCode(r.kodeBelanja),
           tanggal: cleanDateValue(r.tanggal),
           noSPM: cleanDateValue(r.noSPM) || r.noSPM
@@ -314,9 +314,9 @@ export const subscribeToSharedData = (
 
         const sanitizedAnggaran = finalAnggaran.map(a => ({
           ...a,
-          kodeProgram: cleanBudgetCode(a.kodeProgram),
+          kodeProgram: resolveCanonicalProgramCode(a.kodeProgram || (a.kodeSub ? a.kodeSub.split('.').slice(0, 3).join('.') : '')),
           kodeKegiatan: cleanBudgetCode(a.kodeKegiatan),
-          kodeSub: cleanBudgetCode(a.kodeSub),
+          kodeSub: resolveCanonicalSubCode(a.kodeSub),
           kodeBelanja: extractCode(a.kodeBelanja)
         }));
 
@@ -408,14 +408,14 @@ export const fetchSharedDataOnce = async (): Promise<FirestoreAppData | null> =>
       const sanitizedPrograms = Array.isArray(rawData.programs)
         ? rawData.programs.map(p => ({
             ...p,
-            kodeProgram: cleanBudgetCode(p.kodeProgram)
+            kodeProgram: resolveCanonicalProgramCode(p.kodeProgram)
           }))
         : rawData.programs;
 
       const sanitizedKegiatan = Array.isArray(rawData.kegiatanList)
         ? rawData.kegiatanList.map(k => ({
             ...k,
-            kodeProgram: cleanBudgetCode(k.kodeProgram),
+            kodeProgram: resolveCanonicalProgramCode(k.kodeProgram),
             kodeKegiatan: cleanBudgetCode(k.kodeKegiatan)
           }))
         : rawData.kegiatanList;
@@ -423,17 +423,17 @@ export const fetchSharedDataOnce = async (): Promise<FirestoreAppData | null> =>
       const sanitizedSub = Array.isArray(rawData.subKegiatanList)
         ? rawData.subKegiatanList.map(s => ({
             ...s,
-            kodeProgram: cleanBudgetCode(s.kodeProgram),
+            kodeProgram: resolveCanonicalProgramCode(s.kodeProgram),
             kodeKegiatan: cleanBudgetCode(s.kodeKegiatan),
-            kodeSub: cleanBudgetCode(s.kodeSub)
+            kodeSub: resolveCanonicalSubCode(s.kodeSub)
           }))
         : rawData.subKegiatanList;
 
       const sanitizedRealisasi = finalRealisasi.map(r => ({
         ...r,
-        kodeProgram: cleanBudgetCode(r.kodeProgram),
+        kodeProgram: resolveCanonicalProgramCode(r.kodeProgram || (r.kodeSub ? r.kodeSub.split('.').slice(0, 3).join('.') : '')),
         kodeKegiatan: cleanBudgetCode(r.kodeKegiatan),
-        kodeSub: cleanBudgetCode(r.kodeSub),
+        kodeSub: resolveCanonicalSubCode(r.kodeSub),
         kodeBelanja: extractCode(r.kodeBelanja),
         tanggal: cleanDateValue(r.tanggal),
         noSPM: cleanDateValue(r.noSPM) || r.noSPM
@@ -441,9 +441,9 @@ export const fetchSharedDataOnce = async (): Promise<FirestoreAppData | null> =>
 
       const sanitizedAnggaran = finalAnggaran.map(a => ({
         ...a,
-        kodeProgram: cleanBudgetCode(a.kodeProgram),
+        kodeProgram: resolveCanonicalProgramCode(a.kodeProgram || (a.kodeSub ? a.kodeSub.split('.').slice(0, 3).join('.') : '')),
         kodeKegiatan: cleanBudgetCode(a.kodeKegiatan),
-        kodeSub: cleanBudgetCode(a.kodeSub),
+        kodeSub: resolveCanonicalSubCode(a.kodeSub),
         kodeBelanja: extractCode(a.kodeBelanja)
       }));
 

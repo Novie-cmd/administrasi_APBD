@@ -29,7 +29,7 @@ export const cleanBudgetCode = (val: any): string => {
   }
 
   // 3. Normalize anomalous/stray codes from spreadsheet imports
-  if (str === '5464806' || str === '5.464.806' || str === '8.01.00') {
+  if (str === '5464806' || str === '5.464.806' || str === '8.01.00' || str === '08.01.00') {
     return '8.01.01';
   }
   if (str === '5.464.806.2.01.01') {
@@ -38,44 +38,72 @@ export const cleanBudgetCode = (val: any): string => {
   if (str === '5.464.806.2.01') {
     return '8.01.01.1.06';
   }
-  if (str === '8.01.0.00.0.00') {
+  if (str === '8.01.0.00.0.00' || str === '08.01.0.00.0.00') {
     return '8.01.01.1.02.0001';
   }
-  if (str === '8.01.0.00.0') {
+  if (str === '8.01.0.00.0' || str === '08.01.0.00.0') {
     return '8.01.01.1.02';
   }
 
-  // 4. Regex to extract budget codes like 5.1.02.01.01.0024, 8.01.01.1.02.0001, 8.01.01, 5.01.01
+  // 4. Regex to extract budget codes like 5.1.02.01.01.0024, 8.01.01.1.02.0001, 8.01.01, 5.01.01, 08.01.01
   const match = str.match(/\b\d+(\.\d+)+\b/);
-  if (match) {
-    return match[0];
+  let result = match ? match[0] : str;
+
+  // 5. Normalize leading zero on first segment (e.g. "08.01..." -> "8.01...", "05.01..." -> "5.01...")
+  if (result.startsWith('08.')) {
+    result = '8.' + result.slice(3);
+  } else if (result.startsWith('05.')) {
+    result = '5.' + result.slice(3);
   }
-  return str;
+  return result;
 };
 
 export const resolveCanonicalProgramCode = (val: any): string => {
   if (val === undefined || val === null) return '';
-  const c = cleanBudgetCode(val).trim();
+  let c = cleanBudgetCode(val).trim();
   if (!c) return '';
-  if (c === '8.01.00' || c === '5464806' || c === '5.464.806' || c.startsWith('8.01.0.00') || c.startsWith('5.464.806')) {
+  if (
+    c === '8.01.00' ||
+    c === '08.01.00' ||
+    c === '5464806' ||
+    c === '5.464.806' ||
+    c.startsWith('8.01.0.00') ||
+    c.startsWith('08.01.0.00') ||
+    c.startsWith('5.464.806')
+  ) {
     return '8.01.01';
   }
-  let normalized = c;
-  if (normalized.startsWith('5.01.')) {
-    normalized = normalized.replace('5.01.', '8.01.');
+
+  // Strip leading zero in first segment (e.g. 08. -> 8., 05. -> 5.)
+  if (c.startsWith('08.')) {
+    c = '8.' + c.slice(3);
+  } else if (c.startsWith('05.')) {
+    c = '5.' + c.slice(3);
   }
-  const parts = normalized.split('.');
+
+  // Map 5.01. to 8.01.
+  if (c.startsWith('5.01.')) {
+    c = c.replace('5.01.', '8.01.');
+  }
+
+  const parts = c.split('.');
   if (parts.length >= 3) {
-    return parts.slice(0, 3).join('.');
+    let p0 = parseInt(parts[0], 10);
+    if (p0 === 5 || p0 === 8) p0 = 8;
+    const p1 = String(parseInt(parts[1], 10)).padStart(2, '0');
+    const p2 = String(parseInt(parts[2], 10)).padStart(2, '0');
+    return `${p0}.${p1}.${p2}`;
   }
-  return normalized;
+  return c;
 };
 
 export const resolveCanonicalSubCode = (val: any): string => {
-  const c = cleanBudgetCode(val).trim();
+  let c = cleanBudgetCode(val).trim();
   if (c === '5.464.806.2.01.01') return '8.01.01.1.06.0008';
-  if (c === '8.01.0.00.0.00' || c === '8.01.0.00.0') return '8.01.01.1.02.0001';
-  if (c.startsWith('5.01.')) return c.replace('5.01.', '8.01.');
+  if (c === '8.01.0.00.0.00' || c === '8.01.0.00.0' || c === '08.01.0.00.0.00') return '8.01.01.1.02.0001';
+  if (c.startsWith('08.')) c = '8.' + c.slice(3);
+  if (c.startsWith('05.01.')) c = '8.01.' + c.slice(6);
+  else if (c.startsWith('5.01.')) c = '8.01.' + c.slice(5);
   return c;
 };
 

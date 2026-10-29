@@ -7,7 +7,9 @@ import {
   parseExcelDate,
   makeRealisasiCompositeKey,
   sanitizeRealisasiList,
-  extractMonthFromText
+  extractMonthFromText,
+  resolveCanonicalProgramCode,
+  resolveCanonicalSubCode
 } from '../utils/codeUtils';
 import { fetchCompleteSpreadsheetData } from '../services/spreadsheetService';
 import {
@@ -449,39 +451,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const rawPrograms = Array.isArray(primary?.programs) ? primary.programs : (hasEverInitialized ? [] : INITIAL_PROGRAMS);
       const cleanPrograms = rawPrograms.map((p: any) => ({
         ...p,
-        kodeProgram: cleanBudgetCode(p.kodeProgram)
+        kodeProgram: resolveCanonicalProgramCode(p.kodeProgram)
       }));
 
       const rawKegiatan = Array.isArray(primary?.kegiatanList) ? primary.kegiatanList : (hasEverInitialized ? [] : INITIAL_KEGIATAN);
       const cleanKegiatan = rawKegiatan.map((k: any) => ({
         ...k,
-        kodeProgram: cleanBudgetCode(k.kodeProgram),
+        kodeProgram: resolveCanonicalProgramCode(k.kodeProgram),
         kodeKegiatan: cleanBudgetCode(k.kodeKegiatan)
       }));
 
       const rawSub = Array.isArray(primary?.subKegiatanList) ? primary.subKegiatanList : (hasEverInitialized ? [] : INITIAL_SUBKEGIATAN);
       const cleanSub = rawSub.map((s: any) => ({
         ...s,
-        kodeProgram: cleanBudgetCode(s.kodeProgram),
+        kodeProgram: resolveCanonicalProgramCode(s.kodeProgram),
         kodeKegiatan: cleanBudgetCode(s.kodeKegiatan),
-        kodeSub: cleanBudgetCode(s.kodeSub)
+        kodeSub: resolveCanonicalSubCode(s.kodeSub)
       }));
 
       const rawAnggaran = Array.isArray(primary?.anggaranList) ? primary.anggaranList : (hasEverInitialized ? [] : INITIAL_ANGGARAN);
       const cleanAnggaran = rawAnggaran.map((a: any) => ({
         ...a,
-        kodeProgram: cleanBudgetCode(a.kodeProgram),
+        kodeProgram: resolveCanonicalProgramCode(a.kodeProgram || a.kodeSub),
         kodeKegiatan: cleanBudgetCode(a.kodeKegiatan),
-        kodeSub: cleanBudgetCode(a.kodeSub),
+        kodeSub: resolveCanonicalSubCode(a.kodeSub),
         kodeBelanja: extractCode(a.kodeBelanja)
       }));
 
       const rawRealisasi = sanitizeRealisasiList(Array.isArray(primary?.realisasiList) ? primary.realisasiList : (hasEverInitialized ? [] : INITIAL_REALISASI));
       const cleanRealisasi = rawRealisasi.map((r: any) => ({
         ...r,
-        kodeProgram: cleanBudgetCode(r.kodeProgram),
+        kodeProgram: resolveCanonicalProgramCode(r.kodeProgram || r.kodeSub),
         kodeKegiatan: cleanBudgetCode(r.kodeKegiatan),
-        kodeSub: cleanBudgetCode(r.kodeSub),
+        kodeSub: resolveCanonicalSubCode(r.kodeSub),
         kodeBelanja: extractCode(r.kodeBelanja),
         tanggal: cleanDateValue(r.tanggal),
         noSPM: cleanDateValue(r.noSPM) || r.noSPM
@@ -1021,13 +1023,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setOpdList(remoteData.opdList);
         }
         if (remoteData.programs && Array.isArray(remoteData.programs)) {
-          setPrograms(remoteData.programs);
+          setPrograms(remoteData.programs.map((p: any) => ({ ...p, kodeProgram: resolveCanonicalProgramCode(p.kodeProgram) })));
         }
         if (remoteData.kegiatanList && Array.isArray(remoteData.kegiatanList)) {
-          setKegiatanList(remoteData.kegiatanList);
+          setKegiatanList(remoteData.kegiatanList.map((k: any) => ({ ...k, kodeProgram: resolveCanonicalProgramCode(k.kodeProgram), kodeKegiatan: cleanBudgetCode(k.kodeKegiatan) })));
         }
         if (remoteData.subKegiatanList && Array.isArray(remoteData.subKegiatanList)) {
-          setSubKegiatanList(remoteData.subKegiatanList);
+          setSubKegiatanList(remoteData.subKegiatanList.map((s: any) => ({ ...s, kodeProgram: resolveCanonicalProgramCode(s.kodeProgram), kodeKegiatan: cleanBudgetCode(s.kodeKegiatan), kodeSub: resolveCanonicalSubCode(s.kodeSub) })));
         }
         if (remoteData.belanjaList && Array.isArray(remoteData.belanjaList)) {
           setBelanjaList(filterOutBelanjaTombstones(remoteData.belanjaList));
@@ -1039,10 +1041,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setRekananList(remoteData.rekananList);
         }
         if (remoteData.anggaranList && Array.isArray(remoteData.anggaranList)) {
-          setAnggaranList(remoteData.anggaranList);
+          setAnggaranList(remoteData.anggaranList.map((a: any) => ({ ...a, kodeProgram: resolveCanonicalProgramCode(a.kodeProgram || a.kodeSub), kodeSub: resolveCanonicalSubCode(a.kodeSub) })));
         }
         if (remoteData.realisasiList && Array.isArray(remoteData.realisasiList)) {
-          setRealisasiList(sanitizeRealisasiList(remoteData.realisasiList));
+          setRealisasiList(sanitizeRealisasiList(remoteData.realisasiList).map((r: any) => ({ ...r, kodeProgram: resolveCanonicalProgramCode(r.kodeProgram || r.kodeSub), kodeSub: resolveCanonicalSubCode(r.kodeSub) })));
         }
         if (remoteData.importLogs && Array.isArray(remoteData.importLogs) && remoteData.importLogs.length > 0) {
           setImportLogs(remoteData.importLogs);

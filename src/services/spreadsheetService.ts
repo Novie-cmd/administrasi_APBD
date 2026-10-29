@@ -1,5 +1,5 @@
 import { Program, Kegiatan, SubKegiatan, Belanja, Anggaran, Realisasi, User } from '../types';
-import { cleanBudgetCode, cleanDateValue, extractCode } from '../utils/codeUtils';
+import { cleanBudgetCode, cleanDateValue, extractCode, resolveCanonicalProgramCode, resolveCanonicalSubCode } from '../utils/codeUtils';
 
 interface GVizColumn {
   id: string;
@@ -160,7 +160,7 @@ export async function fetchCompleteSpreadsheetData(
     paguRows.forEach((row, idx) => {
       const rawSub = row['Kode_Sub_Kegiatan'] || row['Kode_Sub'] || row['kodeSub'];
       const rawBel = row['Kode_Rekening_Belanja'] || row['Kode_Belanja'] || row['kodeBelanja'];
-      const kodeSub = cleanBudgetCode(rawSub);
+      const kodeSub = resolveCanonicalSubCode(rawSub);
       const kodeBelanja = extractCode(rawBel);
       if (!kodeSub || !kodeBelanja) return;
 
@@ -177,7 +177,7 @@ export async function fetchCompleteSpreadsheetData(
         sumberDana = 'PAD';
       }
 
-      const kdProg = cleanBudgetCode(row['Kode_Program'] || (kodeSub.includes('.') ? kodeSub.split('.').slice(0, 3).join('.') : '8.01.01'));
+      const kdProg = resolveCanonicalProgramCode(row['Kode_Program'] || (kodeSub.includes('.') ? kodeSub.split('.').slice(0, 3).join('.') : '8.01.01'));
       const kdKeg = cleanBudgetCode(row['Kode_Kegiatan'] || (kodeSub.includes('.') ? kodeSub.split('.').slice(0, 5).join('.') : '8.01.01.1.01'));
 
       // Auto-register sub kegiatan if not in master
@@ -228,9 +228,7 @@ export async function fetchCompleteSpreadsheetData(
     realRows.forEach((row, idx) => {
       const rawSub = row['Kode_Sub_Kegiatan'] || row['Kode_Sub'] || row['kodeSub'];
       const rawBel = row['Kode_Rekening_Belanja'] || row['Kode_Belanja'] || row['kodeBelanja'];
-      let kodeSub = cleanBudgetCode(rawSub);
-      if (kodeSub === '5.464.806.2.01.01') kodeSub = '8.01.01.1.06.0008';
-      else if (kodeSub === '8.01.0.00.0.00') kodeSub = '8.01.01.1.02.0001';
+      let kodeSub = resolveCanonicalSubCode(rawSub);
 
       const kodeBelanja = extractCode(rawBel);
       if (!kodeSub || !kodeBelanja) return;
@@ -255,10 +253,7 @@ export async function fetchCompleteSpreadsheetData(
       const namaSub = String(row['Nama_Sub_Kegiatan'] || row['Nama_Sub'] || row['namaSub'] || '').trim();
       const namaBelanja = String(row['Nama_Rekening_Belanja'] || row['Nama_Belanja'] || row['namaBelanja'] || '').trim();
 
-      let kdProg = cleanBudgetCode(row['Kode_Program'] || (kodeSub.includes('.') ? kodeSub.split('.').slice(0, 3).join('.') : '8.01.01'));
-      if (kdProg === '8.01.00' || kdProg === '5464806' || kdProg.startsWith('5.464.806') || kdProg.startsWith('8.01.0.00')) {
-        kdProg = '8.01.01';
-      }
+      let kdProg = resolveCanonicalProgramCode(row['Kode_Program'] || (kodeSub.includes('.') ? kodeSub.split('.').slice(0, 3).join('.') : '8.01.01'));
       let kdKeg = cleanBudgetCode(row['Kode_Kegiatan'] || (kodeSub.includes('.') ? kodeSub.split('.').slice(0, 5).join('.') : '8.01.01.1.02'));
       if (kdKeg.startsWith('5.464.806')) kdKeg = '8.01.01.1.06';
       else if (kdKeg.startsWith('8.01.0.00')) kdKeg = '8.01.01.1.02';

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { isCodeEqual, isHibahAccount, resolveCanonicalProgramCode } from '../../utils/codeUtils';
+import { isCodeEqual, isHibahAccount, resolveCanonicalProgramCode, resolveCanonicalSubCode, cleanBudgetCode } from '../../utils/codeUtils';
 import { NTBLogo } from '../common/NTBLogo';
 import * as XLSX from 'xlsx';
 import { safeDownloadExcel } from '../../utils/downloadHelper';
@@ -1038,11 +1038,11 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
   // Helper calculation for Laporan Per Kegiatan
   const allKegiatanKodes = Array.from(
     new Set([
-      ...kegiatanList.filter(k => Number(k.tahun) === Number(selectedTahun)).map(k => k.kodeKegiatan.trim()),
-      ...currentAnggaran.map(a => a.kodeKegiatan.trim()),
-      ...currentRealisasi.map(r => r.kodeKegiatan.trim())
+      ...kegiatanList.filter(k => Number(k.tahun) === Number(selectedTahun)).map(k => cleanBudgetCode(k.kodeKegiatan).trim()),
+      ...currentAnggaran.map(a => cleanBudgetCode(a.kodeKegiatan).trim()),
+      ...currentRealisasi.map(r => cleanBudgetCode(r.kodeKegiatan).trim())
     ])
-  );
+  ).filter(Boolean);
 
   const kegiatanReportData = allKegiatanKodes.map(kode => {
     const kObj = kegiatanList.find(k => isCodeEqual(k.kodeKegiatan, kode));
@@ -1086,11 +1086,11 @@ export const PelaporanView: React.FC<PelaporanViewProps> = ({
   // Helper calculation for Laporan Per Sub Kegiatan
   const allSubKodes = Array.from(
     new Set([
-      ...subKegiatanList.filter(s => Number(s.tahun) === Number(selectedTahun)).map(s => s.kodeSub.trim()),
-      ...currentAnggaran.map(a => a.kodeSub.trim()),
-      ...currentRealisasi.map(r => r.kodeSub.trim())
+      ...subKegiatanList.filter(s => Number(s.tahun) === Number(selectedTahun)).map(s => resolveCanonicalSubCode(s.kodeSub).trim()),
+      ...currentAnggaran.map(a => resolveCanonicalSubCode(a.kodeSub).trim()),
+      ...currentRealisasi.map(r => resolveCanonicalSubCode(r.kodeSub).trim())
     ])
-  );
+  ).filter(Boolean);
 
   const subReportData = allSubKodes.map(kode => {
     const sObj = subKegiatanList.find(s => isCodeEqual(s.kodeSub, kode));
